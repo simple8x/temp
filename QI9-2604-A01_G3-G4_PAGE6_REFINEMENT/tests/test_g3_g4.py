@@ -1,6 +1,9 @@
 import json,unittest
 from pathlib import Path
-ROOT=Path(__file__).parent; OUT=ROOT/'run_g3_g4'
+ROOT=Path(__file__).parent
+# The checked-in G3/G4 source evidence lives at package_root/run_g3_g4,
+# not under tests/run_g3_g4. Keep tests reading the authoritative fixtures.
+OUT=ROOT.parent/'run_g3_g4'
 class G34(unittest.TestCase):
  @classmethod
  def setUpClass(cls):
