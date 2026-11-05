@@ -10,7 +10,7 @@ permissions:
 jobs:
   extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,15 +28,35 @@ jobs:
         run: |
           set -euo pipefail
           PDF="../../QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/-QI9-2604-A01- Module IO.pdf"
-          mkdir -p ../../pdf2kicad-run
+          mkdir -p ../../pdf2kicad-run/logs
           for page in 5 6 7 8 9 10 11; do
-            echo "===== PAGE $page INFO ====="
-            python -m pdf2kicad.cli "$PDF" "$page" "../../pdf2kicad-run/page$(printf '%02d' "$page")" --info
-            echo "===== PAGE $page EXTRACT ====="
-            python -m pdf2kicad.cli "$PDF" "$page" "../../pdf2kicad-run/page$(printf '%02d' "$page")"
+            {
+              echo "===== PAGE $page INFO ====="
+              python -m pdf2kicad.cli "$PDF" "$page" "../../pdf2kicad-run/page$(printf '%02d' "$page")" --info
+              echo "===== PAGE $page EXTRACT ====="
+              python -m pdf2kicad.cli "$PDF" "$page" "../../pdf2kicad-run/page$(printf '%02d' "$page")"
+            } 2>&1 | tee "../../pdf2kicad-run/logs/page$(printf '%02d' "$page").log"
           done
           python tools/make_project.py ../../pdf2kicad-run/project ../../pdf2kicad-run
           find ../../pdf2kicad-run -type f -maxdepth 4 -print -exec sha256sum {} \;
+      - name: Install KiCad CLI validator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kicad
+      - name: Validate generated schematic with KiCad CLI
+        run: |
+          set +e
+          mkdir -p pdf2kicad-run/kicad-validation
+          kicad-cli version 2>&1 | tee pdf2kicad-run/kicad-validation/version.log
+          kicad-cli sch export netlist --output pdf2kicad-run/kicad-validation/Module_IO.net pdf2kicad-run/project/Module_IO.kicad_sch 2>&1 | tee pdf2kicad-run/kicad-validation/netlist.log
+          NETLIST_RC=${PIPESTATUS[0]}
+          kicad-cli sch erc --output pdf2kicad-run/kicad-validation/erc.rpt pdf2kicad-run/project/Module_IO.kicad_sch 2>&1 | tee pdf2kicad-run/kicad-validation/erc.log
+          ERC_RC=${PIPESTATUS[0]}
+          echo "KICAD_NETLIST_EXIT=$NETLIST_RC"
+          echo "KICAD_ERC_EXIT=$ERC_RC"
+          echo "KICAD_NETLIST_EXIT=$NETLIST_RC" >> pdf2kicad-run/kicad-validation/status.txt
+          echo "KICAD_ERC_EXIT=$ERC_RC" >> pdf2kicad-run/kicad-validation/status.txt
+          test "$NETLIST_RC" -eq 0
       - name: Upload extraction evidence
         if: always()
         uses: actions/upload-artifact@v4
