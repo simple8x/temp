@@ -1,0 +1,77 @@
+name: Independent G3-G4 PDF retest
+
+on:
+  push:
+    paths:
+      - 'QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/**'
+      - '.github/workflows/independent-g3-g4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pdf-forensic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install parser and test tools
+        run: python -m pip install --upgrade pip pymupdf pytest
+      - name: Recompute source PDF evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="QI9-2604-A01_G3-G4_PAGE6_REFINEMENT"
+          PDF="$ROOT/-QI9-2604-A01- Module IO.pdf"
+          mkdir -p "$ROOT/independent_retest"
+          python - "$PDF" "$ROOT/independent_retest/pdf_retest.json" <<'PY'
+          import sys, json, hashlib, statistics
+          from pathlib import Path
+          import fitz
+          pdf_path, out_path = map(Path, sys.argv[1:])
+          raw = pdf_path.read_bytes()
+          doc = fitz.open(stream=raw, filetype="pdf")
+          pages=[]
+          for i, page in enumerate(doc):
+              drawings=page.get_drawings()
+              lines=sum(1 for d in drawings for item in d.get("items",[]) if item[0]=="l")
+              filled=[]
+              for d in drawings:
+                  fill=d.get("fill")
+                  rect=d.get("rect")
+                  if fill is None or rect is None: continue
+                  w,h=abs(rect.width),abs(rect.height)
+                  area=w*h
+                  filled.append({"rect":[rect.x0,rect.y0,rect.x1,rect.y1],"width":w,"height":h,"area":area,"items":len(d.get("items",[])),"fill":list(fill)})
+              pages.append({
+                "page":i+1,"width_pt":page.rect.width,"height_pt":page.rect.height,
+                "text_blocks":len(page.get_text("blocks")),"text_chars":len(page.get_text()),
+                "drawing_objects":len(drawings),"line_items":lines,
+                "filled_drawing_objects":len(filled),
+                "filled_candidates_area_le_4pt2":sum(x["area"]<=4 for x in filled),
+                "filled_candidates_area_le_16pt2":sum(x["area"]<=16 for x in filled),
+                "filled_candidates_area_le_64pt2":sum(x["area"]<=64 for x in filled),
+                "filled_geometry":filled if i==5 else []
+              })
+          result={"source_file":pdf_path.name,"sha256":hashlib.sha256(raw).hexdigest(),"bytes":len(raw),"page_count":len(doc),"pymupdf_version":fitz.VersionBind,"pages":pages}
+          Path(out_path).write_text(json.dumps(result,indent=2),encoding="utf-8")
+          print(json.dumps({"sha256":result["sha256"],"bytes":len(raw),"page_count":len(doc),"page6":pages[5]},indent=2))
+          PY
+      - name: Run package tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="QI9-2604-A01_G3-G4_PAGE6_REFINEMENT"
+          find "$ROOT" -maxdepth 3 -type f -name 'test_*.py' -print
+          python -m pytest -q "$ROOT" --disable-warnings --maxfail=1 | tee "$ROOT/independent_retest/pytest.log"
+      - name: Upload independent evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: qI9-2604-independent-g3-g4
+          path: QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/independent_retest/
+          if-no-files-found: error
+          retention-days: 7
