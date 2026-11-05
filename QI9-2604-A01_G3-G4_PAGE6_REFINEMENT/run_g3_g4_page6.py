@@ -9,8 +9,8 @@ from PIL import Image
 from pytesseract import Output
 from g3_g4_geometry import Segment, analyze_connectivity
 
-REF = re.compile(r"^(?:[RCDQLJUFY]|SW|RN|U|Q)\\d+[A-Z]?$", re.I)
-NET = re.compile(r"^(?:\\+?\\d+(?:\\.\\d+)?V(?:_[A-Z0-9]+)?|GND(?:_[A-Z0-9]+)?|SHIELD_[A-Z0-9]+|UART_[A-Z0-9]+|ESP32_[A-Z0-9]+|RX[PN]?|TX[PN]?)$", re.I)
+REF = re.compile(r"^(?:[RCDQLJUFY]|SW|RN|U|Q)\d+[A-Z]?$", re.I)
+NET = re.compile(r"^(?:\+?\d+(?:\.\d+)?V(?:_[A-Z0-9]+)?|GND(?:_[A-Z0-9]+)?|SHIELD_[A-Z0-9]+|UART_[A-Z0-9]+|ESP32_[A-Z0-9]+|RX[PN]?|TX[PN]?)$", re.I)
 
 def sha256(path):
     h = hashlib.sha256()
@@ -58,8 +58,7 @@ def main():
             ))
     geom = analyze_connectivity(segments, tol=1e-4, cell_size=a.cell_size)
 
-    facts = {}
-    page_facts = []
+    facts, page_facts = {}, []
     for item in ref.get("items", []):
         if item.get("resolution_status") == "VERIFIED" and item.get("pin_identity") and item.get("net_identity"):
             key = (item.get("source_page"), item.get("symbol_identity"),
@@ -111,7 +110,7 @@ def main():
             "No junction-dot or pin-anchor classifier is promoted by this run."
         ]
     }
-    a.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    a.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": result["release"]["status"], "source_sha256": source_hash,
                       "page": a.page, "ocr_words": len(tokens), "line_primitives": line_count,
                       "geometric_candidates": geom["candidate_count"],
