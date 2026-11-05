@@ -1,0 +1,53 @@
+{
+  "schema": "qi9-g3-g4-page-run/v1",
+  "source_pdf": "[QI9-2604-A01] Module IO.pdf",
+  "source_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+  "pdf_page_index_1based": 6,
+  "render": {
+    "scale": 3.0,
+    "width_px": 2526,
+    "height_px": 1786
+  },
+  "g3": {
+    "ocr_word_occurrences": 190,
+    "refdes_candidate_occurrences": 20,
+    "refdes_unique_tokens": ["C14", "C16", "C17", "D12", "D13", "J3", "R10U", "R14", "R15", "R16", "R18", "R19", "R20", "R21", "U5", "U6", "U7", "c10", "c12", "c13"],
+    "net_label_candidate_occurrences": 24,
+    "net_label_unique_tokens": ["+3.3V", "+5V_RS232", "ESP32_TX0", "GND_RS232", "SHIELD_RS232", "UART_RXO", "UART_TXO"],
+    "reviewed_pin_net_facts_unique_across_source": 6,
+    "reviewed_pin_net_facts_on_page": [
+      {"resolution_id": "REF-007", "symbol": "U5 / B0505-1W", "pin": "Pin 1: -Vin", "net": "GNDREF"},
+      {"resolution_id": "REF-008", "symbol": "U5 / B0505-1W", "pin": "Pin 3: -Vout", "net": "GND_RS232"}
+    ],
+    "status": "PARTIAL_CANDIDATES_ONLY"
+  },
+  "g4": {
+    "raw_line_primitive_count": 9503,
+    "spatial_broadphase_pair_count": 91378,
+    "naive_all_pairs_count": 45148753,
+    "broadphase_pruning_percent": 99.7976,
+    "geometric_relation_candidate_count": 16993,
+    "geometric_relation_counts": {
+      "ENDPOINT_ENDPOINT": 13410,
+      "T": 609,
+      "CROSSING": 137,
+      "OVERLAP": 2837
+    },
+    "wire_role_classified_segments": 0,
+    "verified_junction_dots": 0,
+    "verified_joins": 0,
+    "net_membership_claims": 0,
+    "status": "GEOMETRY_ONLY_BLOCKED"
+  },
+  "release": {
+    "status": "BLOCKED_ELECTRICAL_TOPOLOGY",
+    "kicad_netlist_generated": false,
+    "mutation_performed": false
+  },
+  "limitations": [
+    "OCR tokens are candidates, not verified symbols or labels.",
+    "Every vector line is role UNKNOWN and includes wires, symbol outlines, glyphs, and frames.",
+    "Spatial index prunes bounding-box pairs only; geometry is not electrical connectivity.",
+    "No junction-dot or pin-anchor classifier is promoted by this run."
+  ]
+}
