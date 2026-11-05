@@ -38,3 +38,14 @@ No source PDF mutation is performed.
 - The repair is a reusable geometry/evidence layer; existing extracted primitives still have no independently reviewed wire-role labels or junction-dot records. Therefore this patch does not convert the existing 70,278 primitives into verified wires and does not change G3/G4 release status.
 - G3/G4 remain BLOCKED for full electrical topology and netlist generation until the actual PDF page evidence is annotated and fed into the classifier.
 - No KiCad netlist generated; no source data changed.
+
+## Actual PDF page-6 run — 2026-11-05
+- Source PDF was materialized from the user's Library and hash-checked against the reference artifact: `a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc`.
+- Page 6 was rendered at 3× and processed with Tesseract: 190 OCR word occurrences; 20 refdes-like candidates; 24 net-label-like candidates. These remain OCR candidates, not verified symbols or attached labels.
+- Page 6 vector extraction: 9,503 line primitives.
+- Spatial broad phase examined 91,378 candidate pairs instead of 45,148,753 theoretical all-pairs comparisons (99.7976% pruning); exact geometry checks retained 16,993 geometric relation candidates.
+- The relation inventory includes symbol outlines, text glyph strokes, drawing frames and possible wires. It is not a wire/junction inventory.
+- Page 6 source-reviewed facts retained: U5 pin 1 -Vin → GNDREF (REF-007); U5 pin 3 -Vout → GND_RS232 (REF-008).
+- Wire-role classified segments: 0; verified junction dots: 0; verified joins: 0; net membership claims: 0; netlist: NOT GENERATED.
+- Spatial broad-phase implementation and reproducible runner added: `g3_g4_geometry.py`, `run_g3_g4_page6.py`; regression suite now 19/19 PASS locally.
+- This is a local page-6 run and unit-test result, not a GitHub Actions CI result. Full electrical topology remains BLOCKED.
