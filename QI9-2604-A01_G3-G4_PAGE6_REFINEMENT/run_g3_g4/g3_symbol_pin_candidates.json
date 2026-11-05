@@ -1,0 +1,2016 @@
+{
+  "schema": "qi9-g3-symbol-pin-candidates/v1",
+  "source_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+  "candidate_reference_count": 58,
+  "candidate_net_label_count": 63,
+  "symbol_candidates": [
+    {
+      "source_page": 5,
+      "token": "D1",
+      "confidence": 85.356888,
+      "bbox_px": [
+        435,
+        307,
+        16,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 5,
+      "token": "C1",
+      "confidence": 81.281685,
+      "bbox_px": [
+        703,
+        430,
+        17,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 5,
+      "token": "u2",
+      "confidence": 78.517212,
+      "bbox_px": [
+        2015,
+        796,
+        18,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 5,
+      "token": "C4",
+      "confidence": 76.62001,
+      "bbox_px": [
+        693,
+        900,
+        17,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 5,
+      "token": "U4",
+      "confidence": 89.664825,
+      "bbox_px": [
+        399,
+        936,
+        18,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 5,
+      "token": "R13",
+      "confidence": 77.01947,
+      "bbox_px": [
+        1367,
+        1080,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "U5",
+      "confidence": 83.979156,
+      "bbox_px": [
+        431,
+        335,
+        17,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "c10",
+      "confidence": 2.700745,
+      "bbox_px": [
+        1250,
+        467,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "c412",
+      "confidence": 38.135117,
+      "bbox_px": [
+        1095,
+        541,
+        26,
+        28
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "D10",
+      "confidence": 7.019157,
+      "bbox_px": [
+        918,
+        715,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "C16",
+      "confidence": 64.068047,
+      "bbox_px": [
+        1523,
+        735,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "R18",
+      "confidence": 52.049919,
+      "bbox_px": [
+        1555,
+        803,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "J3",
+      "confidence": 79.367546,
+      "bbox_px": [
+        1921,
+        835,
+        15,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "C17",
+      "confidence": 49.531155,
+      "bbox_px": [
+        461,
+        965,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 6,
+      "token": "R24",
+      "confidence": 90.543335,
+      "bbox_px": [
+        516,
+        1081,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "C21",
+      "confidence": 49.891987,
+      "bbox_px": [
+        523,
+        906,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "R29",
+      "confidence": 95.781311,
+      "bbox_px": [
+        449,
+        1020,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "c18",
+      "confidence": 72.223686,
+      "bbox_px": [
+        1327,
+        456,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "J4",
+      "confidence": 69.314331,
+      "bbox_px": [
+        1869,
+        516,
+        16,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "D16",
+      "confidence": 54.871788,
+      "bbox_px": [
+        1715,
+        526,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "D147",
+      "confidence": 14.866913,
+      "bbox_px": [
+        1715,
+        606,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "C22",
+      "confidence": 65.445694,
+      "bbox_px": [
+        1093,
+        906,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "u12",
+      "confidence": 34.346703,
+      "bbox_px": [
+        1111,
+        954,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 7,
+      "token": "R30",
+      "confidence": 96.283714,
+      "bbox_px": [
+        1019,
+        1020,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 8,
+      "token": "C24",
+      "confidence": 53.855339,
+      "bbox_px": [
+        366,
+        423,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 8,
+      "token": "R33",
+      "confidence": 88.232994,
+      "bbox_px": [
+        996,
+        695,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 8,
+      "token": "J5",
+      "confidence": 83.607559,
+      "bbox_px": [
+        1671,
+        693,
+        15,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 8,
+      "token": "R35",
+      "confidence": 70.547035,
+      "bbox_px": [
+        1896,
+        785,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 9,
+      "token": "u1s",
+      "confidence": 24.187073,
+      "bbox_px": [
+        1209,
+        556,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "J6",
+      "confidence": 79.657059,
+      "bbox_px": [
+        367,
+        855,
+        15,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "D24",
+      "confidence": 73.037048,
+      "bbox_px": [
+        562,
+        275,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "D30",
+      "confidence": 77.150597,
+      "bbox_px": [
+        562,
+        435,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "D34",
+      "confidence": 79.72702,
+      "bbox_px": [
+        562,
+        515,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "D40",
+      "confidence": 76.222282,
+      "bbox_px": [
+        562,
+        674,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U16B",
+      "confidence": 84.634743,
+      "bbox_px": [
+        1107,
+        405,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U16C",
+      "confidence": 24.36113,
+      "bbox_px": [
+        1107,
+        515,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U16D",
+      "confidence": 50.31395,
+      "bbox_px": [
+        1107,
+        625,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U18C",
+      "confidence": 79.651482,
+      "bbox_px": [
+        1107,
+        735,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U18D",
+      "confidence": 70.260193,
+      "bbox_px": [
+        1107,
+        845,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U17B",
+      "confidence": 85.197784,
+      "bbox_px": [
+        1817,
+        405,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U17D",
+      "confidence": 71.783073,
+      "bbox_px": [
+        1817,
+        625,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U19C",
+      "confidence": 56.754665,
+      "bbox_px": [
+        1817,
+        735,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 10,
+      "token": "U19D",
+      "confidence": 57.58522,
+      "bbox_px": [
+        1817,
+        845,
+        36,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "U20A",
+      "confidence": 23.771477,
+      "bbox_px": [
+        692,
+        318,
+        36,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "u208",
+      "confidence": 35.324059,
+      "bbox_px": [
+        692,
+        528,
+        36,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "u20c",
+      "confidence": 66.338219,
+      "bbox_px": [
+        692,
+        718,
+        36,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "u20D",
+      "confidence": 63.802856,
+      "bbox_px": [
+        682,
+        918,
+        36,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "U21A",
+      "confidence": 64.497864,
+      "bbox_px": [
+        1382,
+        328,
+        36,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "U21B",
+      "confidence": 22.487885,
+      "bbox_px": [
+        1381,
+        538,
+        37,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "u21D",
+      "confidence": 55.581646,
+      "bbox_px": [
+        1371,
+        928,
+        37,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D49",
+      "confidence": 82.87664,
+      "bbox_px": [
+        2057,
+        588,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D514",
+      "confidence": 21.010765,
+      "bbox_px": [
+        2057,
+        668,
+        25,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D52",
+      "confidence": 88.464493,
+      "bbox_px": [
+        2057,
+        748,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D53",
+      "confidence": 87.51432,
+      "bbox_px": [
+        2057,
+        828,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D55",
+      "confidence": 82.899956,
+      "bbox_px": [
+        2057,
+        908,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D57",
+      "confidence": 83.960503,
+      "bbox_px": [
+        2057,
+        988,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D59",
+      "confidence": 81.146774,
+      "bbox_px": [
+        2057,
+        1068,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    },
+    {
+      "source_page": 11,
+      "token": "D60",
+      "confidence": 83.346237,
+      "bbox_px": [
+        2057,
+        1148,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "REFERENCE_DESIGNATOR",
+      "symbol_identity": "UNRESOLVED",
+      "pin_anchors": [],
+      "status": "CANDIDATE_REQUIRES_VISUAL_CONFIRMATION"
+    }
+  ],
+  "net_label_candidates": [
+    {
+      "source_page": 5,
+      "token": "50v",
+      "confidence": 61.517414,
+      "bbox_px": [
+        702,
+        462,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "50v",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "GND",
+      "confidence": 82.740135,
+      "bbox_px": [
+        1596,
+        596,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "SHIELD_USB",
+      "confidence": 77.748367,
+      "bbox_px": [
+        1697,
+        787,
+        87,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "SHIELD_USB",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "50v",
+      "confidence": 65.84024,
+      "bbox_px": [
+        691,
+        932,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "50v",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "GND",
+      "confidence": 96.581696,
+      "bbox_px": [
+        1146,
+        1007,
+        28,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "+3.3V",
+      "confidence": 72.152557,
+      "bbox_px": [
+        1180,
+        1036,
+        42,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+3.3V",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "50v",
+      "confidence": 26.405014,
+      "bbox_px": [
+        1741,
+        1022,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "50v",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 5,
+      "token": "SHIELD_USB",
+      "confidence": 92.533264,
+      "bbox_px": [
+        1887,
+        1186,
+        87,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "SHIELD_USB",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+5V_RS232",
+      "confidence": 90.63089,
+      "bbox_px": [
+        558,
+        305,
+        83,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+5V_RS232",
+      "confidence": 84.382408,
+      "bbox_px": [
+        1278,
+        425,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 92.296669,
+      "bbox_px": [
+        558,
+        525,
+        83,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+5V_RS232",
+      "confidence": 90.787209,
+      "bbox_px": [
+        928,
+        533,
+        83,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 91.026993,
+      "bbox_px": [
+        1157,
+        545,
+        85,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+5V_RS232",
+      "confidence": 72.862076,
+      "bbox_px": [
+        468,
+        585,
+        83,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+5V_RS232",
+      "confidence": 82.75119,
+      "bbox_px": [
+        1618,
+        627,
+        83,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+3.3V",
+      "confidence": 84.469223,
+      "bbox_px": [
+        249,
+        715,
+        43,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+3.3V",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 86.742157,
+      "bbox_px": [
+        1653,
+        757,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "ESP32_TX0",
+      "confidence": 45.353298,
+      "bbox_px": [
+        257,
+        806,
+        79,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_TX0",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 89.245903,
+      "bbox_px": [
+        1877,
+        575,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "SHIELD_RS232",
+      "confidence": 91.084702,
+      "bbox_px": [
+        1717,
+        605,
+        105,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "SHIELD_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "SHIELD_RS232",
+      "confidence": 45.495613,
+      "bbox_px": [
+        1972,
+        791,
+        106,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "SHIELD_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 57.637177,
+      "bbox_px": [
+        487,
+        865,
+        85,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 89.874069,
+      "bbox_px": [
+        1731,
+        1033,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "+5V_RS232",
+      "confidence": 80.139977,
+      "bbox_px": [
+        548,
+        1055,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 92.781601,
+      "bbox_px": [
+        1278,
+        1065,
+        83,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 6,
+      "token": "GND_RS232",
+      "confidence": 90.510742,
+      "bbox_px": [
+        1617,
+        1065,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS232",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+5V_RS485",
+      "confidence": 62.309795,
+      "bbox_px": [
+        715,
+        466,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 40.150063,
+      "bbox_px": [
+        715,
+        686,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+5V_RS485",
+      "confidence": 55.71278,
+      "bbox_px": [
+        621,
+        876,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 76.6119,
+      "bbox_px": [
+        373,
+        966,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+3.3V",
+      "confidence": 61.692688,
+      "bbox_px": [
+        402,
+        1006,
+        43,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+3.3V",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 88.115356,
+      "bbox_px": [
+        640,
+        1155,
+        85,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+5V_RS485",
+      "confidence": 60.337109,
+      "bbox_px": [
+        1145,
+        316,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 91.323502,
+      "bbox_px": [
+        1274,
+        540,
+        85,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+5V_RS485",
+      "confidence": 66.526688,
+      "bbox_px": [
+        1405,
+        426,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 77.22435,
+      "bbox_px": [
+        1764,
+        498,
+        84,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+5V_RS485",
+      "confidence": 54.16906,
+      "bbox_px": [
+        1191,
+        876,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 90.369446,
+      "bbox_px": [
+        945,
+        972,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+3.3V",
+      "confidence": 64.440521,
+      "bbox_px": [
+        972,
+        1006,
+        42,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+3.3V",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "ESP32_EN4",
+      "confidence": 46.964115,
+      "bbox_px": [
+        978,
+        1097,
+        81,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_EN4",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 91.381805,
+      "bbox_px": [
+        1210,
+        1156,
+        85,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 91.488663,
+      "bbox_px": [
+        1404,
+        786,
+        84,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 68.570404,
+      "bbox_px": [
+        1784,
+        672,
+        88,
+        24
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "GND_RS485",
+      "confidence": 89.103691,
+      "bbox_px": [
+        1650,
+        781,
+        84,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 7,
+      "token": "+5V_RS485",
+      "confidence": 66.040878,
+      "bbox_px": [
+        1839,
+        1000,
+        83,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+5V_RS485",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "RXN",
+      "confidence": 91.438126,
+      "bbox_px": [
+        856,
+        433,
+        26,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "RXN",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "TXN",
+      "confidence": 73.373619,
+      "bbox_px": [
+        490,
+        454,
+        25,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "TXN",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "TXN",
+      "confidence": 88.983688,
+      "bbox_px": [
+        654,
+        453,
+        26,
+        11
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "TXN",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "RXP",
+      "confidence": 74.218994,
+      "bbox_px": [
+        856,
+        453,
+        27,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "RXP",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "GND",
+      "confidence": 94.511551,
+      "bbox_px": [
+        855,
+        493,
+        28,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "GND",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "ESP32_1X2",
+      "confidence": 86.834335,
+      "bbox_px": [
+        1113,
+        574,
+        79,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_1X2",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "+3.3V",
+      "confidence": 64.342834,
+      "bbox_px": [
+        397,
+        505,
+        42,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "+3.3V",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "43.3V",
+      "confidence": 33.457016,
+      "bbox_px": [
+        1974,
+        795,
+        43,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "43.3V",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "SHIELD_RJ4S",
+      "confidence": 3.001442,
+      "bbox_px": [
+        1742,
+        993,
+        94,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "SHIELD_RJ4S",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 8,
+      "token": "SHIELD_RJ45",
+      "confidence": 38.736382,
+      "bbox_px": [
+        1452,
+        1013,
+        94,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "SHIELD_RJ45",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_1XL",
+      "confidence": 25.48156,
+      "bbox_px": [
+        908,
+        757,
+        79,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_1XL",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_RX1",
+      "confidence": 82.690765,
+      "bbox_px": [
+        756,
+        777,
+        81,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_RX1",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_EN1",
+      "confidence": 75.440895,
+      "bbox_px": [
+        906,
+        797,
+        81,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_EN1",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_RX2",
+      "confidence": 71.14164,
+      "bbox_px": [
+        906,
+        957,
+        81,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_RX2",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_TX2",
+      "confidence": 83.747009,
+      "bbox_px": [
+        758,
+        977,
+        79,
+        12
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_TX2",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_1X0",
+      "confidence": 67.070602,
+      "bbox_px": [
+        1534,
+        617,
+        79,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_1X0",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_RXO",
+      "confidence": 81.485947,
+      "bbox_px": [
+        1394,
+        637,
+        81,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_RXO",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    },
+    {
+      "source_page": 9,
+      "token": "ESP32_CFG2",
+      "confidence": 72.01181,
+      "bbox_px": [
+        1534,
+        657,
+        90,
+        13
+      ],
+      "evidence": "OCR_WORD_CANDIDATE",
+      "candidate_type": "NET_LABEL_TEXT",
+      "net_name_candidate": "ESP32_CFG2",
+      "electrical_attachment": "UNRESOLVED",
+      "status": "TEXT_CANDIDATE_ONLY"
+    }
+  ],
+  "reviewed_pin_net_facts": [
+    {
+      "resolution_id": "REF-005",
+      "page": 8,
+      "symbol": "J5 / HR911105A",
+      "pin": "Pin 6: RD-",
+      "net": "RXN",
+      "confidence": "HIGH",
+      "evidence": "Pin 6 is labelled RD- and its connected net label is RXN.",
+      "evidence_type": "VECTOR_GEOMETRY",
+      "status": "SOURCE_REVIEWED_REFERENCE_ONLY"
+    },
+    {
+      "resolution_id": "REF-006",
+      "page": 8,
+      "symbol": "J5 / HR911105A",
+      "pin": "Pin 3: TD-",
+      "net": "TXN",
+      "confidence": "HIGH",
+      "evidence": "Pin 3 is labelled TD- and its connected net label is TXN.",
+      "evidence_type": "VECTOR_GEOMETRY",
+      "status": "SOURCE_REVIEWED_REFERENCE_ONLY"
+    },
+    {
+      "resolution_id": "REF-007",
+      "page": 6,
+      "symbol": "U5 / B0505-1W",
+      "pin": "Pin 1: -Vin",
+      "net": "GNDREF",
+      "confidence": "HIGH",
+      "evidence": "The source drawing labels U5 pin 1 as -Vin; its input-side connection is labelled GNDREF.",
+      "evidence_type": "VECTOR_GEOMETRY",
+      "status": "SOURCE_REVIEWED_REFERENCE_ONLY"
+    },
+    {
+      "resolution_id": "REF-008",
+      "page": 6,
+      "symbol": "U5 / B0505-1W",
+      "pin": "Pin 3: -Vout",
+      "net": "GND_RS232",
+      "confidence": "HIGH",
+      "evidence": "The source drawing labels U5 pin 3 as -Vout; its output-side connection is labelled GND_RS232.",
+      "evidence_type": "VECTOR_GEOMETRY",
+      "status": "SOURCE_REVIEWED_REFERENCE_ONLY"
+    },
+    {
+      "resolution_id": "REF-009",
+      "page": 7,
+      "symbol": "U9 / B0505-1W",
+      "pin": "Pin 1: -Vin",
+      "net": "GNDREF",
+      "confidence": "HIGH",
+      "evidence": "The source drawing labels U9 pin 1 as -Vin; its input-side connection is labelled GNDREF.",
+      "evidence_type": "VECTOR_GEOMETRY",
+      "status": "SOURCE_REVIEWED_REFERENCE_ONLY"
+    },
+    {
+      "resolution_id": "REF-010",
+      "page": 7,
+      "symbol": "U9 / B0505-1W",
+      "pin": "Pin 3: -Vout",
+      "net": "GND_RS485",
+      "confidence": "HIGH",
+      "evidence": "The source drawing labels U9 pin 3 as -Vout; its output-side connection is labelled GND_RS485.",
+      "evidence_type": "VECTOR_GEOMETRY",
+      "status": "SOURCE_REVIEWED_REFERENCE_ONLY"
+    }
+  ],
+  "unresolved_policy": "OCR token does not prove symbol identity or pin anchor; only listed reviewed facts carry pin/net mapping.",
+  "status": "PARTIAL_EVIDENCE_READY_BLOCKED_FOR_FULL_SYMBOL_PIN_TOPOLOGY"
+}

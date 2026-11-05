@@ -1,0 +1,12 @@
+{
+  "G3": "PARTIAL_EVIDENCE_READY_BLOCKED",
+  "G4": "PARTIAL_GRAPH_EVIDENCE_READY_BLOCKED",
+  "symbol_ref_candidates": 58,
+  "net_label_candidates": 63,
+  "reviewed_pin_net_facts": 6,
+  "line_primitives_not_classified_as_wires": 70278,
+  "shared_endpoint_candidates": 50271,
+  "net_membership_claims": 0,
+  "kicad_netlist_generated": false,
+  "tests": "6/6 PASS"
+}

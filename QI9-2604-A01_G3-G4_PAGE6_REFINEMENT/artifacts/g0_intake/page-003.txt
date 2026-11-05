@@ -1,0 +1,78 @@
+                                                                                                  MFE2-0003
+                               R2 CONFIDENTIAL
+Size: A4                                                                                        Attachment 04/ Rev.02
+
+
+ No.         Part Name              Part Code          Maker       Q'ty  Unit            Symbol            Remark
+
+  21  Ethernet connector           HR911105A         Hanrun       1    pcs  J5
+
+
+  22 Terminal (Header + Plug)        KF-3.81-13-R           Any        1    pcs  J6
+
+
+  23  Terminal (Header + Plug)        KF-3.81-10-R           Any        1    pcs  J7
+
+
+  24 Inductor                     33uH              Any        1    pcs  L1
+
+
+  25  Inductor                     10uH              Any        1    pcs  L2
+
+                                                    Alpha & Omega
+  26  P-Mosfet                   AO3407A                       1    pcs  Q1
+                                                    Semiconductor
+
+  27 Transistor                    BCX56            NXP        8    pcs  Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9
+
+                                                                                  R1,R52,R53,R56,R57,R60,R61,
+  28  Resistor                         2k2              Any        11   pcs
+                                                                              R64,R65,RN1,RN2
+                                                                                   R2,R3,R7,R14,R15,R21,R22,R23,
+  29  Resistor                       360              Any       11   pcs
+                                                                            R31,RN6,RN7
+                                                                                   R4,R5,R6,R12,R16,R20,R26,R27,
+  30  Resistor                         5k1              Any        12   pcs
+                                                                               R28,R33,R36,R37
+
+  31  Resistor                       200k              Any        1    pcs  R10
+
+
+  32  Resistor                        68k              Any        1    pcs  R11
+
+
+  33  Resistor                         1k6              Any        1    pcs  R13
+
+                                                                                 R17,R29,R30,R34,R35,R38,R39,
+  34  Resistor                        220              Any        21   pcs  R40,R41,R42,R43,R44,R45,R46,
+                                                                               R47,R48,R49,R50,R51,RN5,RN8
+
+  35  Resistor                         0               Any        5    pcs  R18,R19,R24,R25,R32
+
+                                                                                 R54,R55,R58,R59,R62,R63,R66,
+  36  Resistor                        510              Any        10   pcs
+                                                                            R67,RN3,RN4
+
+  37 SMD button               SMD 3x6            Any        2    pcs  SW1,SW2                       Red
+
+                                                          Texas
+  38 Power regulator               LM2596S-5                       1    pcs  U1
+                                                        Instruments
+                                                          ST
+  39 USB TVS diode                USBLC6-2P6                       1    pcs  U2
+                                                       Microelectronics
+
+  40 Power regulator              MP1584          Monolithic     1    pcs  U3
+
+
+  41 Power control                  LTC4412        Analog Devices    1    pcs  U4
+
+
+  42  Isolated power               B0505-1W         Mornsun      2    pcs  U5,U9
+
+
+ 2nd Approved by   1st Approved by  Checked by   Designed by        Page name/ Machine code        Rank   Rev.  Page
+                                                       MODULE IO
+                                                      N.C.BINH                QI9-2604-A01
+                                                                                           A      01     3                                                    Mar. 2026
+                                                                                   Part list 2

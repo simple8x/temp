@@ -1,0 +1,1594 @@
+{
+  "schema": "ocr-word-candidates/v1",
+  "source_page": 6,
+  "dpi": 200,
+  "words": [
+    {
+      "text": "MFE2-0003",
+      "confidence_raw": "90.479294",
+      "bbox_px": [
+        2158,
+        32,
+        125,
+        18
+      ],
+      "block_num": "1",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Attachment",
+      "confidence_raw": "93.215370",
+      "bbox_px": [
+        2023,
+        65,
+        133,
+        19
+      ],
+      "block_num": "1",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "04/",
+      "confidence_raw": "92.713837",
+      "bbox_px": [
+        2164,
+        64,
+        38,
+        24
+      ],
+      "block_num": "1",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "Rev.02",
+      "confidence_raw": "90.812653",
+      "bbox_px": [
+        2211,
+        66,
+        72,
+        18
+      ],
+      "block_num": "1",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "Size:",
+      "confidence_raw": "92.396179",
+      "bbox_px": [
+        37,
+        69,
+        49,
+        18
+      ],
+      "block_num": "3",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "A4",
+      "confidence_raw": "92.396179",
+      "bbox_px": [
+        95,
+        69,
+        29,
+        18
+      ],
+      "block_num": "3",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "+5V_RS232",
+      "confidence_raw": "90.630890",
+      "bbox_px": [
+        558,
+        305,
+        83,
+        13
+      ],
+      "block_num": "4",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "U5",
+      "confidence_raw": "83.979156",
+      "bbox_px": [
+        431,
+        335,
+        17,
+        12
+      ],
+      "block_num": "4",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "BO505-1W",
+      "confidence_raw": "84.564827",
+      "bbox_px": [
+        400,
+        355,
+        79,
+        12
+      ],
+      "block_num": "4",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "T",
+      "confidence_raw": "91.787758",
+      "bbox_px": [
+        439,
+        383,
+        1,
+        9
+      ],
+      "block_num": "5",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "+Vin",
+      "confidence_raw": "30.514137",
+      "bbox_px": [
+        386,
+        395,
+        31,
+        11
+      ],
+      "block_num": "5",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "30.514137",
+      "bbox_px": [
+        439,
+        401,
+        1,
+        11
+      ],
+      "block_num": "5",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "+Vout",
+      "confidence_raw": "82.310318",
+      "bbox_px": [
+        452,
+        396,
+        42,
+        11
+      ],
+      "block_num": "5",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "!",
+      "confidence_raw": "61.478748",
+      "bbox_px": [
+        439,
+        421,
+        1,
+        11
+      ],
+      "block_num": "6",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "“vin",
+      "confidence_raw": "30.025070",
+      "bbox_px": [
+        386,
+        435,
+        31,
+        11
+      ],
+      "block_num": "6",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "30.025070",
+      "bbox_px": [
+        439,
+        441,
+        1,
+        11
+      ],
+      "block_num": "6",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "Vout",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        452,
+        436,
+        42,
+        11
+      ],
+      "block_num": "6",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "+5V_RS232",
+      "confidence_raw": "84.382408",
+      "bbox_px": [
+        1278,
+        425,
+        84,
+        13
+      ],
+      "block_num": "6",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "c10",
+      "confidence_raw": "2.700745",
+      "bbox_px": [
+        1250,
+        467,
+        28,
+        12
+      ],
+      "block_num": "15",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "GNDREF",
+      "confidence_raw": "91.827873",
+      "bbox_px": [
+        252,
+        525,
+        55,
+        12
+      ],
+      "block_num": "16",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "92.296669",
+      "bbox_px": [
+        558,
+        525,
+        83,
+        13
+      ],
+      "block_num": "16",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": ".",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        1195,
+        501,
+        9,
+        31
+      ],
+      "block_num": "16",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "100nF",
+      "confidence_raw": "81.441269",
+      "bbox_px": [
+        1240,
+        525,
+        43,
+        12
+      ],
+      "block_num": "16",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "+5V_RS232",
+      "confidence_raw": "90.787209",
+      "bbox_px": [
+        928,
+        533,
+        83,
+        13
+      ],
+      "block_num": "17",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "c412",
+      "confidence_raw": "38.135117",
+      "bbox_px": [
+        1095,
+        541,
+        26,
+        28
+      ],
+      "block_num": "17",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "91.026993",
+      "bbox_px": [
+        1157,
+        545,
+        85,
+        13
+      ],
+      "block_num": "17",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "413",
+      "confidence_raw": "52.597397",
+      "bbox_px": [
+        1513,
+        559,
+        26,
+        12
+      ],
+      "block_num": "17",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "+5V_RS232",
+      "confidence_raw": "72.862076",
+      "bbox_px": [
+        468,
+        585,
+        83,
+        13
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "{I",
+      "confidence_raw": "64.467560",
+      "bbox_px": [
+        1101,
+        574,
+        17,
+        35
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "At",
+      "confidence_raw": "52.088631",
+      "bbox_px": [
+        1176,
+        578,
+        7,
+        11
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "ca+",
+      "confidence_raw": "17.343597",
+      "bbox_px": [
+        1209,
+        585,
+        29,
+        12
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "{I",
+      "confidence_raw": "65.609116",
+      "bbox_px": [
+        1521,
+        574,
+        17,
+        35
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "22uF",
+      "confidence_raw": "69.025452",
+      "bbox_px": [
+        1097,
+        617,
+        34,
+        12
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "22uF",
+      "confidence_raw": "73.457184",
+      "bbox_px": [
+        1513,
+        613,
+        34,
+        12
+      ],
+      "block_num": "18",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "5",
+      "confidence_raw": "73.934677",
+      "bbox_px": [
+        1456,
+        637,
+        7,
+        12
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "+5V_RS232",
+      "confidence_raw": "82.751190",
+      "bbox_px": [
+        1618,
+        627,
+        83,
+        13
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "J",
+      "confidence_raw": "32.686050",
+      "bbox_px": [
+        319,
+        634,
+        46,
+        58
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "c1-",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        1209,
+        645,
+        29,
+        12
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "us",
+      "confidence_raw": "62.747719",
+      "bbox_px": [
+        393,
+        663,
+        18,
+        12
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "GNO_RS232",
+      "confidence_raw": "73.077591",
+      "bbox_px": [
+        220,
+        675,
+        83,
+        13
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "4"
+    },
+    {
+      "text": "HCPL-0600",
+      "confidence_raw": "62.428200",
+      "bbox_px": [
+        391,
+        680,
+        87,
+        12
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "4"
+    },
+    {
+      "text": "}2—<*]",
+      "confidence_raw": "29.855408",
+      "bbox_px": [
+        1436,
+        669,
+        132,
+        44
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "4"
+    },
+    {
+      "text": "SMO",
+      "confidence_raw": "72.644501",
+      "bbox_px": [
+        393,
+        697,
+        29,
+        12
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "5"
+    },
+    {
+      "text": "22uF",
+      "confidence_raw": "81.179916",
+      "bbox_px": [
+        1519,
+        699,
+        34,
+        12
+      ],
+      "block_num": "19",
+      "par_num": "1",
+      "line_num": "5"
+    },
+    {
+      "text": "+3.3V",
+      "confidence_raw": "84.469223",
+      "bbox_px": [
+        249,
+        715,
+        43,
+        12
+      ],
+      "block_num": "20",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "D10",
+      "confidence_raw": "7.019157",
+      "bbox_px": [
+        918,
+        715,
+        26,
+        12
+      ],
+      "block_num": "20",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "a7",
+      "confidence_raw": "0.207153",
+      "bbox_px": [
+        296,
+        729,
+        31,
+        28
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "A",
+      "confidence_raw": "19.103485",
+      "bbox_px": [
+        478,
+        735,
+        3,
+        2
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "veLtow",
+      "confidence_raw": "38.495033",
+      "bbox_px": [
+        889,
+        737,
+        54,
+        12
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        965,
+        735,
+        13,
+        23
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "He",
+      "confidence_raw": "53.606415",
+      "bbox_px": [
+        1436,
+        730,
+        27,
+        43
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "52.148151",
+      "bbox_px": [
+        1525,
+        734,
+        40,
+        35
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "C16",
+      "confidence_raw": "64.068047",
+      "bbox_px": [
+        1523,
+        735,
+        26,
+        12
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "a!",
+      "confidence_raw": "50.164719",
+      "bbox_px": [
+        377,
+        759,
+        40,
+        11
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "é",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        481,
+        765,
+        1,
+        3
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "Yellow",
+      "confidence_raw": "96.531059",
+      "bbox_px": [
+        910,
+        753,
+        46,
+        30
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "22uF",
+      "confidence_raw": "81.817780",
+      "bbox_px": [
+        1521,
+        757,
+        34,
+        12
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "86.742157",
+      "bbox_px": [
+        1653,
+        757,
+        84,
+        13
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "14",
+      "confidence_raw": "79.966354",
+      "bbox_px": [
+        1451,
+        777,
+        17,
+        12
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "cS",
+      "confidence_raw": "25.374702",
+      "bbox_px": [
+        1548,
+        783,
+        42,
+        8
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "C_t",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        1548,
+        792,
+        43,
+        9
+      ],
+      "block_num": "21",
+      "par_num": "1",
+      "line_num": "4"
+    },
+    {
+      "text": "(UART_TXO",
+      "confidence_raw": "31.185272",
+      "bbox_px": [
+        849,
+        782,
+        77,
+        19
+      ],
+      "block_num": "22",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "ESP32_TX0",
+      "confidence_raw": "45.353298",
+      "bbox_px": [
+        257,
+        806,
+        79,
+        12
+      ],
+      "block_num": "23",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "5",
+      "confidence_raw": "31.126213",
+      "bbox_px": [
+        377,
+        803,
+        5,
+        7
+      ],
+      "block_num": "23",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "R18",
+      "confidence_raw": "52.049919",
+      "bbox_px": [
+        1555,
+        803,
+        26,
+        12
+      ],
+      "block_num": "23",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "7",
+      "confidence_raw": "92.105766",
+      "bbox_px": [
+        1455,
+        817,
+        8,
+        12
+      ],
+      "block_num": "23",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "0",
+      "confidence_raw": "70.595535",
+      "bbox_px": [
+        1566,
+        819,
+        7,
+        12
+      ],
+      "block_num": "23",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "89.245903",
+      "bbox_px": [
+        1877,
+        575,
+        84,
+        13
+      ],
+      "block_num": "25",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "SHIELD_RS232",
+      "confidence_raw": "91.084702",
+      "bbox_px": [
+        1717,
+        605,
+        105,
+        13
+      ],
+      "block_num": "28",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "SHIELD_RS232",
+      "confidence_raw": "45.495613",
+      "bbox_px": [
+        1972,
+        791,
+        106,
+        13
+      ],
+      "block_num": "35",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "DB9-Female",
+      "confidence_raw": "68.831886",
+      "bbox_px": [
+        1922,
+        815,
+        93,
+        12
+      ],
+      "block_num": "36",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "J3",
+      "confidence_raw": "79.367546",
+      "bbox_px": [
+        1921,
+        835,
+        15,
+        12
+      ],
+      "block_num": "36",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "57.637177",
+      "bbox_px": [
+        487,
+        865,
+        85,
+        13
+      ],
+      "block_num": "44",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "fel",
+      "confidence_raw": "39.532314",
+      "bbox_px": [
+        1814,
+        837,
+        34,
+        72
+      ],
+      "block_num": "46",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Lt",
+      "confidence_raw": "12.242157",
+      "bbox_px": [
+        1814,
+        738,
+        34,
+        51
+      ],
+      "block_num": "46",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "b1i2",
+      "confidence_raw": "21.835762",
+      "bbox_px": [
+        1581,
+        941,
+        26,
+        24
+      ],
+      "block_num": "50",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "b13",
+      "confidence_raw": "45.265396",
+      "bbox_px": [
+        1712,
+        945,
+        26,
+        12
+      ],
+      "block_num": "50",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "C17",
+      "confidence_raw": "49.531155",
+      "bbox_px": [
+        461,
+        965,
+        28,
+        12
+      ],
+      "block_num": "50",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "SMAJ15CA",
+      "confidence_raw": "18.744011",
+      "bbox_px": [
+        1535,
+        965,
+        73,
+        12
+      ],
+      "block_num": "50",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "SMAJL5CA",
+      "confidence_raw": "24.299858",
+      "bbox_px": [
+        1711,
+        965,
+        74,
+        12
+      ],
+      "block_num": "50",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "us",
+      "confidence_raw": "52.982147",
+      "bbox_px": [
+        395,
+        1013,
+        18,
+        12
+      ],
+      "block_num": "51",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "67.022369",
+      "bbox_px": [
+        493,
+        984,
+        4,
+        35
+      ],
+      "block_num": "51",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "1",
+      "confidence_raw": "15.469193",
+      "bbox_px": [
+        539,
+        1001,
+        21,
+        21
+      ],
+      "block_num": "51",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "GNOREF",
+      "confidence_raw": "19.057465",
+      "bbox_px": [
+        570,
+        1017,
+        55,
+        12
+      ],
+      "block_num": "51",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "HCPL-0600",
+      "confidence_raw": "83.999237",
+      "bbox_px": [
+        393,
+        1030,
+        87,
+        12
+      ],
+      "block_num": "52",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "89.874069",
+      "bbox_px": [
+        1731,
+        1033,
+        84,
+        13
+      ],
+      "block_num": "52",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "SMO",
+      "confidence_raw": "76.023956",
+      "bbox_px": [
+        393,
+        1045,
+        29,
+        12
+      ],
+      "block_num": "52",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "+5V_RS232",
+      "confidence_raw": "80.139977",
+      "bbox_px": [
+        548,
+        1055,
+        84,
+        13
+      ],
+      "block_num": "52",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "R24",
+      "confidence_raw": "90.543335",
+      "bbox_px": [
+        516,
+        1081,
+        26,
+        12
+      ],
+      "block_num": "53",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "360",
+      "confidence_raw": "95.767296",
+      "bbox_px": [
+        520,
+        1097,
+        27,
+        12
+      ],
+      "block_num": "53",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "92.781601",
+      "bbox_px": [
+        1278,
+        1065,
+        83,
+        13
+      ],
+      "block_num": "58",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "GND_RS232",
+      "confidence_raw": "90.510742",
+      "bbox_px": [
+        1617,
+        1065,
+        84,
+        13
+      ],
+      "block_num": "58",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "!",
+      "confidence_raw": "35.390312",
+      "bbox_px": [
+        442,
+        1073,
+        1,
+        11
+      ],
+      "block_num": "59",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "!",
+      "confidence_raw": "35.343010",
+      "bbox_px": [
+        442,
+        1091,
+        1,
+        11
+      ],
+      "block_num": "59",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "!",
+      "confidence_raw": "41.482128",
+      "bbox_px": [
+        442,
+        1109,
+        1,
+        11
+      ],
+      "block_num": "59",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "iff2",
+      "confidence_raw": "0.000000",
+      "bbox_px": [
+        442,
+        1123,
+        41,
+        15
+      ],
+      "block_num": "59",
+      "par_num": "1",
+      "line_num": "4"
+    },
+    {
+      "text": "1",
+      "confidence_raw": "40.776581",
+      "bbox_px": [
+        442,
+        1145,
+        1,
+        11
+      ],
+      "block_num": "59",
+      "par_num": "1",
+      "line_num": "5"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "48.282223",
+      "bbox_px": [
+        442,
+        1163,
+        1,
+        11
+      ],
+      "block_num": "59",
+      "par_num": "1",
+      "line_num": "6"
+    },
+    {
+      "text": "GNOREF",
+      "confidence_raw": "89.179871",
+      "bbox_px": [
+        321,
+        1196,
+        56,
+        21
+      ],
+      "block_num": "63",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "2\"4",
+      "confidence_raw": "60.933952",
+      "bbox_px": [
+        769,
+        1439,
+        31,
+        22
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Approved",
+      "confidence_raw": "96.562675",
+      "bbox_px": [
+        808,
+        1442,
+        111,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "by",
+      "confidence_raw": "96.999954",
+      "bbox_px": [
+        929,
+        1442,
+        26,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "92.949417",
+      "bbox_px": [
+        957,
+        1435,
+        13,
+        35
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "1°t",
+      "confidence_raw": "27.345589",
+      "bbox_px": [
+        980,
+        1441,
+        25,
+        20
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Approved",
+      "confidence_raw": "93.259041",
+      "bbox_px": [
+        1013,
+        1442,
+        111,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "by|",
+      "confidence_raw": "92.277794",
+      "bbox_px": [
+        1134,
+        1442,
+        26,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Checked",
+      "confidence_raw": "96.503586",
+      "bbox_px": [
+        1192,
+        1442,
+        94,
+        19
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "by",
+      "confidence_raw": "96.847511",
+      "bbox_px": [
+        1302,
+        1442,
+        26,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "|",
+      "confidence_raw": "96.842819",
+      "bbox_px": [
+        1339,
+        1435,
+        13,
+        35
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Designed",
+      "confidence_raw": "96.576706",
+      "bbox_px": [
+        1368,
+        1442,
+        103,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "by",
+      "confidence_raw": "96.983696",
+      "bbox_px": [
+        1481,
+        1442,
+        26,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Page",
+      "confidence_raw": "92.775658",
+      "bbox_px": [
+        1625,
+        1443,
+        53,
+        23
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "name/",
+      "confidence_raw": "92.775658",
+      "bbox_px": [
+        1687,
+        1441,
+        75,
+        24
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "Machine",
+      "confidence_raw": "96.555367",
+      "bbox_px": [
+        1771,
+        1442,
+        97,
+        19
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "code",
+      "confidence_raw": "96.783043",
+      "bbox_px": [
+        1876,
+        1442,
+        54,
+        19
+      ],
+      "block_num": "65",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "MODULE",
+      "confidence_raw": "96.254173",
+      "bbox_px": [
+        1711,
+        1488,
+        101,
+        18
+      ],
+      "block_num": "67",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "IO",
+      "confidence_raw": "62.819897",
+      "bbox_px": [
+        1821,
+        1488,
+        24,
+        18
+      ],
+      "block_num": "67",
+      "par_num": "1",
+      "line_num": "1"
+    },
+    {
+      "text": "N.C.BINH",
+      "confidence_raw": "91.475136",
+      "bbox_px": [
+        1392,
+        1526,
+        90,
+        16
+      ],
+      "block_num": "67",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "QI9-2604-A01",
+      "confidence_raw": "69.161392",
+      "bbox_px": [
+        1700,
+        1521,
+        156,
+        21
+      ],
+      "block_num": "67",
+      "par_num": "1",
+      "line_num": "2"
+    },
+    {
+      "text": "Mar.",
+      "confidence_raw": "96.544701",
+      "bbox_px": [
+        1387,
+        1556,
+        44,
+        16
+      ],
+      "block_num": "67",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "2026",
+      "confidence_raw": "96.544701",
+      "bbox_px": [
+        1440,
+        1556,
+        48,
+        16
+      ],
+      "block_num": "67",
+      "par_num": "1",
+      "line_num": "3"
+    },
+    {
+      "text": "RS232",
+      "confidence_raw": "91.767746",
+      "bbox_px": [
+        1747,
+        1574,
+        65,
+        18
+      ],
+      "block_num": "69",
+      "par_num": "1",
+      "line_num": "1"
+    }
+  ],
+  "warning": "OCR is candidate text, not verified label association."
+}

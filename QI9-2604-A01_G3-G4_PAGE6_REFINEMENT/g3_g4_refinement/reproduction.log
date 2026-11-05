@@ -1,0 +1,15 @@
+{
+  "source_pdf_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+  "source_page": 6,
+  "page_dimensions_pt": [
+    841.9200439453125,
+    595.3200073242188
+  ],
+  "line_primitives": 9503,
+  "wire_like_stroke_candidates": 767,
+  "small_filled_mark_candidates": 68,
+  "verified_wire_segments": 0,
+  "verified_junctions": 0,
+  "verified_net_memberships": 0,
+  "status": "CANDIDATE_CLASSIFICATION_ONLY_BLOCKED_FOR_ELECTRICAL_CONNECTIVITY"
+}
