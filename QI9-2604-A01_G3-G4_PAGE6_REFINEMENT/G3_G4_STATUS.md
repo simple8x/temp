@@ -30,3 +30,11 @@ python -m unittest -v test_g3_g4.py
 ```
 
 No source PDF mutation is performed.
+
+
+## Algorithm repair branch — 2026-11-05
+- Added `g3_g4_geometry.py` with explicit endpoint/T/crossing/overlap/degenerate classification and fail-closed electrical evidence gates.
+- Added `test_g3_g4_geometry.py`: 14 local regression tests PASS.
+- The repair is a reusable geometry/evidence layer; existing extracted primitives still have no independently reviewed wire-role labels or junction-dot records. Therefore this patch does not convert the existing 70,278 primitives into verified wires and does not change G3/G4 release status.
+- G3/G4 remain BLOCKED for full electrical topology and netlist generation until the actual PDF page evidence is annotated and fed into the classifier.
+- No KiCad netlist generated; no source data changed.
