@@ -1,5 +1,7 @@
 import unittest
 from g3_g4_geometry import *
+
+
 class GeometryEvidenceTests(unittest.TestCase):
  def s(self,i,a,b,role="WIRE",ev="SOURCE_REVIEWED",path=None): return Segment(i,6,a,b,role,ev,path)
  def test_shared_endpoint_unknown(self):
@@ -32,4 +34,39 @@ class GeometryEvidenceTests(unittest.TestCase):
   self.assertEqual(validate_label_attachment(LabelAnchor("RXN",(1,0),"review",True),s)["status"],"VERIFIED_ATTACHMENT")
  def test_near_label_not_attached(self):
   self.assertEqual(validate_label_attachment(LabelAnchor("RXN",(1,.1),"review",True),self.s("w",(0,0),(2,0)))["status"],"UNKNOWN")
+
+
+class SpatialIndexTests(unittest.TestCase):
+ def test_broadphase_pair_count_and_unknown_policy(self):
+  ss=[Segment("a",6,(0,0),(10,0)),Segment("b",6,(5,-5),(5,5)),Segment("far",6,(50,50),(60,50))]
+  r=analyze_connectivity(ss)
+  self.assertEqual(r["broadphase_pair_count"],1)
+  self.assertEqual(r["candidate_count"],1)
+  self.assertEqual(r["verified_join_count"],0)
+  self.assertTrue(r["policy"]["spatial_index_is_candidate_pruning_only"])
+ def test_long_segment_fallback(self):
+  ss=[Segment("long",6,(0,0),(1000,1000)),Segment("cross",6,(500,499),(500,501))]
+  pairs=candidate_pairs(ss,cell_size=1,max_cells_per_segment=8)
+  self.assertIn((0,1),pairs)
+ def test_page_scoped_index(self):
+  ss=[Segment("a",6,(0,0),(10,0)),Segment("b",7,(5,0),(5,5))]
+  self.assertEqual(candidate_pairs(ss),[])
+ def test_invalid_grid_size(self):
+  with self.assertRaises(ValueError):
+   candidate_pairs([Segment("a",6,(0,0),(1,1))],cell_size=0)
+ def test_random_intersection_pairs_not_pruned(self):
+  import random
+  rng=random.Random(17)
+  ss=[]
+  for i in range(120):
+   x,y=rng.uniform(-20,20),rng.uniform(-20,20)
+   dx,dy=rng.uniform(-5,5),rng.uniform(-5,5)
+   ss.append(Segment(str(i),6,(x,y),(x+dx,y+dy)))
+  pairs=set(candidate_pairs(ss,cell_size=2))
+  for i in range(len(ss)):
+   for j in range(i+1,len(ss)):
+    if relation(ss[i],ss[j],1e-4)[0]!="DISJOINT":
+     self.assertIn((i,j),pairs)
+
+
 if __name__=="__main__": unittest.main(verbosity=2)
