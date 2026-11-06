@@ -67,3 +67,8 @@ def test_authoritative_qi9_page5_detects_explicit_no_connect_marks():
     assert no_connect, "page 5 visibly contains explicit NC crosses; parser must detect at least one"
     assert all(term.anchor_kind == "no_connect_cross" for term in no_connect)
     assert all(term.nc_mark_distance <= 1.6 for term in no_connect)
+    assert all(term.group >= 0 and topo.groups[term.group].ref == "J2" for term in no_connect)
+    from pdf2kicad.netlist import pin_tokens
+    pin_map, _ = pin_tokens(topo, comps, words)
+    assert all(id(term) in pin_map for term in no_connect), "every page-5 J2 NC pin must recover its printed pin token"
+    assert len({pin_map[id(term)] for term in no_connect}) == len(no_connect)
