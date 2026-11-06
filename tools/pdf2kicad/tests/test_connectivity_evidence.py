@@ -20,6 +20,7 @@ def test_connectivity_ledger_traces_parser_membership_to_wire_primitives():
             Seg(20.0, 5.0, 30.0, 5.0, "line"),
         ],
         terminals=[attached, unresolved],
+        groups=[SimpleNamespace(ref=""), SimpleNamespace(ref=""), SimpleNamespace(ref="R1")],
     )
     component = SimpleNamespace(ref="R1", terminals=[attached, unresolved])
     evidence = build_connectivity_evidence(
@@ -52,6 +53,8 @@ def test_conflicting_parser_pin_ownership_is_reported_not_hidden():
         W=[0, 1],
         comps=[[0], [1]],
         segs=[Seg(0, 5, 10, 5, "line"), Seg(20, 5, 30, 5, "line")],
+        terminals=[a, b],
+        groups=[SimpleNamespace(ref=""), SimpleNamespace(ref=""), SimpleNamespace(ref="U1")],
     )
     component = SimpleNamespace(ref="U1", terminals=[a, b])
     evidence = build_connectivity_evidence(
