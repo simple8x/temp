@@ -53,6 +53,54 @@ def _is_pin_text(w, comps, topo, wire_tol=3.0, terminal_window=12.0):
     return False
 
 
+def assign_no_connect_terminals(topo, comps, max_distance=24.0, min_alignment=0.65, score_margin=3.0):
+    """Associate marked NC pin stubs with one unambiguous referenced component.
+
+    The NC mark is at the free end of the pin stub, so the wire direction points
+    from the mark toward the component. Assignment is geometry-only and fails
+    closed when two component boxes are similarly plausible.
+    """
+    assigned = []
+    group_index = {id(group): index for index, group in enumerate(topo.groups)}
+    for terminal in topo.terminals:
+        if terminal.kind != "nc" or terminal.group >= 0 or not (terminal.dx or terminal.dy):
+            continue
+        candidates = []
+        for group in comps:
+            if not group.ref or id(group) not in group_index:
+                continue
+            qx = min(max(terminal.x, group.x0), group.x1)
+            qy = min(max(terminal.y, group.y0), group.y1)
+            vx, vy = qx - terminal.x, qy - terminal.y
+            distance = math.hypot(vx, vy)
+            if distance > max_distance:
+                continue
+            alignment = (vx * terminal.dx + vy * terminal.dy) / distance if distance else 1.0
+            if alignment < min_alignment:
+                continue
+            score = distance + (1.0 - alignment) * 8.0
+            candidates.append((score, distance, alignment, group))
+        candidates.sort(key=lambda item: item[0])
+        if not candidates:
+            continue
+        if len(candidates) > 1 and candidates[1][0] - candidates[0][0] < score_margin:
+            continue
+        score, distance, alignment, group = candidates[0]
+        terminal.group = group_index[id(group)]
+        if terminal not in group.no_connect_terminals:
+            group.no_connect_terminals.append(terminal)
+        assigned.append({
+            "ref": group.ref,
+            "terminal_x": round(terminal.x, 4),
+            "terminal_y": round(terminal.y, 4),
+            "distance_to_component_box": round(distance, 4),
+            "direction_alignment": round(alignment, 4),
+            "assignment_score": round(score, 4),
+            "status": "GEOMETRIC_COMPONENT_ASSOCIATION_NOT_PIN_NET_VERIFICATION",
+        })
+    return assigned
+
+
 def assign(topo, words):
     """words: decoded text words. Returns components [{ref,value,group,terminals}] and nets."""
     isref = lambda t: REF.match(t) and not re.fullmatch(r"[AB]\d{1,2}", t)   # A4/B7 = USB-C pin names
