@@ -1,5 +1,5 @@
 """pdf2kicad PAGE-LEVEL extractor (experimental).  Usage: python -m pdf2kicad.cli in.pdf PAGE outdir [--info] [--mode M] [--scale S]  (writes netlist.csv + parts.csv for tools/gen_kicad_sch.py)"""
-import csv, re, sys
+import csv, json, re, sys
 from .primitives import load_page
 from .normalize import classify, text_layer_words, estimate_scale
 from . import glyphs as G, font, textdecode as T, topology as TP, netlist as NL
@@ -266,6 +266,12 @@ def main(argv):
                 nm = min(cand, key=lambda x: (abs((x.x0 + x.x1) / 2 - ix) + abs((x.y0 + x.y1) / 2 - iy)), default=None)
                 side = ("right" if t.dx > 0.5 else "left" if t.dx < -0.5 else "bottom" if t.dy > 0.5 else "top")
                 w.writerow([g.ref, pin, nm.text if nm else "", side])
+    # Preserve explicit filled-junction evidence separately from inferred net membership.
+    from .electrical_evidence import classify_page
+    junction_evidence = classify_page(pdf, page)
+    with open(os.path.join(outdir, "junction_evidence.json"), "w", encoding="utf-8") as f:
+        json.dump(junction_evidence, f, indent=2)
+        f.write("\\n")
     print("%d components, %d nets -> %s" % (len({g.ref for g in comps}), len(nets), outdir))
     print("rectangle symbol boxes: %d; internal H/V primitives excluded: %d" %
           (len(topo.symbol_boxes), topo.rectangle_internal_count))
