@@ -118,10 +118,12 @@ def _core(pg, use, pre=None):
         text = [w for w in words if ok(w) and not xs(w)]
         drop = {key(s) for w in words if ok(w) or xs(w) for g in w.glyphs for s in g.segs}
         marks = [((w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2) for w in words if xs(w)]
+        marks.extend(TP.find_no_connect_crosses(pg.segs))
+        marks = list({(round(x, 2), round(y, 2)): (x, y) for x, y in marks}.values())
         segs = [s for s in pg.segs if key((s.x0, s.y0, s.x1, s.y1)) not in drop]
     else:                                              # textlayer: text is already text
         text = text_layer_words(pg)
-        marks = []
+        marks = TP.find_no_connect_crosses(pg.segs)
         segs = list(pg.segs)
     # sheet frame / title block: long lines and everything in the bottom strip (84% of height)
     lim = 0.84 * pg.height
