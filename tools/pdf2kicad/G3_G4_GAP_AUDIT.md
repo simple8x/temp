@@ -66,3 +66,6 @@ The NC marker and the opposite symbol-body endpoint can be two geometric endpoin
 **Pin-number recovery is still not verified.** The source-PDF page-5 test currently fails its requirement that all 10 J2 NC marks map to printed pin tokens. The vector words A1-A12 and B1-B12 are decoded, but the existing mutual-nearest pin-token matcher has not yet assigned them to those NC terminals. Do not infer the pin number from proximity alone.
 
 The current six-gate status remains G3/G4 BLOCKED. Parser-derived net memberships are not independent verification, and KiCad ERC/reference-netlist reconciliation are still outstanding.
+
+
+CI interpretation rule: a passing regression confirms execution of the parser and its fixtures only. It does not establish that every extracted pin identity, net membership, or electrical connection matches the source schematic. G3/G4 cannot be promoted to PASS until the independent pin/net reference comparison and KiCad ERC review are recorded.
