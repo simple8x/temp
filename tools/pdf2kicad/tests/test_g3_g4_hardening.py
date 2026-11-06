@@ -12,6 +12,7 @@ from pdf2kicad.topology import (
     is_arrowhead_geometry,
     terminal_status,
     find_no_connect_crosses,
+    suppress_nc_stub_body_ends,
 )
 from pdf2kicad.netlist import PINTOK, _is_pin_text, _netlike, value_shape_matches
 
@@ -286,3 +287,26 @@ def test_nc_reassignment_escapes_unreferenced_geometry_group():
     assert term.group == 1
     assert orphan.no_connect_terminals == []
     assert component.no_connect_terminals == [term]
+
+
+
+def test_nc_stub_suppresses_duplicate_body_end_without_creating_a_net_pin():
+    marked = Terminal(0, 0, 7, kind="nc")
+    body_end = Terminal(10, 0, 7, kind="attach", body=3)
+    conflicts = suppress_nc_stub_body_ends([marked, body_end])
+
+    assert conflicts == []
+    assert marked.body == 3
+    assert body_end.kind == "nc_stub_body_end"
+    assert terminal_status(body_end) == "SUPPRESSED_NC_STUB_BODY_END"
+
+
+def test_nc_stub_with_multiple_attached_branches_fails_closed():
+    marked = Terminal(0, 0, 7, kind="nc")
+    a = Terminal(10, 0, 7, kind="attach", body=3)
+    b = Terminal(10, 5, 7, kind="attach", body=4)
+    conflicts = suppress_nc_stub_body_ends([marked, a, b])
+
+    assert len(conflicts) == 1
+    assert all(t.kind == "nc_topology_conflict" for t in [marked, a, b])
+    assert all(terminal_status(t) == "NC_STUB_TOPOLOGY_CONFLICT" for t in [marked, a, b])
