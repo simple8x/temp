@@ -120,6 +120,9 @@ class Terminal:
     dx: float = 0.0               # direction the wire leaves the body (unit vector)
     dy: float = 0.0
     anchor_kind: str = ""
+    nc_mark_x: float = 0.0
+    nc_mark_y: float = 0.0
+    nc_mark_distance: float = float("inf")
 
 
 def terminal_status(term):
@@ -420,10 +423,19 @@ class Topology:
                                 best = j
                                 break
                         step += 0.4
-                if best >= 0:
-                    t.kind, t.body = "attach", best
-                elif any(math.hypot(x - mx, y - my) <= 1.6 for mx, my in self.marks):
+                # An explicit X/no-connect marker is stronger evidence than geometric
+                # proximity to a symbol body. In KiCad plots the marker is drawn at
+                # the pin endpoint; classifying body attachment first hid real NCs.
+                nearest_mark = min(
+                    ((math.hypot(x - mx, y - my), mx, my) for mx, my in self.marks),
+                    default=(float("inf"), 0.0, 0.0),
+                )
+                t.nc_mark_distance, t.nc_mark_x, t.nc_mark_y = nearest_mark
+                if nearest_mark[0] <= 1.6:
                     t.kind = "nc"
+                    t.anchor_kind = "no_connect_cross"
+                elif best >= 0:
+                    t.kind, t.body = "attach", best
                 terms.append(t)
         self.terminals = terms
 
