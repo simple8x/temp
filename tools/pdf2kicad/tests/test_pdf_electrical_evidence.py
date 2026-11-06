@@ -70,5 +70,9 @@ def test_authoritative_qi9_page5_detects_explicit_no_connect_marks():
     assert all(term.group >= 0 and topo.groups[term.group].ref == "J2" for term in no_connect)
     from pdf2kicad.netlist import pin_tokens
     pin_map, _ = pin_tokens(topo, comps, words)
+    j2 = next(group for group in comps if group.ref == "J2")
+    print("J2 terminals", len(j2.terminals), "NC", len(j2.no_connect_terminals))
+    print("NC pin map", [(round(term.x, 2), round(term.y, 2), pin_map.get(id(term))) for term in no_connect])
+    print("J2 candidates", [(word.text, round(word.x0, 2), round(word.y0, 2)) for word in words if word.text.startswith(("A", "B")) and len(word.text) <= 3])
     assert all(id(term) in pin_map for term in no_connect), "every page-5 J2 NC pin must recover its printed pin token"
     assert len({pin_map[id(term)] for term in no_connect}) == len(no_connect)
