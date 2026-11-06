@@ -63,8 +63,15 @@ def assign_no_connect_terminals(topo, comps, max_distance=24.0, min_alignment=0.
     assigned, diagnostics = [], []
     group_index = {id(group): index for index, group in enumerate(topo.groups)}
     for terminal in topo.terminals:
-        if terminal.kind != "nc" or terminal.group >= 0:
+        if terminal.kind != "nc":
             continue
+        if terminal.group >= 0:
+            current_group = topo.groups[terminal.group]
+            if current_group.ref:
+                continue
+            if terminal in current_group.no_connect_terminals:
+                current_group.no_connect_terminals.remove(terminal)
+            terminal.group = -1
         if not (terminal.dx or terminal.dy):
             diagnostics.append({
                 "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
