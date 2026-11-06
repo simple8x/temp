@@ -3,7 +3,8 @@ on:
   push:
     branches: [import/pdf2kicad]
     paths:
-      - ".github/workflows/pdf2kicad-one-shot.yml"\n      - "tools/pdf2kicad/**"
+      - ".github/workflows/pdf2kicad-one-shot.yml"
+      - "tools/pdf2kicad/**"
   workflow_dispatch:
 permissions:
   contents: read
