@@ -87,6 +87,8 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         "attached_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "attach"),
         "explicit_no_connect_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "nc"),
         "open_unresolved_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "open"),
+        "suppressed_nc_stub_body_ends": sum(1 for terminal in topo.terminals if terminal.kind == "nc_stub_body_end"),
+        "nc_topology_conflict_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "nc_topology_conflict"),
     }
 
     conflicts = {}
@@ -119,5 +121,6 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         "memberships": memberships,
         "unresolved_terminals": unresolved,
         "no_connect_marks": no_connect_marks,
+        "nc_stub_conflicts": getattr(topo, "nc_stub_conflicts", []),
         "pin_conflicts": pin_conflicts,
     }
