@@ -327,23 +327,63 @@ PINTOK = re.compile(r"^\d{1,2}$|^[A-C]\d{1,2}$|^[+\-]$|^[AK]$")
 
 
 def pin_tokens(topo, comps, words):
-    """pin id per terminal = nearest short pin-number-like word within 8pt, else x/y coordinate."""
-    boxes = [g for g in comps if (g.x1 - g.x0) > 20 and (g.y1 - g.y0) > 20]
-    inside = lambda w: any(g.x0 < (w.x0 + w.x1) / 2 < g.x1 and g.y0 < (w.y0 + w.y1) / 2 < g.y1 for g in boxes)
-    # Keep pin-number-like tokens inside a symbol body in the candidate pool.
-    # The mutual-nearest assignment below still requires a unique terminal/token
-    # match within its distance and margin limits.
-    cand = [w for w in words if PINTOK.match(w.text) and id(w) not in getattr(topo, "used_words", ())]
-    def dist(w, t):                      # number sits beside the stub: measure to stub end and to its middle
+    """Recover printed pin IDs with a component-scoped one-to-one geometric assignment.
+
+    Mutual-nearest matching is incorrect for dense connector rows: one caption can
+    be the nearest candidate for two adjacent pin endpoints, causing both valid
+    matches to be discarded. Solve the whole component as a bipartite assignment,
+    with an explicit unmatched option for every terminal. Captions outside that
+    component's expanded symbol bounds are ineligible.
+    """
+    from .assign import linear_sum_assignment
+    import numpy as np
+
+    used = getattr(topo, "used_words", ())
+    candidates = [w for w in words
+                  if PINTOK.fullmatch(w.text) and id(w) not in used]
+    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]
+    out, claimed = {}, set()
+    BIG, UNMATCHED, MAX_DISTANCE = 1e6, 12.0, 12.0
+
+    def dist(w, t):
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
-        return min(math.hypot(cx - t.x, cy - t.y), math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
-    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]     # 2-pin parts: their numbers are not printed, nearby digits are values
-    terminals = [t for g in multi for t in (g.terminals + getattr(g, "no_connect_terminals", []))]
-    # Accept a token only when it is the clear nearest choice for both sides.
-    matrix = [[dist(w, t) for w in cand] for t in terminals]
-    matches = _unambiguous_pin_assignment(matrix)
-    out = {id(terminals[ti]): cand[wi].text for ti, wi in matches.items()}
-    claimed = {id(cand[wi]) for wi in matches.values()}
+        return min(math.hypot(cx - t.x, cy - t.y),
+                   math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
+
+    for group in multi:
+        terminals = group.terminals + getattr(group, "no_connect_terminals", [])
+        if not terminals:
+            continue
+        # The pin captions are commonly plotted just outside the component body.
+        # A bounded expansion prevents captions from neighbouring symbols leaking in.
+        local = []
+        for word in candidates:
+            cx, cy = (word.x0 + word.x1) / 2, (word.y0 + word.y1) / 2
+            dx = max(group.x0 - cx, 0.0, cx - group.x1)
+            dy = max(group.y0 - cy, 0.0, cy - group.y1)
+            if math.hypot(dx, dy) <= 20.0:
+                local.append(word)
+        if not local:
+            continue
+
+        # One private dummy column per terminal means a terminal may remain UNKNOWN
+        # instead of being forced onto a distant or already claimed caption.
+        matrix = np.full((len(terminals), len(local) + len(terminals)), BIG, dtype=float)
+        for ti, terminal in enumerate(terminals):
+            for wi, word in enumerate(local):
+                d = dist(word, terminal)
+                if d <= MAX_DISTANCE:
+                    matrix[ti, wi] = d
+            matrix[ti, len(local) + ti] = UNMATCHED
+        rows, cols = linear_sum_assignment(matrix)
+        selected = {int(r): int(c) for r, c in zip(rows, cols)}
+        for ti, wi in selected.items():
+            if wi >= len(local) or matrix[ti, wi] >= UNMATCHED:
+                continue
+            word = local[wi]
+            out[id(terminals[ti])] = word.text
+            claimed.add(id(word))
+
     return out, claimed
 
 
