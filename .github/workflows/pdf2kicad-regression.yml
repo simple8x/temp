@@ -26,7 +26,26 @@ jobs:
           cache-dependency-path: tools/pdf2kicad/requirements.txt
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
-      - name: Run regression tests
+      - name: Checkout authoritative QI9 source PDF
+        uses: actions/checkout@v4
+        with:
+          repository: simple8x/temp
+          ref: audit/pdf2kicad-qi9-2604
+          path: evidence
+      - name: Run regression tests against synthetic and authoritative PDF evidence
+        env:
+          QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
         run: python -m pytest -q
       - name: Compile package
         run: python -m compileall -q pdf2kicad tools tests
+      - name: Generate junction evidence for schematic pages 5-11
+        env:
+          QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
+        run: python -m pdf2kicad.electrical_evidence "$QI9_SOURCE_PDF" --pages 5-11 --outdir junction-evidence
+      - name: Upload junction evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: qi9-explicit-junction-evidence
+          path: tools/pdf2kicad/junction-evidence/
+          if-no-files-found: error
+          retention-days: 7
