@@ -234,7 +234,7 @@ def main(argv):
     # Include every topology terminal. Unattached endpoints have no safe ref assignment.
     group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
     with open(os.path.join(outdir, "pin_status.csv"), "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["ref", "x", "y", "status", "evidence", "component_assignment"])
+        w = csv.writer(f); w.writerow(["ref", "x", "y", "status", "evidence", "component_assignment", "nc_mark_x", "nc_mark_y", "nc_mark_distance"])
         for term in topo.terminals:
             status = TP.terminal_status(term)
             evidence = ("vector_no_connect_cross" if status == "NO_CONNECT_MARK" else
@@ -243,7 +243,7 @@ def main(argv):
                         "no_explicit_nc_or_body_attachment")
             ref = group_ref.get(term.group, "")
             assignment = "ASSIGNED" if ref else "UNRESOLVED"
-            w.writerow([ref, "%.3f" % term.x, "%.3f" % term.y, status, evidence, assignment])
+            w.writerow([ref, "%.3f" % term.x, "%.3f" % term.y, status, evidence, assignment, "%.3f" % term.nc_mark_x if status == "NO_CONNECT_MARK" else "", "%.3f" % term.nc_mark_y if status == "NO_CONNECT_MARK" else "", "%.3f" % term.nc_mark_distance if status == "NO_CONNECT_MARK" else ""])
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
     with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
