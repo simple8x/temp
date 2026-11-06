@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pdf2kicad.netlist import _unambiguous_pin_assignment, _propagate_shared_terminal_names, _netlike, _propagate_shared_terminal_names
+from pdf2kicad.netlist import _unambiguous_pin_assignment, _propagate_shared_terminal_names, _netlike, pin_tokens
 
 
 def test_clear_mutual_matches_are_kept():
