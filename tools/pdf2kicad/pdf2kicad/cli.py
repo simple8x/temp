@@ -266,6 +266,16 @@ def main(argv):
                 nm = min(cand, key=lambda x: (abs((x.x0 + x.x1) / 2 - ix) + abs((x.y0 + x.y1) / 2 - iy)), default=None)
                 side = ("right" if t.dx > 0.5 else "left" if t.dx < -0.5 else "bottom" if t.dy > 0.5 else "top")
                 w.writerow([g.ref, pin, nm.text if nm else "", side])
+    # Emit traceable parser-derived connectivity; this is not independent verification.
+    from .connectivity_evidence import build_connectivity_evidence
+    connectivity_evidence = build_connectivity_evidence(topo, comps, nets, pins)
+    with open(os.path.join(outdir, "connectivity_evidence.json"), "w", encoding="utf-8") as f:
+        json.dump(connectivity_evidence, f, indent=2)
+        f.write("\n")
+    print("connectivity evidence: %d parser-derived pin/net memberships; %d unresolved terminals; independent verification=%d" % (
+        connectivity_evidence["summary"]["parser_derived_memberships"],
+        connectivity_evidence["summary"]["unresolved_open_terminals"],
+        connectivity_evidence["summary"]["independently_verified_memberships"]))
     # Preserve explicit filled-junction evidence separately from inferred net membership.
     from .electrical_evidence import classify_page
     junction_evidence = classify_page(pdf, page)
