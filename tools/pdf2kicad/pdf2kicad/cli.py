@@ -212,15 +212,28 @@ def main(argv):
                 symbol[g.ref] = "C"
         elif pre in ("R", "L", "F"):
             symbol[g.ref] = {"R": "R", "L": "L", "F": "FUSE"}[pre]
-    seen = set()
+    # Preserve the extractor's actual pin identity. Never mint a new pin number
+    # merely because the same (ref, pin) appears on multiple nets: that hides a
+    # topology conflict and fabricates a second physical pin.
+    pin_owners = {}
+    net_rows = []
+    identity_rows = []
+    for nm, lst in sorted(nets.items()):
+        for ref, t in lst:
+            pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
+            net_rows.append([nm, ref, pin])
+            pin_owners.setdefault((ref, pin), set()).add(nm)
+            identity_kind = "coordinate_fallback" if re.fullmatch(r"-?\\d+_-?\\d+", pin) else "text_or_geometry_inferred"
+            identity_rows.append([ref, pin, identity_kind, nm])
     with open(os.path.join(outdir, "netlist.csv"), "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["net", "ref", "pin"])
-        for nm, lst in sorted(nets.items()):
-            for ref, t in lst:
-                pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
-                if (ref, pin) in seen:
-                    pin += "_" + str(len(seen))
-                seen.add((ref, pin)); w.writerow([nm, ref, pin])
+        w = csv.writer(f); w.writerow(["net", "ref", "pin"]); w.writerows(net_rows)
+    with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
+        w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
+    with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
+        w = csv.writer(f); w.writerow(["ref", "pin_identity", "nets", "net_count"])
+        for (ref, pin), owners in sorted(pin_owners.items()):
+            if len(owners) > 1:
+                w.writerow([ref, pin, "|".join(sorted(owners)), len(owners)])
     with open(os.path.join(outdir, "parts.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "value", "symbol", "block"])
         for r in sorted({g.ref for g in comps}):
