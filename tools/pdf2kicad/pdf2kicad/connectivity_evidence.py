@@ -68,6 +68,9 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
     ]
     no_connect_marks = [
         {
+            "ref": group_ref.get(terminal.group),
+            "pin_identity": pin_numbers.get(id(terminal), "%.2f_%.2f" % (terminal.x, terminal.y)),
+            "pin_identity_kind": "parser_pin_token" if id(terminal) in pin_numbers else "coordinate_fallback",
             "x": round(terminal.nc_mark_x, 4),
             "y": round(terminal.nc_mark_y, 4),
             "terminal_x": round(terminal.x, 4),
