@@ -130,6 +130,7 @@ def _core(pg, use, pre=None):
     segs = [s for s in segs if s.length <= 0.36 * max(pg.width, pg.height) and s.y0 < lim and s.y1 < lim]
     topo = TP.Topology(segs, pg.dots, marks)
     comps = NL.assign(topo, text)
+    topo.nc_component_assignments = NL.assign_no_connect_terminals(topo, comps)
     for g in comps:                                  # LED arrow heads are tiny wire bits, not pins
         if g.ref.startswith("D"):
             big = [t for t in g.terminals if max(topo._comp_box(t.comp)[2] - topo._comp_box(t.comp)[0],
