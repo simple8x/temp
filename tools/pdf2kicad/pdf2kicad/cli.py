@@ -243,6 +243,8 @@ def main(argv):
         for term in topo.terminals:
             status = TP.terminal_status(term)
             evidence = ("vector_no_connect_cross" if status == "NO_CONNECT_MARK" else
+                        "suppressed_nc_stub_body_end" if status == "SUPPRESSED_NC_STUB_BODY_END" else
+                        "nc_stub_topology_conflict" if status == "NC_STUB_TOPOLOGY_CONFLICT" else
                         "vector_arrowhead_pin_marker" if term.anchor_kind == "arrowhead" else
                         "wire_to_body" if status == "ATTACHED" else
                         "no_explicit_nc_or_body_attachment")
@@ -265,6 +267,11 @@ def main(argv):
         w.writerow(["terminal_x", "terminal_y", "candidate_ref", "distance", "alignment", "score", "decision"])
         for row in getattr(topo, "nc_component_assignment_debug", []):
             w.writerow([row.get("terminal_x"), row.get("terminal_y"), row.get("candidate_ref"), row.get("distance"), row.get("alignment"), row.get("score"), row.get("decision")])
+    with open(os.path.join(outdir, "nc_stub_conflicts.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["wire_component", "nc_mark_count", "attached_terminal_count", "status"])
+        for row in getattr(topo, "nc_stub_conflicts", []):
+            w.writerow([row["wire_component"], row["nc_mark_count"], row["attached_terminal_count"], row["status"]])
     pin_token_debug = []
     component_terminals = [
         (g, term) for g in comps
