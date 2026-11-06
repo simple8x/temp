@@ -5,6 +5,8 @@ lineage. It deliberately does NOT call those decisions independently verified.
 """
 from __future__ import annotations
 
+from .topology import terminal_status
+
 
 def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
     pin_numbers = pin_numbers or {}
@@ -39,7 +41,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
                 "terminal": {
                     "x": round(terminal.x, 4),
                     "y": round(terminal.y, 4),
-                    "status": terminal.kind,
+                    "status": terminal_status(terminal),
                     "anchor_kind": terminal.anchor_kind or None,
                     "symbol_group": terminal.group,
                 },
