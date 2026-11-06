@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pdf2kicad.netlist import _unambiguous_pin_assignment, _propagate_shared_terminal_names, _propagate_shared_terminal_names
+from pdf2kicad.netlist import _unambiguous_pin_assignment, _propagate_shared_terminal_names, _netlike, _propagate_shared_terminal_names
 
 
 def test_clear_mutual_matches_are_kept():
@@ -84,3 +84,10 @@ def test_unlabelled_fragments_remain_unresolved_without_a_label():
     fragments = {("U1", 10.0, 20.0): {4, 9}}
     names = _propagate_shared_terminal_names(fragments, {})
     assert names == {}
+
+
+
+def test_resistor_value_not_mistaken_for_net_label():
+    assert not _netlike("2k2")
+    assert not _netlike("4R7")
+    assert _netlike("INPUT03")
