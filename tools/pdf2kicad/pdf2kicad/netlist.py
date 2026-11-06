@@ -25,7 +25,14 @@ PARTNO = re.compile(r"^[A-Z]{2,}[A-Z0-9]*[-.]\d[\w.\-]*$|^SMAJ\d|^[A-Z]{2,}\d{3,
 
 
 def _netlike(t):
-    return not PARTNO.match(t) and len(t) >= 2 and t not in COLOURS and not t.isdigit() and not re.fullmatch(r"[\d.]+[kKMmunpRVA]?[FHΩ]?[A-Za-z]{0,2}", t)
+    # Reject common component-value notation before treating text as a net label.
+    # In particular, IEC-style resistor values such as 2k2 / 4R7 were previously
+    # mistaken for net names and could create false cross-net pin conflicts.
+    value_token = re.fullmatch(
+        r"(?:[\d.]+[kKMmunpRVA]?[FHΩ]?[A-Za-z]{0,2}|\d+[kKmMRr]\d+)",
+        t,
+    )
+    return not PARTNO.match(t) and len(t) >= 2 and t not in COLOURS and not t.isdigit() and not value_token
 
 
 def assign(topo, words):
