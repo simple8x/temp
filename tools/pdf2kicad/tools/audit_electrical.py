@@ -21,8 +21,14 @@ def main(root):
     pages = {}
     totals = defaultdict(int)
     all_conflicts = []
+    required_pages = ["page%02d" % n for n in range(5, 12)]
+    missing_pages = [name for name in required_pages if not os.path.isdir(os.path.join(root, name))]
+    missing_outputs = []
     for name in sorted(x for x in os.listdir(root) if re.fullmatch(r"page\d{2}", x)):
         base = os.path.join(root, name)
+        expected = ["netlist.csv", "pin_identity.csv", "pins.csv", "pin_conflicts.csv"]
+        missing = [filename for filename in expected if not os.path.isfile(os.path.join(base, filename))]
+        missing_outputs.extend([{"page": name, "file": filename} for filename in missing])
         nets = rows(os.path.join(base, "netlist.csv"))
         identities = rows(os.path.join(base, "pin_identity.csv"))
         pins = rows(os.path.join(base, "pins.csv"))
@@ -42,6 +48,7 @@ def main(root):
             "unknown_identity_kind_rows": len(unknown_kinds),
             "blank_pin_name_rows": len(blank_names),
             "cross_net_pin_conflicts": len(conflicts),
+            "missing_output_files": len(missing),
         }
         pages[name] = page
         for k, v in page.items():
@@ -49,12 +56,15 @@ def main(root):
         all_conflicts.extend([{"page": name, **x} for x in conflicts])
     if not pages:
         raise SystemExit("No pageNN extraction directories found")
-    status = "BLOCKED" if totals["cross_net_pin_conflicts"] else (
+    status = "BLOCKED" if (missing_pages or missing_outputs or totals["cross_net_pin_conflicts"] or not all(pages.get(p, {}).get("netlist_rows", 0) for p in required_pages)) else (
         "REVIEW_REQUIRED" if totals["coordinate_fallback_rows"] or totals["geometry_inferred_rows"] or totals["unknown_identity_kind_rows"] or totals["blank_pin_name_rows"] else "PASS_CANDIDATE")
     report = {
         "schema": "pdf2kicad.electrical-audit.v1",
         "status": status,
         "policy": "Only explicit PDF pin tokens are marked printed_text. Geometry-derived polarity and coordinate anchors remain unverified; no positional numbering is fabricated.",
+        "required_pages": required_pages,
+        "missing_pages": missing_pages,
+        "missing_outputs": missing_outputs,
         "pages": pages,
         "totals": dict(totals),
         "cross_net_pin_conflicts": all_conflicts,
