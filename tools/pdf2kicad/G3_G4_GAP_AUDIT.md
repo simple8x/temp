@@ -69,3 +69,10 @@ The current six-gate status remains G3/G4 BLOCKED. Parser-derived net membership
 
 
 CI interpretation rule: a passing regression confirms execution of the parser and its fixtures only. It does not establish that every extracted pin identity, net membership, or electrical connection matches the source schematic. G3/G4 cannot be promoted to PASS until the independent pin/net reference comparison and KiCad ERC review are recorded.
+
+
+## Latest validation boundary
+
+- Last completed source-PDF regression run that reached the page-5 NC pin-token assertion: run 42196321108, failed with 1 failed / 38 passed / 6 skipped. The failure was that the 10 J2 NC marks had no recovered printed pin identities. The log showed the A1-A12/B1-B12 tokens were decoded, but the mutual-nearest matcher did not assign them.
+- A subsequent code change makes pin-token-shaped text within the component-terminal window ineligible as a net label. This is intended to prevent the net-label pass from consuming pin IDs, but **no successful post-change CI result is available in this audit**.
+- Therefore pin identity recovery remains BLOCKED, and the branch must not be merged as electrically verified. PR #2 is open and ready for review; it is not merged.
