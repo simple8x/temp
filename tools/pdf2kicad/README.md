@@ -20,6 +20,24 @@ Run: `python -m pdf2kicad.cli in.pdf PAGE out.csv`  (net, ref, pin-coordinate)
 | 11 | 48/48 | 0.99 | 0.92 |
 All 209 references found and matching the BOM; 205/209 values identical to the hand-read ones (misses: J2 and R12, RN1, RN2 values).
 
+## Parser-derived connectivity evidence
+
+Each CLI page extraction now also writes `connectivity_evidence.json`. For every
+parser-produced net membership it records the reference, parsed pin identity (or
+coordinate fallback), terminal state, wire-component ID, and the source wire
+primitive indices and coordinates. It separately reports unresolved open
+terminals and repeated pin identities assigned to multiple nets.
+
+**This ledger is traceability for parser output, not independent electrical
+verification.** Its `parser_derived_memberships` count is deliberately distinct
+from `independently_verified_memberships`, which remains zero until an
+independently derived/reviewed reference topology is compared. The report marks
+each row `PARSER_DERIVED_NOT_INDEPENDENTLY_VERIFIED`; it must not be treated as
+a PASS or as proof that the PDF connection was interpreted correctly.
+
+Run the normal CLI command to generate the file alongside `netlist.csv`,
+`pin_status.csv`, `pin_identity.csv`, and `pin_conflicts.csv`.
+
 ## Explicit junction evidence (QI9-2604-A01 source PDF)
 
 The CLI now writes `junction_evidence.json` per page. A filled mark is confirmed only when
