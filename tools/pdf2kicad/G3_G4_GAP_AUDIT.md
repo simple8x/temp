@@ -55,3 +55,14 @@ Important interpretation:
 ## Status rule
 
 A successful CI run proves that the tested code and extraction commands completed. It does not prove electrical correctness. This audit therefore records G3/G4 as **BLOCKED** until independent netlist reconciliation and KiCad validation are implemented.
+
+
+## NC stub reconciliation update (2026-11-06)
+
+The source-PDF vector pass now detects 28 explicit X marks across pages 5, 6, 8, and 9. Each mark is within 0.085 pt of a wire terminal in the generated evidence. The NC terminals are associated to referenced components by unique directional geometry (28/28 currently assigned in the parser report). For the page-5 USB-C connector, the associated reference is J2.
+
+The NC marker and the opposite symbol-body endpoint can be two geometric endpoints of the same pin stub. A regression now collapses a one-NC/one-body-end stub to one physical NC pin and suppresses the duplicate body-end terminal from net membership. Branched or multiple-mark cases are recorded as NC_STUB_TOPOLOGY_CONFLICT and fail closed.
+
+**Pin-number recovery is still not verified.** The source-PDF page-5 test currently fails its requirement that all 10 J2 NC marks map to printed pin tokens. The vector words A1-A12 and B1-B12 are decoded, but the existing mutual-nearest pin-token matcher has not yet assigned them to those NC terminals. Do not infer the pin number from proximity alone.
+
+The current six-gate status remains G3/G4 BLOCKED. Parser-derived net memberships are not independent verification, and KiCad ERC/reference-netlist reconciliation are still outstanding.
