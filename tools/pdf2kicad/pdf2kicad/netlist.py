@@ -189,17 +189,40 @@ def pin_tokens(topo, comps, words):
     boxes = [g for g in comps if (g.x1 - g.x0) > 20 and (g.y1 - g.y0) > 20]
     inside = lambda w: any(g.x0 < (w.x0 + w.x1) / 2 < g.x1 and g.y0 < (w.y0 + w.y1) / 2 < g.y1 for g in boxes)
     cand = [w for w in words if PINTOK.match(w.text) and id(w) not in getattr(topo, "used_words", ()) and not inside(w)]
-    taken, out = set(), {}
     def dist(w, t):                      # number sits beside the stub: measure to stub end and to its middle
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
         return min(math.hypot(cx - t.x, cy - t.y), math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
     multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]     # 2-pin parts: their numbers are not printed, nearby digits are values
-    pr = sorted((dist(w, t), i, id(t), t) for g in multi for t in g.terminals for i, w in enumerate(cand))
-    for d, i, tid, t in pr:
-        if d > 12 or i in taken or tid in out:
-            continue
-        taken.add(i); out[tid] = cand[i].text
-    return out, {id(cand[i]) for i in taken}
+    terminals = [t for g in multi for t in g.terminals]
+    # Accept a token only when it is the clear nearest choice for both sides.
+    matrix = [[dist(w, t) for w in cand] for t in terminals]
+    matches = _unambiguous_pin_assignment(matrix)
+    out = {id(terminals[ti]): cand[wi].text for ti, wi in matches.items()}
+    claimed = {id(cand[wi]) for wi in matches.values()}
+    return out, claimed
+
+
+def _unambiguous_pin_assignment(distances, max_distance=12.0, margin=1.5):
+    """Return terminal->token matches only for mutual, margin-separated nearest neighbours."""
+    if not distances or not distances[0]:
+        return {}
+    token_count = len(distances[0])
+    if any(len(row) != token_count for row in distances):
+        raise ValueError("pin distance matrix must be rectangular")
+
+    def unique_best(values):
+        order = sorted(range(len(values)), key=lambda i: values[i])
+        if values[order[0]] > max_distance:
+            return None
+        if len(order) > 1 and values[order[1]] - values[order[0]] < margin:
+            return None
+        return order[0]
+
+    terminal_best = {ti: unique_best(row) for ti, row in enumerate(distances)}
+    token_best = {wi: unique_best([distances[ti][wi] for ti in range(len(distances))])
+                  for wi in range(token_count)}
+    return {ti: wi for ti, wi in terminal_best.items()
+            if wi is not None and token_best[wi] == ti}
 
 
 def values(topo, comps, words, claimed):
