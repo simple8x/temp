@@ -466,6 +466,19 @@ class Topology:
                 if nearest_mark[0] <= 1.6:
                     t.kind = "nc"
                     t.anchor_kind = "no_connect_cross"
+                    # An NC cross is often drawn at the free end of a pin stub:
+                    # the symbol body is then along the wire direction (+dx,+dy),
+                    # not behind the endpoint as for an ordinary body attachment.
+                    if best < 0 and (t.dx or t.dy):
+                        step = 0.4
+                        while step <= 24.0 and best < 0:
+                            qx, qy = x + t.dx * step, y + t.dy * step
+                            for j in bg.near(qx, qy, 0.35):
+                                d, _ = pt_seg_dist(qx, qy, self.body_segs[j])
+                                if d <= 0.35:
+                                    best = j
+                                    break
+                            step += 0.4
                     if best >= 0:
                         t.body = best
                 elif best >= 0:
