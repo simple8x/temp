@@ -1,6 +1,11 @@
 name: pdf2kicad regression
 
 on:
+  push:
+    branches: [fix/pdf2kicad-g3-g4-hardening]
+    paths:
+      - "tools/pdf2kicad/**"
+      - ".github/workflows/pdf2kicad-regression.yml"
   pull_request:
     branches: [import/pdf2kicad]
     paths:
