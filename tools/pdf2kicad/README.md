@@ -73,7 +73,7 @@ The hardened branch additionally writes `pin_status.csv` for every topology term
 
 Closed axis-aligned rectangles with four long edges are treated as candidate symbol bodies; H/V line primitives wholly inside their boundary (1.5 pt inset) are excluded from the wire graph. Small isolated two-stroke chevrons may be recorded as arrowhead pin markers, not NC marks. Text inside component bounds or within 3 pt of a pin stub is excluded from net-label assignment.
 
-Printed pin-token recognition accepts numeric and letter-prefixed forms such as `A2` and `B12`. Raster/template recovery for obscured or missing digits is not yet implemented; such pins remain unresolved. These rules are regression-tested but do not certify the 7-page electrical netlist, KiCad ERC, or visual PDF review.
+Printed pin-token recognition accepts numeric and letter-prefixed forms such as `A2` and `B12`. Explicit NC candidates are obtained both from decoded standalone X glyphs and from pairs of short, centered, near-orthogonal diagonal vector strokes; a candidate is assigned only to a wire endpoint within 1.6 pt. An NC marker takes precedence over geometric proximity to a symbol body, and its center/distance are retained in `pin_status.csv` and `connectivity_evidence.json`. The authoritative page-5 regression asserts that at least one source-PDF NC is detected. Raster/template recovery for obscured or missing digits is not yet implemented; such pins remain unresolved. These rules are regression-tested but do not certify the 7-page electrical netlist, KiCad ERC, or visual PDF review.
 
 ## Known limits
 - No part is missing on the 7 test pages. Multi-unit parts are merged (U16A..D -> U16).
