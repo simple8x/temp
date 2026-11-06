@@ -223,7 +223,7 @@ def main(argv):
             pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
             net_rows.append([nm, ref, pin])
             pin_owners.setdefault((ref, pin), set()).add(nm)
-            identity_kind = "coordinate_fallback" if re.fullmatch(r"-?\\d+_-?\\d+", pin) else "text_or_geometry_inferred"
+            identity_kind = "coordinate_fallback" if re.fullmatch(r"-?\d+_-?\d+", pin) else "text_or_geometry_inferred"
             identity_rows.append([ref, pin, identity_kind, nm])
     with open(os.path.join(outdir, "netlist.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["net", "ref", "pin"]); w.writerows(net_rows)
