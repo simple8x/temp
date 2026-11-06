@@ -119,6 +119,36 @@ class Terminal:
     group: int = -1
     dx: float = 0.0               # direction the wire leaves the body (unit vector)
     dy: float = 0.0
+    anchor_kind: str = ""
+
+
+def terminal_status(term):
+    """Only an explicit no-connect mark is NC; a bare open end remains unresolved."""
+    if term.kind == "nc":
+        return "NO_CONNECT_MARK"
+    if term.kind == "attach":
+        return "ATTACHED"
+    return "OPEN_UNRESOLVED"
+
+
+def is_arrowhead_geometry(segs, tol=0.4):
+    """Recognize a small two-stroke chevron; it is a pin marker, never an NC mark."""
+    diag = [s for s in segs if s.kind in ("line", "rect") and not (s.is_h or s.is_v)
+            and 1.0 <= s.length <= 8.0]
+    for i, a in enumerate(diag):
+        ae = ((a.x0, a.y0), (a.x1, a.y1))
+        for b in diag[i + 1:]:
+            be = ((b.x0, b.y0), (b.x1, b.y1))
+            shared = [(p, q) for p in ae for q in be if math.hypot(p[0]-q[0], p[1]-q[1]) <= tol]
+            if not shared:
+                continue
+            p, _ = shared[0]
+            ao = next(q for q in ae if math.hypot(q[0]-p[0], q[1]-p[1]) > tol)
+            bo = next(q for q in be if math.hypot(q[0]-p[0], q[1]-p[1]) > tol)
+            span = math.hypot(ao[0]-bo[0], ao[1]-bo[1])
+            if 1.0 <= span <= 8.0:
+                return True
+    return False
 
 
 @dataclass
@@ -132,6 +162,7 @@ class Group:
     ref: str = ""
     kind: str = ""                # component | netsym | orphan
     name: str = ""
+    shape_kind: str = ""
 
     def box(self):
         xs = [v for s in self.segs for v in (s.x0, s.x1)]
@@ -426,10 +457,14 @@ class Topology:
             gi = len(self.groups)
             grp = Group([segs[j] for j in js])
             grp.box()
+            if is_arrowhead_geometry(grp.segs):
+                grp.shape_kind = "arrowhead"
             self.groups.append(grp)
             for j in js:
                 self.group_of_seg[j] = gi
         for t in self.terminals:
             if t.kind == "attach":
                 t.group = self.group_of_seg[t.body]
+                if self.groups[t.group].shape_kind == "arrowhead":
+                    t.anchor_kind = "arrowhead"
                 self.groups[t.group].terminals.append(t)
