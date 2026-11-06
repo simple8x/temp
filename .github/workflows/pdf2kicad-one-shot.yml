@@ -3,7 +3,7 @@ on:
   push:
     branches: [import/pdf2kicad]
     paths:
-      - ".github/workflows/pdf2kicad-one-shot.yml"
+      - ".github/workflows/pdf2kicad-one-shot.yml"\n      - "tools/pdf2kicad/**"
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +54,11 @@ jobs:
           echo "KICAD_NETLIST_EXIT=$NETLIST_RC"
           echo "KICAD_NETLIST_EXIT=$NETLIST_RC" >> pdf2kicad-run/kicad-validation/status.txt
           test "$NETLIST_RC" -eq 0
+      - name: Audit pin identity and electrical consistency
+        if: always()
+        run: |
+          set -euo pipefail
+          python tools/pdf2kicad/tools/audit_electrical.py pdf2kicad-run | tee pdf2kicad-run/electrical-audit.log
       - name: Upload extraction evidence
         if: always()
         uses: actions/upload-artifact@v4
