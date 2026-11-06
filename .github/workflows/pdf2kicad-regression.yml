@@ -55,10 +55,10 @@ jobs:
           for page in 5 6 7 8 9 10 11; do
             python -m pdf2kicad.cli "$QI9_SOURCE_PDF" "$page" "connectivity-evidence/page${page}"
           done
-      - name: Upload junction evidence
+      - name: Upload junction and connectivity evidence
         uses: actions/upload-artifact@v4
         with:
-          name: qi9-explicit-junction-evidence
+          name: qi9-g3-g4-parser-evidence
           path: |
             tools/pdf2kicad/junction-evidence/
             tools/pdf2kicad/connectivity-evidence/
