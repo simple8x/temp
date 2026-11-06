@@ -114,7 +114,7 @@ def test_explicit_nc_cross_overrides_nearby_symbol_body_attachment():
     from pdf2kicad.topology import Topology, Grid
 
     topo = Topology.__new__(Topology)
-    topo.segs = [Seg(0, 0, 10, 0, "line")]
+    topo.segs = [Seg(0, 0, 10, 0, "line"), Seg(0, 0, 0, 5, "line")]
     topo.W = [0]
     topo.comps = [[0]]
     topo.wire_comps = [0]
