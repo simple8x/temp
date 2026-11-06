@@ -266,3 +266,23 @@ def test_nc_component_association_requires_direction_and_unique_candidate():
     topo2 = SimpleNamespace(terminals=[ambiguous], groups=[a, b])
     assert assign_no_connect_terminals(topo2, [a, b]) == []
     assert ambiguous.group == -1
+
+
+
+def test_nc_reassignment_escapes_unreferenced_geometry_group():
+    from types import SimpleNamespace
+    from pdf2kicad.topology import Terminal
+    from pdf2kicad.netlist import assign_no_connect_terminals
+
+    term = Terminal(0.0, 0.0, 0, kind="nc", dx=1.0, dy=0.0, group=0)
+    orphan = SimpleNamespace(ref="", no_connect_terminals=[term])
+    component = SimpleNamespace(ref="J2", x0=8.0, y0=-2.0, x1=12.0, y1=2.0, no_connect_terminals=[])
+    topo = SimpleNamespace(terminals=[term], groups=[orphan, component])
+
+    assigned = assign_no_connect_terminals(topo, [component])
+
+    assert len(assigned) == 1
+    assert assigned[0]["ref"] == "J2"
+    assert term.group == 1
+    assert orphan.no_connect_terminals == []
+    assert component.no_connect_terminals == [term]
