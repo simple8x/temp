@@ -11,6 +11,7 @@ from pdf2kicad.topology import (
     find_symbol_rectangles,
     is_arrowhead_geometry,
     terminal_status,
+    find_no_connect_crosses,
 )
 from pdf2kicad.netlist import PINTOK, _is_pin_text, _netlike, value_shape_matches
 
@@ -148,3 +149,27 @@ def test_distant_x_glyph_does_not_override_body_attachment():
 
     assert topo.terminals[0].kind == "attach"
     assert topo.terminals[0].anchor_kind != "no_connect_cross"
+
+
+
+def test_vector_cross_detector_accepts_centered_orthogonal_x():
+    cross = [
+        Seg(-2, -2, 2, 2, "line"),
+        Seg(-2, 2, 2, -2, "line"),
+    ]
+    centres = find_no_connect_crosses(cross)
+    assert len(centres) == 1
+    assert centres[0] == (0.0, 0.0)
+
+
+def test_vector_cross_detector_rejects_non_crossing_or_non_orthogonal_marks():
+    offset = [
+        Seg(-2, -2, 2, 2, "line"),
+        Seg(1, 2, 5, -2, "line"),
+    ]
+    shallow = [
+        Seg(-2, -2, 2, 2, "line"),
+        Seg(-2, -1, 2, 3, "line"),
+    ]
+    assert find_no_connect_crosses(offset) == []
+    assert find_no_connect_crosses(shallow) == []
