@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/evidence-receipt.schema.json",
+  "title": "Evidence Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["receipt_id", "effect_id", "attempt_id", "provider", "capability", "status", "timestamp", "lineage"],
+  "properties": {
+    "receipt_id": {"type": "string", "minLength": 1},
+    "effect_id": {"type": "string", "minLength": 1},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "capability": {"type": "string", "minLength": 1},
+    "authority_ref": {"type": ["string", "null"]},
+    "input_sha256": {"type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$"},
+    "output_sha256": {"type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$"},
+    "status": {"enum": ["PREPARED", "DISPATCHED", "OBSERVED", "UNKNOWN", "FAILED", "BLOCKED"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "lineage": {"type": "string", "minLength": 1},
+    "result_summary": {"type": ["string", "null"]},
+    "evidence_refs": {"type": "array", "items": {"type": "string"}},
+    "error_code": {"type": ["string", "null"]}
+  }
+}
