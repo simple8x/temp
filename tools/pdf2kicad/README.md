@@ -36,7 +36,7 @@ each row `PARSER_DERIVED_NOT_INDEPENDENTLY_VERIFIED`; it must not be treated as
 a PASS or as proof that the PDF connection was interpreted correctly.
 
 Run the normal CLI command to generate the file alongside `netlist.csv`,
-`pin_status.csv`, `no_connect.csv`, `pin_identity.csv`, and `pin_conflicts.csv`. Explicit NC terminals are associated with a symbol group when body geometry supports it, but are kept out of the connected-terminal list and netlist. Printed pin tokens may still be recovered for those NC terminals.
+`pin_status.csv`, `no_connect.csv`, `no_connect_assignment_debug.csv`, `nc_stub_conflicts.csv`, `pin_token_candidates.csv`, `pin_identity.csv`, and `pin_conflicts.csv`. Explicit NC terminals are associated with a symbol group using the pin-stub body endpoint or a unique, direction-aligned component-box match. If one wire component has exactly one explicit NC mark and one body-attached endpoint, the body endpoint is suppressed as a duplicate representation of the same physical pin; it is not emitted as a connected net member. Branched/multiple-mark cases become `NC_STUB_TOPOLOGY_CONFLICT` and fail closed. Printed pin-token-shaped text near component terminals is protected from net-label classification and may be recovered for NC pins.
 
 ## Explicit junction evidence (QI9-2604-A01 source PDF)
 
