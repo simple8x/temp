@@ -19,6 +19,7 @@ def test_connectivity_ledger_traces_parser_membership_to_wire_primitives():
             Seg(0.0, 5.0, 10.0, 5.0, "line"),
             Seg(20.0, 5.0, 30.0, 5.0, "line"),
         ],
+        terminals=[attached, unresolved],
     )
     component = SimpleNamespace(ref="R1", terminals=[attached, unresolved])
     evidence = build_connectivity_evidence(
@@ -27,7 +28,9 @@ def test_connectivity_ledger_traces_parser_membership_to_wire_primitives():
 
     assert evidence["summary"]["parser_derived_memberships"] == 1
     assert evidence["summary"]["distinct_nets"] == 1
-    assert evidence["summary"]["unresolved_open_terminals"] == 1
+    assert evidence["summary"]["open_unresolved_terminals"] == 1
+    assert evidence["summary"]["all_topology_terminals"] == 2
+    assert evidence["summary"]["attached_terminals"] == 1
     assert evidence["summary"]["independently_verified_memberships"] == 0
     row = evidence["memberships"][0]
     assert row["status"] == "PARSER_DERIVED_NOT_INDEPENDENTLY_VERIFIED"
