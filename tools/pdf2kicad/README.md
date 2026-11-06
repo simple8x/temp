@@ -36,7 +36,7 @@ each row `PARSER_DERIVED_NOT_INDEPENDENTLY_VERIFIED`; it must not be treated as
 a PASS or as proof that the PDF connection was interpreted correctly.
 
 Run the normal CLI command to generate the file alongside `netlist.csv`,
-`pin_status.csv`, `pin_identity.csv`, and `pin_conflicts.csv`.
+`pin_status.csv`, `no_connect.csv`, `pin_identity.csv`, and `pin_conflicts.csv`. Explicit NC terminals are associated with a symbol group when body geometry supports it, but are kept out of the connected-terminal list and netlist. Printed pin tokens may still be recovered for those NC terminals.
 
 ## Explicit junction evidence (QI9-2604-A01 source PDF)
 
