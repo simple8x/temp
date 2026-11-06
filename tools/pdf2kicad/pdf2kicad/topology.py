@@ -160,9 +160,51 @@ def terminal_status(term):
     """Only an explicit no-connect mark is NC; a bare open end remains unresolved."""
     if term.kind == "nc":
         return "NO_CONNECT_MARK"
+    if term.kind == "nc_stub_body_end":
+        return "SUPPRESSED_NC_STUB_BODY_END"
+    if term.kind == "nc_topology_conflict":
+        return "NC_STUB_TOPOLOGY_CONFLICT"
     if term.kind == "attach":
         return "ATTACHED"
     return "OPEN_UNRESOLVED"
+
+
+def suppress_nc_stub_body_ends(terminals):
+    """Collapse a marked NC pin stub to one physical pin endpoint.
+
+    A pin stub commonly has two geometric dangling ends: the explicit NC mark
+    and the symbol-body end. Counting both as pins creates a false connected
+    net. When exactly one NC mark and one attached body end share a wire
+    component, transfer the body association to the marked endpoint and
+    suppress the duplicate body-end terminal. Branched/conflicting cases fail
+    closed and are reported separately.
+    """
+    by_component = defaultdict(list)
+    for terminal in terminals:
+        by_component[terminal.comp].append(terminal)
+    conflicts = []
+    for component, members in by_component.items():
+        marked = [t for t in members if t.kind == "nc"]
+        attached = [t for t in members if t.kind == "attach"]
+        if not marked or not attached:
+            continue
+        if len(marked) == 1 and len(attached) == 1:
+            nc, body_end = marked[0], attached[0]
+            if nc.body < 0:
+                nc.body = body_end.body
+            body_end.kind = "nc_stub_body_end"
+            body_end.anchor_kind = "suppressed_by_explicit_nc_mark"
+        else:
+            for terminal in members:
+                terminal.kind = "nc_topology_conflict"
+                terminal.anchor_kind = "conflicting_nc_and_branch_topology"
+            conflicts.append({
+                "wire_component": component,
+                "nc_mark_count": len(marked),
+                "attached_terminal_count": len(attached),
+                "status": "NC_STUB_TOPOLOGY_CONFLICT",
+            })
+    return conflicts
 
 
 def is_arrowhead_geometry(segs, tol=0.4):
@@ -485,6 +527,7 @@ class Topology:
                     t.kind, t.body = "attach", best
                 terms.append(t)
         self.terminals = terms
+        self.nc_stub_conflicts = suppress_nc_stub_body_ends(self.terminals)
 
     # ------------------------------------------------------------------------- symbols
     def _groups(self):
@@ -530,3 +573,10 @@ class Topology:
                     self.groups[t.group].terminals.append(t)
                 else:
                     self.groups[t.group].no_connect_terminals.append(t)
+        nc_group_by_component = {
+            t.comp: t.group for t in self.terminals
+            if t.kind == "nc" and t.group >= 0
+        }
+        for t in self.terminals:
+            if t.kind == "nc_stub_body_end" and t.comp in nc_group_by_component:
+                t.group = nc_group_by_component[t.comp]
