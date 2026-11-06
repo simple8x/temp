@@ -24,6 +24,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+      - name: Compile and run fail-closed audit tests
+        working-directory: tools/pdf2kicad
+        run: |
+          python -m compileall -q pdf2kicad tools
+          python -m pytest -q tests/test_electrical_audit.py
       - name: Run pdf2kicad on all schematic pages
         working-directory: tools/pdf2kicad
         run: |
