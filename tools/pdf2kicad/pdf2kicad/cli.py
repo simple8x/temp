@@ -176,7 +176,7 @@ def main(argv):
     # A two-terminal symbol's visual order does not prove its library pin numbers.
     # Keep its terminals unresolved unless the PDF prints an explicit pin token or
     # symbol geometry establishes a semantic polarity (handled below for diode/capacitor).
-    explicit_pin_ids = set(pins)
+    explicit_pin_values = {terminal_id: value for terminal_id, value in pins.items()}
     symbol = {}
     LEDV = re.compile(r"red|green|yellow|blue|white|orange|led", re.I)
     for g in comps:
@@ -222,7 +222,7 @@ def main(argv):
             pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
             net_rows.append([nm, ref, pin])
             pin_owners.setdefault((ref, pin), set()).add(nm)
-            if id(t) in explicit_pin_ids:
+            if id(t) in explicit_pin_values and pin == explicit_pin_values[id(t)]:
                 identity_kind = "printed_text"
             elif pin in ("A", "K", "+", "-"):
                 identity_kind = "geometry_inferred"
