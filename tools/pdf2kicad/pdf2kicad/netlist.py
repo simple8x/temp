@@ -223,7 +223,10 @@ def pin_tokens(topo, comps, words):
     """pin id per terminal = nearest short pin-number-like word within 8pt, else x/y coordinate."""
     boxes = [g for g in comps if (g.x1 - g.x0) > 20 and (g.y1 - g.y0) > 20]
     inside = lambda w: any(g.x0 < (w.x0 + w.x1) / 2 < g.x1 and g.y0 < (w.y0 + w.y1) / 2 < g.y1 for g in boxes)
-    cand = [w for w in words if PINTOK.match(w.text) and id(w) not in getattr(topo, "used_words", ()) and not inside(w)]
+    # Keep pin-number-like tokens inside a symbol body in the candidate pool.
+    # The mutual-nearest assignment below still requires a unique terminal/token
+    # match within its distance and margin limits.
+    cand = [w for w in words if PINTOK.match(w.text) and id(w) not in getattr(topo, "used_words", ())]
     def dist(w, t):                      # number sits beside the stub: measure to stub end and to its middle
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
         return min(math.hypot(cx - t.x, cy - t.y), math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
