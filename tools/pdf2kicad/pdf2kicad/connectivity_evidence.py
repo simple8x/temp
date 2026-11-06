@@ -51,17 +51,27 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
                 "independent_verification": "NOT_PERFORMED",
             })
 
-    unresolved = []
-    for group in comps:
-        for terminal in group.terminals:
-            if terminal.kind == "open":
-                unresolved.append({
-                    "ref": group.ref,
-                    "x": round(terminal.x, 4),
-                    "y": round(terminal.y, 4),
-                    "wire_component": terminal.comp,
-                    "status": "OPEN_UNRESOLVED",
-                })
+    # Inspect the full topology terminal inventory, not only component groups.
+    # Unattached terminals are not included in Group.terminals by Topology._groups().
+    group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
+    unresolved = [
+        {
+            "ref": group_ref.get(terminal.group),
+            "x": round(terminal.x, 4),
+            "y": round(terminal.y, 4),
+            "wire_component": terminal.comp,
+            "status": terminal_status(terminal),
+            "component_assignment": "ASSIGNED" if terminal.group in group_ref else "UNRESOLVED",
+        }
+        for terminal in topo.terminals
+        if terminal.kind == "open"
+    ]
+    terminal_counts = {
+        "all_topology_terminals": len(topo.terminals),
+        "attached_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "attach"),
+        "explicit_no_connect_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "nc"),
+        "open_unresolved_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "open"),
+    }
 
     conflicts = {}
     for row in memberships:
@@ -79,7 +89,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         "summary": {
             "parser_derived_memberships": len(memberships),
             "distinct_nets": len(netmap),
-            "unresolved_open_terminals": len(unresolved),
+            **terminal_counts,
             "pin_identity_conflicts": len(pin_conflicts),
             "independently_verified_memberships": 0,
             "status": "PARSER_CONNECTIVITY_EXPOSED_INDEPENDENT_VERIFICATION_REQUIRED",
