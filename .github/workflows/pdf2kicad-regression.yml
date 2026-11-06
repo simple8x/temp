@@ -47,10 +47,20 @@ jobs:
         env:
           QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
         run: python -m pdf2kicad.electrical_evidence "$QI9_SOURCE_PDF" --pages 5-11 --outdir junction-evidence
+      - name: Generate parser connectivity evidence for schematic pages 5-11
+        env:
+          QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
+        run: |
+          mkdir -p connectivity-evidence
+          for page in 5 6 7 8 9 10 11; do
+            python -m pdf2kicad.cli "$QI9_SOURCE_PDF" "$page" "connectivity-evidence/page${page}"
+          done
       - name: Upload junction evidence
         uses: actions/upload-artifact@v4
         with:
           name: qi9-explicit-junction-evidence
-          path: tools/pdf2kicad/junction-evidence/
+          path: |
+            tools/pdf2kicad/junction-evidence/
+            tools/pdf2kicad/connectivity-evidence/
           if-no-files-found: error
           retention-days: 7
