@@ -82,3 +82,28 @@ def test_arrowhead_is_a_pin_marker_not_an_nc_mark():
 def test_unmarked_open_pin_is_never_promoted_to_nc():
     term = Terminal(0, 0, 0, kind="open")
     assert terminal_status(term) == "OPEN_UNRESOLVED"
+
+
+def test_usb_c_connector_all_24_lettered_pin_tokens_assign_uniquely():
+    from types import SimpleNamespace
+    from pdf2kicad.topology import Terminal
+    from pdf2kicad.netlist import pin_tokens
+
+    tokens = [f"{side}{number}" for side in ("A", "B") for number in range(1, 13)]
+    terminals = [
+        Terminal(30.0 + 20.0 * i, 100.0, i, kind="attach", dx=1.0, dy=0.0)
+        for i in range(len(tokens))
+    ]
+    group = SimpleNamespace(x0=0.0, y0=0.0, x1=600.0, y1=200.0, terminals=terminals)
+    words = [
+        SimpleNamespace(x0=term.x + 1.0, x1=term.x + 3.0,
+                        y0=term.y - 1.0, y1=term.y + 1.0, text=token)
+        for term, token in zip(terminals, tokens)
+    ]
+    topo = SimpleNamespace(used_words=set())
+
+    assigned, claimed = pin_tokens(topo, [group], words)
+
+    assert len(assigned) == 24
+    assert {assigned[id(term)] for term in terminals} == set(tokens)
+    assert len(claimed) == 24
