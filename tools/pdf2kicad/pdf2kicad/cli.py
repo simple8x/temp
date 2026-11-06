@@ -276,7 +276,7 @@ def main(argv):
         f.write("\n")
     print("connectivity evidence: %d parser-derived pin/net memberships; %d unresolved terminals; independent verification=%d" % (
         connectivity_evidence["summary"]["parser_derived_memberships"],
-        connectivity_evidence["summary"]["unresolved_open_terminals"],
+        connectivity_evidence["summary"]["open_unresolved_terminals"],
         connectivity_evidence["summary"]["independently_verified_memberships"]))
     # Preserve explicit filled-junction evidence separately from inferred net membership.
     from .electrical_evidence import classify_page
