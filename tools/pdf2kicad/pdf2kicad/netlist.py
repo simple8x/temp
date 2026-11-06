@@ -39,12 +39,17 @@ def _netlike(t):
 def _is_pin_text(w, comps, topo, wire_tol=4.5, terminal_window=12.0):
     """Reject body captions and text hugging a component pin stub from net-label candidates."""
     cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
+    pin_token = PINTOK.fullmatch(w.text) is not None
     for g in comps:
         if g.x0 <= cx <= g.x1 and g.y0 <= cy <= g.y1:
             return True
         for term in g.terminals + getattr(g, "no_connect_terminals", []):
             if math.hypot(cx - term.x, cy - term.y) > terminal_window:
                 continue
+            # Pin-number-shaped text beside a component terminal is a pin token
+            # even when the plotted pin stub is not part of the wire graph.
+            if pin_token:
+                return True
             for k in topo.comps[term.comp]:
                 sg = topo.segs[topo.W[k]]
                 from .topology import pt_seg_dist
