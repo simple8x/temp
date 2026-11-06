@@ -35,8 +35,34 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: simple8x/temp
-          ref: audit/pdf2kicad-qi9-2604
+          ref: dfd969d9479dbca8ffc9e4a1107ab6f87f26fade
           path: evidence
+      - name: Write immutable source manifest
+        env:
+          QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          pdf = Path(os.environ["QI9_SOURCE_PDF"])
+          source_commit = subprocess.check_output(
+              ["git", "-C", "evidence", "rev-parse", "HEAD"], text=True
+          ).strip()
+          manifest = {
+              "schema": "pdf2kicad-source-manifest/v1",
+              "source_repository": "simple8x/temp",
+              "source_ref": "dfd969d9479dbca8ffc9e4a1107ab6f87f26fade",
+              "resolved_source_commit": source_commit,
+              "pdf_relative_path": str(pdf.relative_to(Path("evidence").resolve())),
+              "pdf_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+              "page_count": 14,
+              "schematic_pages_extracted": [5, 6, 7, 8, 9, 10, 11],
+          }
+          Path("source_manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\\n", encoding="utf-8"
+          )
+          print(json.dumps(manifest, indent=2))
+          PY
       - name: Run regression tests against synthetic and authoritative PDF evidence
         env:
           QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
@@ -62,5 +88,6 @@ jobs:
           path: |
             tools/pdf2kicad/junction-evidence/
             tools/pdf2kicad/connectivity-evidence/
+            tools/pdf2kicad/source_manifest.json
           if-no-files-found: error
           retention-days: 7
