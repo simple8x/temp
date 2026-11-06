@@ -18,6 +18,54 @@ REACH = 4.2             # pin end may stop this far short of the body, pt
 GROUP_GAP = 4.6         # body pieces closer than this belong to one symbol
 
 
+
+def find_symbol_rectangles(segs, min_edge=15.0, tol=0.4):
+    """Find closed axis-aligned symbol rectangles from four long vector edges."""
+    hs, vs = defaultdict(list), defaultdict(list)
+    q = lambda v: int(round(v / tol))
+    for s in segs:
+        if s.kind not in ("line", "rect"):
+            continue
+        if s.is_h and s.length >= min_edge:
+            x0, x1 = sorted((s.x0, s.x1))
+            hs[(q(x0), q(x1))].append((min(s.y0, s.y1), max(s.y0, s.y1)))
+        elif s.is_v and s.length >= min_edge:
+            y0, y1 = sorted((s.y0, s.y1))
+            vs[q((s.x0 + s.x1) / 2)].append((y0, y1))
+    boxes = set()
+    for (qx0, qx1), ys in hs.items():
+        x0, x1 = qx0 * tol, qx1 * tol
+        if x1 - x0 < min_edge:
+            continue
+        for i, (a0, a1) in enumerate(ys):
+            for b0, b1 in ys[i + 1:]:
+                y0, y1 = min(a0, b0), max(a1, b1)
+                if abs(a0 - a1) > tol or abs(b0 - b1) > tol or y1 - y0 < min_edge:
+                    continue
+                def closes(items):
+                    return any(abs(v0 - y0) <= tol and abs(v1 - y1) <= tol for v0, v1 in items)
+                if closes(vs.get(q(x0), ())) and closes(vs.get(q(x1), ())):
+                    boxes.add((round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2)))
+    return sorted(boxes)
+
+
+def exclude_rectangle_internals(segs, boxes, margin=1.5):
+    """Mark H/V drawing fully inside a closed component outline as internal artwork."""
+    changed = 0
+    for s in segs:
+        if s.kind != "line" or not (s.is_h or s.is_v):
+            continue
+        sx0, sx1 = sorted((s.x0, s.x1))
+        sy0, sy1 = sorted((s.y0, s.y1))
+        for x0, y0, x1, y1 in boxes:
+            if (sx0 >= x0 + margin and sx1 <= x1 - margin and
+                    sy0 >= y0 + margin and sy1 <= y1 - margin):
+                s.kind = "inner"
+                changed += 1
+                break
+    return changed
+
+
 def pt_seg_dist(px, py, s):
     dx, dy = s.x1 - s.x0, s.y1 - s.y0
     L = dx * dx + dy * dy
@@ -101,6 +149,8 @@ class Topology:
                 seen.add(k)
                 uniq.append(sg)
         segs = uniq
+        self.symbol_boxes = find_symbol_rectangles(segs)
+        self.rectangle_internal_count = exclude_rectangle_internals(segs, self.symbol_boxes)
         self._mark_symbol_internals(segs)
         self.segs = segs
         self.dots = dots
