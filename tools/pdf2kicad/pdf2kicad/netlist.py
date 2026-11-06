@@ -100,6 +100,20 @@ def assign(topo, words):
     return comps
 
 
+def _propagate_shared_terminal_names(terminal_components, name_of):
+    """Propagate one explicit net label across wire fragments on the same pin.
+
+    Conflicting explicit labels are deliberately left untouched.
+    """
+    for wire_components in terminal_components.values():
+        explicit_names = {name_of[c] for c in wire_components if c in name_of}
+        if len(explicit_names) == 1:
+            shared_name = next(iter(explicit_names))
+            for component in wire_components:
+                name_of[component] = shared_name
+    return name_of
+
+
 def nets(topo, comps, words):
     """Net = wire component; name from net symbols touching it or text sitting on it."""
     name_of = {}
@@ -161,11 +175,25 @@ def nets(topo, comps, words):
         if best:
             name_of[best[1]] = w.text
             topo.used_words.add(id(w))
-    # global names: same name on different wire comps -> same net
+    # A physical symbol pin is one electrical node even when vector parsing
+    # split its attached wire into multiple wire components.
+    terminal_components = defaultdict(set)
+    for g in comps:
+        for t in g.terminals:
+            terminal_components[(t.group, round(t.x, 2), round(t.y, 2))].add(t.comp)
+    _propagate_shared_terminal_names(terminal_components, name_of)
+
+    # Emit a repeated physical pin anchor only once. Distinct explicit labels
+    # on the same anchor are not merged and remain visible to the audit.
     out = defaultdict(list)
+    seen_members = set()
     for g in comps:
         for t in g.terminals:
             nm = name_of.get(t.comp, "N%d" % t.comp)
+            member = (nm, g.ref, round(t.x, 2), round(t.y, 2))
+            if member in seen_members:
+                continue
+            seen_members.add(member)
             out[nm].append((g.ref, t))
     return out
 
