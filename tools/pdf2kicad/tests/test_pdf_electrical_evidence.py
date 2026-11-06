@@ -1,0 +1,78 @@
+import os
+import tempfile
+from pathlib import Path
+
+import fitz
+import pytest
+
+from pdf2kicad.electrical_evidence import classify_page, _incident_rays
+
+
+EXPECTED_SOURCE_SHA256 = "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc"
+EXPECTED_JUNCTIONS = {5: 33, 6: 17, 7: 20, 8: 8, 9: 3, 10: 62, 11: 48}
+EXPECTED_CANDIDATES = {5: 33, 6: 17, 7: 23, 8: 8, 9: 3, 10: 62, 11: 48}
+
+
+def _synthetic_pdf(path, with_dot):
+    doc = fitz.open()
+    page = doc.new_page(width=200, height=150)
+    page.draw_line((50, 50), (100, 50), color=(0, 0, 0), width=0.48)
+    page.draw_line((100, 50), (100, 100), color=(0, 0, 0), width=0.48)
+    page.draw_line((100, 50), (150, 50), color=(0, 0, 0), width=0.48)
+    if with_dot:
+        page.draw_circle((100, 50), 1.2, color=(0, 0, 0), fill=(0, 0, 0), width=0.48)
+    doc.save(path)
+    doc.close()
+
+
+def test_filled_dot_with_three_orthogonal_rays_is_confirmed(tmp_path):
+    path = tmp_path / "junction.pdf"
+    _synthetic_pdf(path, with_dot=True)
+    result = classify_page(path, 1)
+    assert result["summary"]["explicit_junctions_confirmed"] == 1
+    assert result["junction_candidates"][0]["incident_directions"] == ["E", "S", "W"]
+
+
+def test_bare_geometric_crossing_without_dot_is_not_joined(tmp_path):
+    path = tmp_path / "crossing.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=200, height=150)
+    page.draw_line((50, 50), (150, 50), color=(0, 0, 0), width=0.48)
+    page.draw_line((100, 20), (100, 80), color=(0, 0, 0), width=0.48)
+    doc.save(path)
+    doc.close()
+    result = classify_page(path, 1)
+    assert result["summary"]["filled_circle_mark_candidates"] == 0
+    assert result["summary"]["explicit_junctions_confirmed"] == 0
+
+
+@pytest.mark.skipif(not os.environ.get("QI9_SOURCE_PDF"), reason="source PDF fixture not supplied")
+def test_authoritative_qi9_pdf_junction_inventory():
+    pdf = Path(os.environ["QI9_SOURCE_PDF"])
+    import hashlib
+    assert hashlib.sha256(pdf.read_bytes()).hexdigest() == EXPECTED_SOURCE_SHA256
+    for page, expected in EXPECTED_JUNCTIONS.items():
+        result = classify_page(pdf, page)
+        assert result["summary"]["explicit_junctions_confirmed"] == expected
+        assert result["summary"]["filled_circle_mark_candidates"] == EXPECTED_CANDIDATES[page]
+        assert result["summary"]["verified_net_memberships"] == 0
+
+
+@pytest.mark.skipif(not os.environ.get("QI9_SOURCE_PDF"), reason="source PDF fixture not supplied")
+def test_authoritative_qi9_page5_detects_explicit_no_connect_marks():
+    from pdf2kicad.cli import extract
+
+    comps, nets, words, topo = extract(os.environ["QI9_SOURCE_PDF"], 5, full=True)
+    no_connect = [term for term in topo.terminals if term.kind == "nc"]
+    assert no_connect, "page 5 visibly contains explicit NC crosses; parser must detect at least one"
+    assert all(term.anchor_kind == "no_connect_cross" for term in no_connect)
+    assert all(term.nc_mark_distance <= 1.6 for term in no_connect)
+    assert all(term.group >= 0 and topo.groups[term.group].ref == "J2" for term in no_connect)
+    from pdf2kicad.netlist import pin_tokens
+    pin_map, _ = pin_tokens(topo, comps, words)
+    j2 = next(group for group in comps if group.ref == "J2")
+    print("J2 terminals", len(j2.terminals), "NC", len(j2.no_connect_terminals))
+    print("NC pin map", [(round(term.x, 2), round(term.y, 2), pin_map.get(id(term))) for term in no_connect])
+    print("J2 candidates", [(word.text, round(word.x0, 2), round(word.y0, 2)) for word in words if word.text.startswith(("A", "B")) and len(word.text) <= 3])
+    assert all(id(term) in pin_map for term in no_connect), "every page-5 J2 NC pin must recover its printed pin token"
+    assert len({pin_map[id(term)] for term in no_connect}) == len(no_connect)
