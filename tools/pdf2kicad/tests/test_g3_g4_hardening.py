@@ -246,6 +246,38 @@ def test_nc_cross_at_pin_stub_end_traces_forward_to_symbol_body():
 
 
 
+
+def test_pin_token_assignment_resolves_shared_nearest_caption_globally():
+    from types import SimpleNamespace
+    from pdf2kicad.topology import Terminal
+    from pdf2kicad.netlist import pin_tokens
+
+    # Both first terminals prefer caption "1" under independent nearest-neighbour
+    # matching. A global one-to-one assignment correctly gives the second terminal
+    # "1" and the first terminal "2", without reusing either caption.
+    terminals = [
+        Terminal(0.0, 100.0, 0, kind="attach"),
+        Terminal(2.0, 100.0, 1, kind="attach"),
+        Terminal(20.0, 100.0, 2, kind="attach"),
+    ]
+    group = SimpleNamespace(
+        x0=-10.0, y0=80.0, x1=40.0, y1=120.0,
+        terminals=terminals, no_connect_terminals=[],
+    )
+    words = [
+        SimpleNamespace(x0=-4.0, x1=-2.0, y0=99.0, y1=101.0, text="2"),
+        SimpleNamespace(x0=0.0, x1=2.0, y0=99.0, y1=101.0, text="1"),
+        SimpleNamespace(x0=19.0, x1=21.0, y0=99.0, y1=101.0, text="3"),
+    ]
+    topo = SimpleNamespace(used_words=set())
+
+    assigned, claimed = pin_tokens(topo, [group], words)
+
+    assert assigned[id(terminals[0])] == "2"
+    assert assigned[id(terminals[1])] == "1"
+    assert assigned[id(terminals[2])] == "3"
+    assert len(claimed) == 3
+
 def test_nc_component_association_requires_direction_and_unique_candidate():
     from types import SimpleNamespace
     from pdf2kicad.topology import Terminal
