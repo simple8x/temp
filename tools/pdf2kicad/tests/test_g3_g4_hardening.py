@@ -107,3 +107,44 @@ def test_usb_c_connector_all_24_lettered_pin_tokens_assign_uniquely():
     assert len(assigned) == 24
     assert {assigned[id(term)] for term in terminals} == set(tokens)
     assert len(claimed) == 24
+
+
+
+def test_explicit_nc_cross_overrides_nearby_symbol_body_attachment():
+    from pdf2kicad.topology import Topology, Grid
+
+    topo = Topology.__new__(Topology)
+    topo.segs = [Seg(0, 0, 10, 0, "line")]
+    topo.W = [0]
+    topo.comps = [[0]]
+    topo.wire_comps = [0]
+    topo.body_segs = [Seg(0, 0, 0, 5, "line")]
+    topo.marks = [(0, 0)]
+    topo.bgrid = Grid(8.0)
+    topo._dangling = lambda cid: [(0, 0)]
+    topo._terminals()
+
+    assert len(topo.terminals) == 1
+    term = topo.terminals[0]
+    assert term.kind == "nc"
+    assert term.anchor_kind == "no_connect_cross"
+    assert term.nc_mark_distance == 0.0
+    assert terminal_status(term) == "NO_CONNECT_MARK"
+
+
+def test_distant_x_glyph_does_not_override_body_attachment():
+    from pdf2kicad.topology import Topology, Grid
+
+    topo = Topology.__new__(Topology)
+    topo.segs = [Seg(0, 0, 10, 0, "line")]
+    topo.W = [0]
+    topo.comps = [[0]]
+    topo.wire_comps = [0]
+    topo.body_segs = [Seg(0, 0, 0, 5, "line")]
+    topo.marks = [(5, 5)]
+    topo.bgrid = Grid(8.0)
+    topo._dangling = lambda cid: [(0, 0)]
+    topo._terminals()
+
+    assert topo.terminals[0].kind == "attach"
+    assert topo.terminals[0].anchor_kind != "no_connect_cross"
