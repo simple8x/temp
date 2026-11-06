@@ -51,6 +51,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qi9-explicit-junction-evidence
-          path: junction-evidence/
+          path: tools/pdf2kicad/junction-evidence/
           if-no-files-found: error
           retention-days: 7
