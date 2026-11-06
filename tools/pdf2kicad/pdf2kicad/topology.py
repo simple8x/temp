@@ -125,6 +125,37 @@ class Terminal:
     nc_mark_distance: float = float("inf")
 
 
+def find_no_connect_crosses(segs, min_length=1.5, max_length=6.0, center_tolerance=0.35, orthogonal_dot=0.20):
+    """Find small vector X marks from two centered, near-perpendicular diagonal strokes.
+
+    Candidates are only marker centres. Topology assigns one to a terminal only
+    when it lies within the strict endpoint radius; unrelated X artwork is ignored.
+    """
+    diag = []
+    for index, seg in enumerate(segs):
+        if seg.kind not in ("line", "rect") or not (min_length <= seg.length <= max_length):
+            continue
+        dx, dy = seg.x1 - seg.x0, seg.y1 - seg.y0
+        if abs(dx) < 0.35 * seg.length or abs(dy) < 0.35 * seg.length:
+            continue
+        diag.append((index, seg, dx / seg.length, dy / seg.length))
+    centres = {}
+    for i, (ia, a, ax, ay) in enumerate(diag):
+        acx, acy = (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2
+        for ib, b, bx, by in diag[i + 1:]:
+            if ia == ib:
+                continue
+            dot = abs(ax * bx + ay * by)
+            if dot > orthogonal_dot:
+                continue
+            bcx, bcy = (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2
+            if math.hypot(acx - bcx, acy - bcy) > center_tolerance:
+                continue
+            cx, cy = (acx + bcx) / 2, (acy + bcy) / 2
+            centres[(round(cx, 2), round(cy, 2))] = (cx, cy)
+    return [centres[key] for key in sorted(centres)]
+
+
 def terminal_status(term):
     """Only an explicit no-connect mark is NC; a bare open end remains unresolved."""
     if term.kind == "nc":
