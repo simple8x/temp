@@ -21,7 +21,7 @@ def _named(g, others):
     return t if (len(t) >= 2 and not t.isdigit()) else ""
 
 
-PARTNO = re.compile(r"^[A-Z]{2,}[A-Z0-9]*[-.]\d[\w.\-]*$|^SMAJ\d|^[A-Z]{2,}\d{3,}[A-Z]?$")   # HCPL-0600, KF-3.81-10-R, SMAJ30CA, MP1584
+PARTNO = re.compile(r"^[A-Z]{2,}[A-Z0-9]*[-.]\d[\w.\-]*$|^SMAJ\d|^[A-Z]{2,}\d{3,}[A-Z]?$|^USB[- ]?C$|^TYPE[- ]?C$", re.I)
 
 
 def _netlike(t):
@@ -33,6 +33,24 @@ def _netlike(t):
         t,
     )
     return not PARTNO.match(t) and len(t) >= 2 and t not in COLOURS and not t.isdigit() and not value_token
+
+
+
+def _is_pin_text(w, comps, topo, wire_tol=3.0, terminal_window=12.0):
+    """Reject body captions and text hugging a component pin stub from net-label candidates."""
+    cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
+    for g in comps:
+        if g.x0 <= cx <= g.x1 and g.y0 <= cy <= g.y1:
+            return True
+        for term in g.terminals:
+            if math.hypot(cx - term.x, cy - term.y) > terminal_window:
+                continue
+            for k in topo.comps[term.comp]:
+                sg = topo.segs[topo.W[k]]
+                from .topology import pt_seg_dist
+                if pt_seg_dist(cx, cy, sg)[0] <= wire_tol:
+                    return True
+    return False
 
 
 def assign(topo, words):
@@ -95,7 +113,7 @@ def assign(topo, words):
             near.terminals.extend(g.terminals); g.kind = "merged"
     # single-terminal groups = power / ground / flag symbols; one-to-one nearest net-like word
     syms = [g for g in topo.groups if g.terminals and len({t.comp for t in g.terminals}) == 1 and not g.ref and g.kind != "merged"]
-    cands = [w for w in others if _netlike(w.text)]
+    cands = [w for w in others if _netlike(w.text) and not _is_pin_text(w, comps, topo)]
     pr = sorted((_near(w, g, 0), i, j) for i, w in enumerate(cands) for j, g in enumerate(syms))
     uw, ug = set(), set()
     for d, i, j in pr:
@@ -131,7 +149,8 @@ def nets(topo, comps, words):
     # label flags: a small outline wrapped around a word; its tip meets the wire end within a few pt
     flagged = set()
     for w in words:
-        if id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ()) or not _netlike(w.text):
+        if (id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ())
+                or not _netlike(w.text) or _is_pin_text(w, comps, topo)):
             continue
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
         fl = [c for c in topo.wire_comps
@@ -155,7 +174,8 @@ def nets(topo, comps, words):
     class _P:  # point proxy
         pass
     for w in words:
-        if id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ()) or id(w) in flagged or not _netlike(w.text):
+        if (id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ())
+                or id(w) in flagged or not _netlike(w.text) or _is_pin_text(w, comps, topo)):
             continue
         cx, cy = (w.x0 + w.x1) / 2, w.y1 + 0.3
         best = None
@@ -275,13 +295,15 @@ def values(topo, comps, words, claimed):
     out = {}
     SHAPE = {   # what a value looks like for the part type; a matching word is strongly preferred
         "R": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
+        "RN": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
         "C": r"\d+(\.\d+)?\s?[pnuμmµ]?F|\d+[pnuμµ]\d*",
         "L": r"\d+(\.\d+)?\s?[nuμµm]?H",
-        "J": r"(?=.*\d)[\w.+\-]{4,}", "U": r"(?=.*\d)[\w.+\-]{3,}", "Q": r"(?=.*\d)[\w.+\-]{3,}",
+        "J": r"(?=.*\d)[\w.+\-]{4,}|USB[- ]?C|TYPE[- ]?C|USB[ -]?TYPE[ -]?C", "U": r"(?=.*\d)[\w.+\-]{3,}", "Q": r"(?=.*\d)[\w.+\-]{3,}",
         "D": r"(?=.*\d)[\w.+\-]{3,}|[A-Z]{3,}",       # diode part number, or LED colour written in capitals   # part numbers, not pin captions
     }
     def pen(w, g):
-        rx = SHAPE.get(re.match(r"[A-Z]+", g.ref).group()) if g.ref else None
+        prefix = re.match(r"[A-Z]+", g.ref).group() if g.ref else None
+        rx = SHAPE.get("R" if prefix == "RN" else prefix)
         if rx is None:
             return 0.0
         return 0.0 if re.fullmatch(rx, w.text) else 40.0          # wrong shape = effectively far away
