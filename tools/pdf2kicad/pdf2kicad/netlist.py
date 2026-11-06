@@ -36,7 +36,7 @@ def _netlike(t):
 
 
 
-def _is_pin_text(w, comps, topo, wire_tol=3.0, terminal_window=12.0):
+def _is_pin_text(w, comps, topo, wire_tol=4.5, terminal_window=12.0):
     """Reject body captions and text hugging a component pin stub from net-label candidates."""
     cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
     for g in comps:
