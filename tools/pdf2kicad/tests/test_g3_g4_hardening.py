@@ -12,7 +12,7 @@ from pdf2kicad.topology import (
     is_arrowhead_geometry,
     terminal_status,
 )
-from pdf2kicad.netlist import PINTOK, _netlike, value_shape_matches
+from pdf2kicad.netlist import PINTOK, _is_pin_text, _netlike, value_shape_matches
 
 
 def test_closed_rectangle_detects_body_and_excludes_only_internal_wire():
@@ -35,6 +35,20 @@ def test_pin_caption_values_are_not_net_names():
     assert not _netlike("USB-C")
     assert not _netlike("5k1")
     assert not _netlike("2k2")
+
+
+def test_pin_captions_inside_body_or_on_pin_stub_are_not_net_labels():
+    from types import SimpleNamespace
+
+    term = Terminal(10.0, 0.0, 0, kind="attach")
+    group = SimpleNamespace(x0=0.0, y0=-2.0, x1=2.0, y1=2.0, terminals=[term])
+    topo = SimpleNamespace(comps=[[0]], W=[0], segs=[Seg(0, 0, 10, 0, "line")])
+    inside = SimpleNamespace(x0=0.5, y0=0.0, x1=1.5, y1=1.0, text="VIN")
+    near_stub = SimpleNamespace(x0=8.5, y0=0.5, x1=9.5, y1=1.0, text="A2")
+    far_label = SimpleNamespace(x0=20.0, y0=20.0, x1=24.0, y1=21.0, text="SENSOR")
+    assert _is_pin_text(inside, [group], topo)
+    assert _is_pin_text(near_stub, [group], topo)
+    assert not _is_pin_text(far_label, [group], topo)
 
 
 def test_two_digit_and_lettered_pin_tokens_are_supported():
