@@ -283,6 +283,23 @@ def _unambiguous_pin_assignment(distances, max_distance=12.0, margin=1.5):
             if wi is not None and token_best[wi] == ti}
 
 
+VALUE_SHAPES = {   # what a value looks like for the part type; a matching word is strongly preferred
+    "R": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
+    "RN": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
+    "C": r"\d+(\.\d+)?\s?[pnuμmµ]?F|\d+[pnuμµ]\d*",
+    "L": r"\d+(\.\d+)?\s?[nuμµm]?H",
+    "J": r"(?=.*\d)[\w.+\-]{4,}|USB[- ]?C|TYPE[- ]?C|USB[ -]?TYPE[ -]?C", "U": r"(?=.*\d)[\w.+\-]{3,}", "Q": r"(?=.*\d)[\w.+\-]{3,}",
+    "D": r"(?=.*\d)[\w.+\-]{3,}|[A-Z]{3,}",       # diode part number, or LED colour written in capitals   # part numbers, not pin captions
+}
+
+def value_shape_matches(ref, value):
+    """Validate a candidate value against the reference designator family."""
+    m = re.match(r"[A-Z]+", ref or "")
+    prefix = m.group() if m else None
+    rx = VALUE_SHAPES.get("R" if prefix == "RN" else prefix)
+    return rx is None or re.fullmatch(rx, value) is not None
+
+
 def values(topo, comps, words, claimed):
     topo.value_ids = getattr(topo, 'value_ids', set())
     """value = nearest unclaimed non-ref word to each component (>=2 chars)."""
@@ -293,20 +310,9 @@ def values(topo, comps, words, claimed):
     cand = [w for w in words if id(w) not in claimed and id(w) not in getattr(topo, "used_words", ())
             and (len(w.text) >= 2 or w.text.isdigit()) and not REF.match(w.text) and w.text not in netnames and not inside_body(w)]
     out = {}
-    SHAPE = {   # what a value looks like for the part type; a matching word is strongly preferred
-        "R": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
-        "RN": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
-        "C": r"\d+(\.\d+)?\s?[pnuμmµ]?F|\d+[pnuμµ]\d*",
-        "L": r"\d+(\.\d+)?\s?[nuμµm]?H",
-        "J": r"(?=.*\d)[\w.+\-]{4,}|USB[- ]?C|TYPE[- ]?C|USB[ -]?TYPE[ -]?C", "U": r"(?=.*\d)[\w.+\-]{3,}", "Q": r"(?=.*\d)[\w.+\-]{3,}",
-        "D": r"(?=.*\d)[\w.+\-]{3,}|[A-Z]{3,}",       # diode part number, or LED colour written in capitals   # part numbers, not pin captions
-    }
     def pen(w, g):
-        prefix = re.match(r"[A-Z]+", g.ref).group() if g.ref else None
-        rx = SHAPE.get("R" if prefix == "RN" else prefix)
-        if rx is None:
-            return 0.0
-        return 0.0 if re.fullmatch(rx, w.text) else 40.0          # wrong shape = effectively far away
+        return 0.0 if value_shape_matches(g.ref, w.text) else 40.0
+
     from .assign import linear_sum_assignment
     import numpy as np
     if not cand or not comps:
