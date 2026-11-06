@@ -231,17 +231,19 @@ def main(argv):
             identity_rows.append([ref, pin, identity_kind, nm])
     with open(os.path.join(outdir, "netlist.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["net", "ref", "pin"]); w.writerows(net_rows)
-    # An unmarked open pin is unresolved, never silently NC.
+    # Include every topology terminal. Unattached endpoints have no safe ref assignment.
+    group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
     with open(os.path.join(outdir, "pin_status.csv"), "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["ref", "x", "y", "status", "evidence"])
-        for g in comps:
-            for term in g.terminals:
-                status = TP.terminal_status(term)
-                evidence = ("vector_no_connect_cross" if status == "NO_CONNECT_MARK" else
-                            "vector_arrowhead_pin_marker" if term.anchor_kind == "arrowhead" else
-                            "wire_to_body" if status == "ATTACHED" else
-                            "no_explicit_nc_or_body_attachment")
-                w.writerow([g.ref, "%.3f" % term.x, "%.3f" % term.y, status, evidence])
+        w = csv.writer(f); w.writerow(["ref", "x", "y", "status", "evidence", "component_assignment"])
+        for term in topo.terminals:
+            status = TP.terminal_status(term)
+            evidence = ("vector_no_connect_cross" if status == "NO_CONNECT_MARK" else
+                        "vector_arrowhead_pin_marker" if term.anchor_kind == "arrowhead" else
+                        "wire_to_body" if status == "ATTACHED" else
+                        "no_explicit_nc_or_body_attachment")
+            ref = group_ref.get(term.group, "")
+            assignment = "ASSIGNED" if ref else "UNRESOLVED"
+            w.writerow([ref, "%.3f" % term.x, "%.3f" % term.y, status, evidence, assignment])
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
     with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
