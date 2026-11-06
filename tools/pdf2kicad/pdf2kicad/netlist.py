@@ -42,7 +42,7 @@ def _is_pin_text(w, comps, topo, wire_tol=3.0, terminal_window=12.0):
     for g in comps:
         if g.x0 <= cx <= g.x1 and g.y0 <= cy <= g.y1:
             return True
-        for term in g.terminals:
+        for term in g.terminals + getattr(g, "no_connect_terminals", []):
             if math.hypot(cx - term.x, cy - term.y) > terminal_window:
                 continue
             for k in topo.comps[term.comp]:
@@ -251,7 +251,7 @@ def pin_tokens(topo, comps, words):
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
         return min(math.hypot(cx - t.x, cy - t.y), math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
     multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]     # 2-pin parts: their numbers are not printed, nearby digits are values
-    terminals = [t for g in multi for t in g.terminals]
+    terminals = [t for g in multi for t in (g.terminals + getattr(g, "no_connect_terminals", []))]
     # Accept a token only when it is the clear nearest choice for both sides.
     matrix = [[dist(w, t) for w in cand] for t in terminals]
     matches = _unambiguous_pin_assignment(matrix)
