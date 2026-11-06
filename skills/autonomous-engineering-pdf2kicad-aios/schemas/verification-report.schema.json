@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/verification-report.schema.json",
+  "title": "Engineering Verification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "scope", "checks", "remaining_gaps"],
+  "properties": {
+    "outcome": {"enum": ["PASS", "FAIL", "BLOCKED", "PARTIAL", "UNKNOWN"]},
+    "scope": {"type": "string", "minLength": 1},
+    "repository": {"type": ["string", "null"]},
+    "branch": {"type": ["string", "null"]},
+    "commit": {"type": ["string", "null"]},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "method", "proves", "does_not_prove"],
+        "properties": {
+          "name": {"type": "string"},
+          "status": {"enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_RUN"]},
+          "method": {"type": "string"},
+          "exit_code": {"type": ["integer", "null"]},
+          "proves": {"type": "string"},
+          "does_not_prove": {"type": "string"},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "changes": {"type": "array", "items": {"type": "string"}},
+    "remaining_gaps": {"type": "array", "items": {"type": "string"}},
+    "confidence_labels": {
+      "type": "array",
+      "items": {"enum": ["FACT", "VERIFIED", "INFERRED", "ASSUMPTION", "UNKNOWN"]}
+    }
+  }
+}
