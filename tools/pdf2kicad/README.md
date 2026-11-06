@@ -20,6 +20,17 @@ Run: `python -m pdf2kicad.cli in.pdf PAGE out.csv`  (net, ref, pin-coordinate)
 | 11 | 48/48 | 0.99 | 0.92 |
 All 209 references found and matching the BOM; 205/209 values identical to the hand-read ones (misses: J2 and R12, RN1, RN2 values).
 
+## G3/G4 hardening branch audit outputs
+
+The hardened branch additionally writes `pin_status.csv` for every extracted component terminal:
+- `ATTACHED`: the wire endpoint has geometric attachment evidence to a symbol body.
+- `NO_CONNECT_MARK`: an explicit vector no-connect cross was found.
+- `OPEN_UNRESOLVED`: no body attachment or explicit no-connect mark was found. This is **not** silently promoted to NC.
+
+Closed axis-aligned rectangles with four long edges are treated as candidate symbol bodies; H/V line primitives wholly inside their boundary (1.5 pt inset) are excluded from the wire graph. Small isolated two-stroke chevrons may be recorded as arrowhead pin markers, not NC marks. Text inside component bounds or within 3 pt of a pin stub is excluded from net-label assignment.
+
+Printed pin-token recognition accepts numeric and letter-prefixed forms such as `A2` and `B12`. Raster/template recovery for obscured or missing digits is not yet implemented; such pins remain unresolved. These rules are regression-tested but do not certify the 7-page electrical netlist, KiCad ERC, or visual PDF review.
+
 ## Known limits
 - No part is missing on the 7 test pages. Multi-unit parts are merged (U16A..D -> U16).
 - 7-30% of pins keep coordinate names (e.g. `401_135`) where no pin number is printed beside the stub (optocoupler units); nets are still right, rename by hand.
