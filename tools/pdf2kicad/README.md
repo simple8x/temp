@@ -20,6 +20,24 @@ Run: `python -m pdf2kicad.cli in.pdf PAGE out.csv`  (net, ref, pin-coordinate)
 | 11 | 48/48 | 0.99 | 0.92 |
 All 209 references found and matching the BOM; 205/209 values identical to the hand-read ones (misses: J2 and R12, RN1, RN2 values).
 
+## Explicit junction evidence (QI9-2604-A01 source PDF)
+
+The CLI now writes `junction_evidence.json` per page. A filled mark is confirmed only when
+its vector path is a small filled black circle and at least three distinct orthogonal
+0.48 pt black line rays terminate at the circle centre. A geometric crossing without a
+filled mark is never joined. Unresolved filled marks remain candidates.
+
+The authoritative 14-page source PDF (SHA-256
+`a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc`) was checked
+on schematic pages 5–11. Confirmed explicit junction marks by page: 5=33, 6=17,
+7=20, 8=8, 9=3, 10=62, 11=48. Page 7 has 3 additional filled-mark candidates
+without the required three incident directions; they remain unresolved.
+
+This is verified **junction-marker geometry only**. It does not claim verified net
+membership, pin identity, full connectivity, or KiCad ERC. Bare crossings remain
+unjoined and the electrical netlist gate remains blocked pending full topology and
+reference-netlist comparison.
+
 ## G3/G4 hardening branch audit outputs
 
 The hardened branch additionally writes `pin_status.csv` for every extracted component terminal:
