@@ -220,3 +220,25 @@ def test_pin_token_recovery_includes_nc_pins_without_counting_them_as_connected(
     assert len(assigned) == 4
     assert len(group.terminals) == 3
     assert group.no_connect_terminals == [no_connect]
+
+
+
+def test_nc_cross_at_pin_stub_end_traces_forward_to_symbol_body():
+    from pdf2kicad.topology import Topology
+
+    topo = Topology.__new__(Topology)
+    topo.segs = [Seg(0, 0, 10, 0, "line"), Seg(8, -2, 8, 2, "line")]
+    topo.W = [0]
+    topo.comps = [[0]]
+    topo.wire_comps = [0]
+    topo.marks = [(0, 0)]
+    topo._dangling = lambda cid: [(0, 0)]
+    topo._terminals()
+
+    term = topo.terminals[0]
+    assert term.kind == "nc"
+    assert term.body == 0
+    topo._groups()
+    assert term.group >= 0
+    assert topo.groups[term.group].no_connect_terminals == [term]
+    assert topo.groups[term.group].terminals == []
