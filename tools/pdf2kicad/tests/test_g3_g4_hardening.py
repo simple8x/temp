@@ -53,6 +53,12 @@ def test_connector_and_resistor_array_values_match_their_ref_families():
 def test_arrowhead_is_a_pin_marker_not_an_nc_mark():
     arrow = [Seg(0, 0, 4, 3, "line"), Seg(0, 6, 4, 3, "line")]
     assert is_arrowhead_geometry(arrow)
+    diode_triangle = [
+        Seg(0, 0, 4, 3, "line"),
+        Seg(0, 6, 4, 3, "line"),
+        Seg(0, 0, 0, 6, "line"),
+    ]
+    assert not is_arrowhead_geometry(diode_triangle)
     term = Terminal(4, 3, 0, kind="open", anchor_kind="arrowhead")
     assert terminal_status(term) == "OPEN_UNRESOLVED"
     term.kind = "nc"
