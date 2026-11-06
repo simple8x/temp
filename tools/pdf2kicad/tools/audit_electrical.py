@@ -59,7 +59,8 @@ def main(root):
         json.dump(report, f, indent=2, ensure_ascii=False)
         f.write("\n")
     print(json.dumps(report, indent=2, ensure_ascii=False))
-    return 0
+    # CI must fail closed when electrical identity is unresolved or conflicting.
+    return 0 if report["release_eligible"] else 2
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1] if len(sys.argv) > 1 else "pdf2kicad-run"))
