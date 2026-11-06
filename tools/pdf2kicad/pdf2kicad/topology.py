@@ -189,6 +189,7 @@ def is_arrowhead_geometry(segs, tol=0.4):
 class Group:
     segs: list
     terminals: list = field(default_factory=list)
+    no_connect_terminals: list = field(default_factory=list)
     x0: float = 0
     y0: float = 0
     x1: float = 0
@@ -465,6 +466,8 @@ class Topology:
                 if nearest_mark[0] <= 1.6:
                     t.kind = "nc"
                     t.anchor_kind = "no_connect_cross"
+                    if best >= 0:
+                        t.body = best
                 elif best >= 0:
                     t.kind, t.body = "attach", best
                 terms.append(t)
@@ -506,8 +509,11 @@ class Topology:
             for j in js:
                 self.group_of_seg[j] = gi
         for t in self.terminals:
-            if t.kind == "attach":
+            if t.kind in ("attach", "nc") and t.body >= 0:
                 t.group = self.group_of_seg[t.body]
-                if self.groups[t.group].shape_kind == "arrowhead":
-                    t.anchor_kind = "arrowhead"
-                self.groups[t.group].terminals.append(t)
+                if t.kind == "attach":
+                    if self.groups[t.group].shape_kind == "arrowhead":
+                        t.anchor_kind = "arrowhead"
+                    self.groups[t.group].terminals.append(t)
+                else:
+                    self.groups[t.group].no_connect_terminals.append(t)
