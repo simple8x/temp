@@ -53,13 +53,13 @@ jobs:
               "source_repository": "simple8x/temp",
               "source_ref": "dfd969d9479dbca8ffc9e4a1107ab6f87f26fade",
               "resolved_source_commit": source_commit,
-              "pdf_relative_path": str(pdf.relative_to(Path("evidence").resolve())),
+              "pdf_relative_path": str(pdf.relative_to(Path(os.environ["GITHUB_WORKSPACE"]).resolve() / "evidence")),
               "pdf_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
               "page_count": 14,
               "schematic_pages_extracted": [5, 6, 7, 8, 9, 10, 11],
           }
           Path("source_manifest.json").write_text(
-              json.dumps(manifest, indent=2) + "\\n", encoding="utf-8"
+              json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
           )
           print(json.dumps(manifest, indent=2))
           PY
