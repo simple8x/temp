@@ -28,12 +28,18 @@ def main(root):
         pins = rows(os.path.join(base, "pins.csv"))
         conflicts = rows(os.path.join(base, "pin_conflicts.csv"))
         coordinate = [x for x in identities if x.get("identity_kind") == "coordinate_fallback"]
+        geometry = [x for x in identities if x.get("identity_kind") == "geometry_inferred"]
+        printed = [x for x in identities if x.get("identity_kind") == "printed_text"]
+        unknown_kinds = [x for x in identities if x.get("identity_kind") not in ("coordinate_fallback", "geometry_inferred", "printed_text")]
         blank_names = [x for x in pins if not (x.get("name") or "").strip()]
         page = {
             "netlist_rows": len(nets),
             "components": len({x.get("ref") for x in nets}),
             "nets": len({x.get("net") for x in nets}),
             "coordinate_fallback_rows": len(coordinate),
+            "geometry_inferred_rows": len(geometry),
+            "printed_text_rows": len(printed),
+            "unknown_identity_kind_rows": len(unknown_kinds),
             "blank_pin_name_rows": len(blank_names),
             "cross_net_pin_conflicts": len(conflicts),
         }
@@ -44,11 +50,11 @@ def main(root):
     if not pages:
         raise SystemExit("No pageNN extraction directories found")
     status = "BLOCKED" if totals["cross_net_pin_conflicts"] else (
-        "REVIEW_REQUIRED" if totals["coordinate_fallback_rows"] or totals["blank_pin_name_rows"] else "PASS_CANDIDATE")
+        "REVIEW_REQUIRED" if totals["coordinate_fallback_rows"] or totals["geometry_inferred_rows"] or totals["unknown_identity_kind_rows"] or totals["blank_pin_name_rows"] else "PASS_CANDIDATE")
     report = {
         "schema": "pdf2kicad.electrical-audit.v1",
         "status": status,
-        "policy": "No synthetic pin identity is promoted to a verified physical pin number.",
+        "policy": "Only explicit PDF pin tokens are marked printed_text. Geometry-derived polarity and coordinate anchors remain unverified; no positional numbering is fabricated.",
         "pages": pages,
         "totals": dict(totals),
         "cross_net_pin_conflicts": all_conflicts,
