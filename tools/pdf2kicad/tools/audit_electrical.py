@@ -57,7 +57,7 @@ def main(root):
     out = os.path.join(root, "electrical-audit.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
-        f.write("\\n")
+        f.write("\n")
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0
 
