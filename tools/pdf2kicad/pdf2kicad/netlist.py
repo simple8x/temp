@@ -21,7 +21,7 @@ def _named(g, others):
     return t if (len(t) >= 2 and not t.isdigit()) else ""
 
 
-PARTNO = re.compile(r"^[A-Z]{2,}[A-Z0-9]*[-.]\d[\w.\-]*$|^SMAJ\d|^[A-Z]{2,}\d{3,}[A-Z]?$")   # HCPL-0600, KF-3.81-10-R, SMAJ30CA, MP1584
+PARTNO = re.compile(r"^[A-Z]{2,}[A-Z0-9]*[-.]\d[\w.\-]*$|^SMAJ\d|^[A-Z]{2,}\d{3,}[A-Z]?$|^USB[- ]?C$|^TYPE[- ]?C$", re.I)
 
 
 def _netlike(t):
@@ -33,6 +33,111 @@ def _netlike(t):
         t,
     )
     return not PARTNO.match(t) and len(t) >= 2 and t not in COLOURS and not t.isdigit() and not value_token
+
+
+
+def _is_pin_text(w, comps, topo, wire_tol=4.5, terminal_window=12.0):
+    """Reject body captions and text hugging a component pin stub from net-label candidates."""
+    cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
+    pin_token = PINTOK.fullmatch(w.text) is not None
+    for g in comps:
+        if g.x0 <= cx <= g.x1 and g.y0 <= cy <= g.y1:
+            return True
+        for term in g.terminals + getattr(g, "no_connect_terminals", []):
+            if math.hypot(cx - term.x, cy - term.y) > terminal_window:
+                continue
+            # Pin-number-shaped text beside a component terminal is a pin token
+            # even when the plotted pin stub is not part of the wire graph.
+            if pin_token:
+                return True
+            for k in topo.comps[term.comp]:
+                sg = topo.segs[topo.W[k]]
+                from .topology import pt_seg_dist
+                if pt_seg_dist(cx, cy, sg)[0] <= wire_tol:
+                    return True
+    return False
+
+
+def assign_no_connect_terminals(topo, comps, max_distance=24.0, min_alignment=0.65, score_margin=3.0):
+    """Associate marked NC pin stubs with one unambiguous referenced component.
+
+    The NC mark is at the free end of the pin stub, so the wire direction points
+    from the mark toward the component. Assignment is geometry-only and fails
+    closed when two component boxes are similarly plausible.
+    """
+    assigned, diagnostics = [], []
+    group_index = {id(group): index for index, group in enumerate(topo.groups)}
+    for terminal in topo.terminals:
+        if terminal.kind != "nc":
+            continue
+        if terminal.group >= 0:
+            current_group = topo.groups[terminal.group]
+            if current_group.ref:
+                continue
+            if terminal in current_group.no_connect_terminals:
+                current_group.no_connect_terminals.remove(terminal)
+            terminal.group = -1
+        if not (terminal.dx or terminal.dy):
+            diagnostics.append({
+                "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+                "candidate_ref": "", "distance": "", "alignment": "", "score": "",
+                "decision": "NO_WIRE_DIRECTION",
+            })
+            continue
+        candidates = []
+        nearby = []
+        for group in comps:
+            if not group.ref or id(group) not in group_index:
+                continue
+            qx = min(max(terminal.x, group.x0), group.x1)
+            qy = min(max(terminal.y, group.y0), group.y1)
+            vx, vy = qx - terminal.x, qy - terminal.y
+            distance = math.hypot(vx, vy)
+            alignment = (vx * terminal.dx + vy * terminal.dy) / distance if distance else 1.0
+            score = distance + (1.0 - alignment) * 8.0
+            nearby.append((distance, alignment, score, group))
+            if distance <= max_distance and alignment >= min_alignment:
+                candidates.append((score, distance, alignment, group))
+        for distance, alignment, score, group in sorted(nearby, key=lambda item: item[0])[:10]:
+            diagnostics.append({
+                "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+                "candidate_ref": group.ref, "distance": round(distance, 4),
+                "alignment": round(alignment, 4), "score": round(score, 4),
+                "decision": "ELIGIBLE" if distance <= max_distance and alignment >= min_alignment else
+                            "TOO_FAR" if distance > max_distance else "DIRECTION_MISMATCH",
+            })
+        candidates.sort(key=lambda item: item[0])
+        if not candidates:
+            continue
+        if len(candidates) > 1 and candidates[1][0] - candidates[0][0] < score_margin:
+            diagnostics.append({
+                "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+                "candidate_ref": candidates[0][3].ref, "distance": round(candidates[0][1], 4),
+                "alignment": round(candidates[0][2], 4), "score": round(candidates[0][0], 4),
+                "decision": "AMBIGUOUS_TOP_CANDIDATES",
+            })
+            continue
+        score, distance, alignment, group = candidates[0]
+        terminal.group = group_index[id(group)]
+        if terminal not in group.no_connect_terminals:
+            group.no_connect_terminals.append(terminal)
+        assigned.append({
+            "ref": group.ref,
+            "terminal_x": round(terminal.x, 4),
+            "terminal_y": round(terminal.y, 4),
+            "distance_to_component_box": round(distance, 4),
+            "direction_alignment": round(alignment, 4),
+            "assignment_score": round(score, 4),
+            "status": "GEOMETRIC_COMPONENT_ASSOCIATION_NOT_PIN_NET_VERIFICATION",
+        })
+        diagnostics.append({
+            "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+            "candidate_ref": group.ref, "distance": round(distance, 4),
+            "alignment": round(alignment, 4), "score": round(score, 4),
+            "decision": "ASSIGNED",
+        })
+    topo.nc_component_assignment_debug = diagnostics
+    return assigned
 
 
 def assign(topo, words):
@@ -95,7 +200,7 @@ def assign(topo, words):
             near.terminals.extend(g.terminals); g.kind = "merged"
     # single-terminal groups = power / ground / flag symbols; one-to-one nearest net-like word
     syms = [g for g in topo.groups if g.terminals and len({t.comp for t in g.terminals}) == 1 and not g.ref and g.kind != "merged"]
-    cands = [w for w in others if _netlike(w.text)]
+    cands = [w for w in others if _netlike(w.text) and not _is_pin_text(w, comps, topo)]
     pr = sorted((_near(w, g, 0), i, j) for i, w in enumerate(cands) for j, g in enumerate(syms))
     uw, ug = set(), set()
     for d, i, j in pr:
@@ -131,7 +236,8 @@ def nets(topo, comps, words):
     # label flags: a small outline wrapped around a word; its tip meets the wire end within a few pt
     flagged = set()
     for w in words:
-        if id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ()) or not _netlike(w.text):
+        if (id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ())
+                or not _netlike(w.text) or _is_pin_text(w, comps, topo)):
             continue
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
         fl = [c for c in topo.wire_comps
@@ -155,7 +261,8 @@ def nets(topo, comps, words):
     class _P:  # point proxy
         pass
     for w in words:
-        if id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ()) or id(w) in flagged or not _netlike(w.text):
+        if (id(w) in getattr(topo, "used_words", ()) or id(w) in getattr(topo, "value_ids", ())
+                or id(w) in flagged or not _netlike(w.text) or _is_pin_text(w, comps, topo)):
             continue
         cx, cy = (w.x0 + w.x1) / 2, w.y1 + 0.3
         best = None
@@ -220,23 +327,63 @@ PINTOK = re.compile(r"^\d{1,2}$|^[A-C]\d{1,2}$|^[+\-]$|^[AK]$")
 
 
 def pin_tokens(topo, comps, words):
-    """pin id per terminal = nearest short pin-number-like word within 8pt, else x/y coordinate."""
-    boxes = [g for g in comps if (g.x1 - g.x0) > 20 and (g.y1 - g.y0) > 20]
-    inside = lambda w: any(g.x0 < (w.x0 + w.x1) / 2 < g.x1 and g.y0 < (w.y0 + w.y1) / 2 < g.y1 for g in boxes)
-    # Keep pin-number-like tokens inside a symbol body in the candidate pool.
-    # The mutual-nearest assignment below still requires a unique terminal/token
-    # match within its distance and margin limits.
-    cand = [w for w in words if PINTOK.match(w.text) and id(w) not in getattr(topo, "used_words", ())]
-    def dist(w, t):                      # number sits beside the stub: measure to stub end and to its middle
+    """Recover printed pin IDs with a component-scoped one-to-one geometric assignment.
+
+    Mutual-nearest matching is incorrect for dense connector rows: one caption can
+    be the nearest candidate for two adjacent pin endpoints, causing both valid
+    matches to be discarded. Solve the whole component as a bipartite assignment,
+    with an explicit unmatched option for every terminal. Captions outside that
+    component's expanded symbol bounds are ineligible.
+    """
+    from .assign import linear_sum_assignment
+    import numpy as np
+
+    used = getattr(topo, "used_words", ())
+    candidates = [w for w in words
+                  if PINTOK.fullmatch(w.text) and id(w) not in used]
+    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]
+    out, claimed = {}, set()
+    BIG, UNMATCHED, MAX_DISTANCE = 1e6, 12.0, 12.0
+
+    def dist(w, t):
         cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
-        return min(math.hypot(cx - t.x, cy - t.y), math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
-    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]     # 2-pin parts: their numbers are not printed, nearby digits are values
-    terminals = [t for g in multi for t in g.terminals]
-    # Accept a token only when it is the clear nearest choice for both sides.
-    matrix = [[dist(w, t) for w in cand] for t in terminals]
-    matches = _unambiguous_pin_assignment(matrix)
-    out = {id(terminals[ti]): cand[wi].text for ti, wi in matches.items()}
-    claimed = {id(cand[wi]) for wi in matches.values()}
+        return min(math.hypot(cx - t.x, cy - t.y),
+                   math.hypot(cx - (t.x + t.dx * 5), cy - (t.y + t.dy * 5)) + 1.5)
+
+    for group in multi:
+        terminals = group.terminals + getattr(group, "no_connect_terminals", [])
+        if not terminals:
+            continue
+        # The pin captions are commonly plotted just outside the component body.
+        # A bounded expansion prevents captions from neighbouring symbols leaking in.
+        local = []
+        for word in candidates:
+            cx, cy = (word.x0 + word.x1) / 2, (word.y0 + word.y1) / 2
+            dx = max(group.x0 - cx, 0.0, cx - group.x1)
+            dy = max(group.y0 - cy, 0.0, cy - group.y1)
+            if math.hypot(dx, dy) <= 20.0:
+                local.append(word)
+        if not local:
+            continue
+
+        # One private dummy column per terminal means a terminal may remain UNKNOWN
+        # instead of being forced onto a distant or already claimed caption.
+        matrix = np.full((len(terminals), len(local) + len(terminals)), BIG, dtype=float)
+        for ti, terminal in enumerate(terminals):
+            for wi, word in enumerate(local):
+                d = dist(word, terminal)
+                if d <= MAX_DISTANCE:
+                    matrix[ti, wi] = d
+            matrix[ti, len(local) + ti] = UNMATCHED
+        rows, cols = linear_sum_assignment(matrix)
+        selected = {int(r): int(c) for r, c in zip(rows, cols)}
+        for ti, wi in selected.items():
+            if wi >= len(local) or matrix[ti, wi] >= UNMATCHED:
+                continue
+            word = local[wi]
+            out[id(terminals[ti])] = word.text
+            claimed.add(id(word))
+
     return out, claimed
 
 
@@ -263,6 +410,23 @@ def _unambiguous_pin_assignment(distances, max_distance=12.0, margin=1.5):
             if wi is not None and token_best[wi] == ti}
 
 
+VALUE_SHAPES = {   # what a value looks like for the part type; a matching word is strongly preferred
+    "R": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
+    "RN": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
+    "C": r"\d+(\.\d+)?\s?[pnuμmµ]?F|\d+[pnuμµ]\d*",
+    "L": r"\d+(\.\d+)?\s?[nuμµm]?H",
+    "J": r"(?=.*\d)[\w.+\-]{4,}|USB[- ]?C|TYPE[- ]?C|USB[ -]?TYPE[ -]?C", "U": r"(?=.*\d)[\w.+\-]{3,}", "Q": r"(?=.*\d)[\w.+\-]{3,}",
+    "D": r"(?=.*\d)[\w.+\-]{3,}|[A-Z]{3,}",       # diode part number, or LED colour written in capitals   # part numbers, not pin captions
+}
+
+def value_shape_matches(ref, value):
+    """Validate a candidate value against the reference designator family."""
+    m = re.match(r"[A-Z]+", ref or "")
+    prefix = m.group() if m else None
+    rx = VALUE_SHAPES.get("R" if prefix == "RN" else prefix)
+    return rx is None or re.fullmatch(rx, value) is not None
+
+
 def values(topo, comps, words, claimed):
     topo.value_ids = getattr(topo, 'value_ids', set())
     """value = nearest unclaimed non-ref word to each component (>=2 chars)."""
@@ -273,18 +437,9 @@ def values(topo, comps, words, claimed):
     cand = [w for w in words if id(w) not in claimed and id(w) not in getattr(topo, "used_words", ())
             and (len(w.text) >= 2 or w.text.isdigit()) and not REF.match(w.text) and w.text not in netnames and not inside_body(w)]
     out = {}
-    SHAPE = {   # what a value looks like for the part type; a matching word is strongly preferred
-        "R": r"\d+(\.\d+)?[kKMGR]?\d*|\d+(\.\d+)?\s?[kKM]?[Ωo]?",
-        "C": r"\d+(\.\d+)?\s?[pnuμmµ]?F|\d+[pnuμµ]\d*",
-        "L": r"\d+(\.\d+)?\s?[nuμµm]?H",
-        "J": r"(?=.*\d)[\w.+\-]{4,}", "U": r"(?=.*\d)[\w.+\-]{3,}", "Q": r"(?=.*\d)[\w.+\-]{3,}",
-        "D": r"(?=.*\d)[\w.+\-]{3,}|[A-Z]{3,}",       # diode part number, or LED colour written in capitals   # part numbers, not pin captions
-    }
     def pen(w, g):
-        rx = SHAPE.get(re.match(r"[A-Z]+", g.ref).group()) if g.ref else None
-        if rx is None:
-            return 0.0
-        return 0.0 if re.fullmatch(rx, w.text) else 40.0          # wrong shape = effectively far away
+        return 0.0 if value_shape_matches(g.ref, w.text) else 40.0
+
     from .assign import linear_sum_assignment
     import numpy as np
     if not cand or not comps:

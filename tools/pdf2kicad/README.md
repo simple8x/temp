@@ -20,6 +20,61 @@ Run: `python -m pdf2kicad.cli in.pdf PAGE out.csv`  (net, ref, pin-coordinate)
 | 11 | 48/48 | 0.99 | 0.92 |
 All 209 references found and matching the BOM; 205/209 values identical to the hand-read ones (misses: J2 and R12, RN1, RN2 values).
 
+## Parser-derived connectivity evidence
+
+Each CLI page extraction now also writes `connectivity_evidence.json`. For every
+parser-produced net membership it records the reference, parsed pin identity (or
+coordinate fallback), terminal state, wire-component ID, and the source wire
+primitive indices and coordinates. It separately reports unresolved open
+terminals and repeated pin identities assigned to multiple nets.
+
+**This ledger is traceability for parser output, not independent electrical
+verification.** Its `parser_derived_memberships` count is deliberately distinct
+from `independently_verified_memberships`, which remains zero until an
+independently derived/reviewed reference topology is compared. The report marks
+each row `PARSER_DERIVED_NOT_INDEPENDENTLY_VERIFIED`; it must not be treated as
+a PASS or as proof that the PDF connection was interpreted correctly.
+
+Run the normal CLI command to generate the file alongside `netlist.csv`,
+`pin_status.csv`, `no_connect.csv`, `no_connect_assignment_debug.csv`, `nc_stub_conflicts.csv`, `pin_token_candidates.csv`, `pin_identity.csv`, and `pin_conflicts.csv`. Explicit NC terminals are associated with a symbol group using the pin-stub body endpoint or a unique, direction-aligned component-box match. If one wire component has exactly one explicit NC mark and one body-attached endpoint, the body endpoint is suppressed as a duplicate representation of the same physical pin; it is not emitted as a connected net member. Branched/multiple-mark cases become `NC_STUB_TOPOLOGY_CONFLICT` and fail closed. Printed pin-token-shaped text near component terminals is protected from net-label classification and may be recovered for NC pins.
+
+## Explicit junction evidence (QI9-2604-A01 source PDF)
+
+The CLI now writes `junction_evidence.json` per page. A filled mark is confirmed only when
+its vector path is a small filled black circle and at least three distinct orthogonal
+0.48 pt black line rays terminate at the circle centre. A geometric crossing without a
+filled mark is never joined. Unresolved filled marks remain candidates.
+
+The authoritative 14-page source PDF (SHA-256
+`a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc`) was checked
+on schematic pages 5–11. Confirmed explicit junction marks by page: 5=33, 6=17,
+7=20, 8=8, 9=3, 10=62, 11=48. Page 7 has 3 additional filled-mark candidates
+without the required three incident directions; they remain unresolved.
+
+Independent local re-run against the mounted source PDF reproduced the page inventory exactly:
+`(33,33), (17,17), (23,20), (8,8), (3,3), (62,62), (48,48)`.
+The source SHA-256 matched the pinned value. The J2 page-5 render was visually inspected:
+it shows A1–A12 and B1–B12 labels, explicit NC crosses on several pins, and separate
+USB_D+/USB_D- signal labels. The checked-in 24-token unit test validates assignment logic
+with synthetic coordinates; it is **not** a test that the extractor recovered all 24 tokens
+from the source PDF.
+
+This is verified **junction-marker geometry only**. It does not claim verified net
+membership, pin identity, full connectivity, or KiCad ERC. Bare crossings remain
+unjoined and the electrical netlist gate remains blocked pending full topology and
+reference-netlist comparison.
+
+## G3/G4 hardening branch audit outputs
+
+The hardened branch additionally writes `pin_status.csv` for every topology terminal, including unattached endpoints:
+- `ATTACHED`: the wire endpoint has geometric attachment evidence to a symbol body.
+- `NO_CONNECT_MARK`: an explicit vector no-connect cross was found.
+- `OPEN_UNRESOLVED`: no body attachment or explicit no-connect mark was found. This is **not** silently promoted to NC.
+
+Closed axis-aligned rectangles with four long edges are treated as candidate symbol bodies; H/V line primitives wholly inside their boundary (1.5 pt inset) are excluded from the wire graph. Small isolated two-stroke chevrons may be recorded as arrowhead pin markers, not NC marks. Text inside component bounds or within 3 pt of a pin stub is excluded from net-label assignment.
+
+Printed pin-token recognition accepts numeric and letter-prefixed forms such as `A2` and `B12`. Explicit NC candidates are obtained both from decoded standalone X glyphs and from pairs of short, centered, near-orthogonal diagonal vector strokes; a candidate is assigned only to a wire endpoint within 1.6 pt. An NC marker takes precedence over geometric proximity to a symbol body, and its center/distance are retained in `pin_status.csv` and `connectivity_evidence.json`. The authoritative page-5 regression asserts that at least one source-PDF NC is detected. Raster/template recovery for obscured or missing digits is not yet implemented; such pins remain unresolved. These rules are regression-tested but do not certify the 7-page electrical netlist, KiCad ERC, or visual PDF review.
+
 ## Known limits
 - No part is missing on the 7 test pages. Multi-unit parts are merged (U16A..D -> U16).
 - 7-30% of pins keep coordinate names (e.g. `401_135`) where no pin number is printed beside the stub (optocoupler units); nets are still right, rename by hand.

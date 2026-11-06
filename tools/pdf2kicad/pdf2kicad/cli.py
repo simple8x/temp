@@ -1,5 +1,5 @@
 """pdf2kicad PAGE-LEVEL extractor (experimental).  Usage: python -m pdf2kicad.cli in.pdf PAGE outdir [--info] [--mode M] [--scale S]  (writes netlist.csv + parts.csv for tools/gen_kicad_sch.py)"""
-import csv, re, sys
+import csv, json, re, sys
 from .primitives import load_page
 from .normalize import classify, text_layer_words, estimate_scale
 from . import glyphs as G, font, textdecode as T, topology as TP, netlist as NL
@@ -118,16 +118,19 @@ def _core(pg, use, pre=None):
         text = [w for w in words if ok(w) and not xs(w)]
         drop = {key(s) for w in words if ok(w) or xs(w) for g in w.glyphs for s in g.segs}
         marks = [((w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2) for w in words if xs(w)]
+        marks.extend(TP.find_no_connect_crosses(pg.segs))
+        marks = list({(round(x, 2), round(y, 2)): (x, y) for x, y in marks}.values())
         segs = [s for s in pg.segs if key((s.x0, s.y0, s.x1, s.y1)) not in drop]
     else:                                              # textlayer: text is already text
         text = text_layer_words(pg)
-        marks = []
+        marks = TP.find_no_connect_crosses(pg.segs)
         segs = list(pg.segs)
     # sheet frame / title block: long lines and everything in the bottom strip (84% of height)
     lim = 0.84 * pg.height
     segs = [s for s in segs if s.length <= 0.36 * max(pg.width, pg.height) and s.y0 < lim and s.y1 < lim]
     topo = TP.Topology(segs, pg.dots, marks)
     comps = NL.assign(topo, text)
+    topo.nc_component_assignments = NL.assign_no_connect_terminals(topo, comps)
     for g in comps:                                  # LED arrow heads are tiny wire bits, not pins
         if g.ref.startswith("D"):
             big = [t for t in g.terminals if max(topo._comp_box(t.comp)[2] - topo._comp_box(t.comp)[0],
@@ -231,6 +234,75 @@ def main(argv):
             identity_rows.append([ref, pin, identity_kind, nm])
     with open(os.path.join(outdir, "netlist.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["net", "ref", "pin"]); w.writerows(net_rows)
+    # Include every topology terminal. Unattached endpoints have no safe ref assignment.
+    group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
+    no_connect_rows = []
+    with open(os.path.join(outdir, "pin_status.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["ref", "pin_identity", "identity_kind", "x", "y", "status", "evidence", "component_assignment", "nc_mark_x", "nc_mark_y", "nc_mark_distance"])
+        for term in topo.terminals:
+            status = TP.terminal_status(term)
+            evidence = ("vector_no_connect_cross" if status == "NO_CONNECT_MARK" else
+                        "suppressed_nc_stub_body_end" if status == "SUPPRESSED_NC_STUB_BODY_END" else
+                        "nc_stub_topology_conflict" if status == "NC_STUB_TOPOLOGY_CONFLICT" else
+                        "vector_arrowhead_pin_marker" if term.anchor_kind == "arrowhead" else
+                        "wire_to_body" if status == "ATTACHED" else
+                        "no_explicit_nc_or_body_attachment")
+            ref = group_ref.get(term.group, "")
+            assignment = "ASSIGNED" if ref else "UNRESOLVED"
+            pin_identity = pins.get(id(term), "")
+            identity_kind = "printed_text" if id(term) in pins else "UNRESOLVED"
+            mark_x = "%.3f" % term.nc_mark_x if status == "NO_CONNECT_MARK" else ""
+            mark_y = "%.3f" % term.nc_mark_y if status == "NO_CONNECT_MARK" else ""
+            mark_distance = "%.3f" % term.nc_mark_distance if status == "NO_CONNECT_MARK" else ""
+            w.writerow([ref, pin_identity, identity_kind, "%.3f" % term.x, "%.3f" % term.y, status, evidence, assignment, mark_x, mark_y, mark_distance])
+            if status == "NO_CONNECT_MARK":
+                no_connect_rows.append([ref, pin_identity, identity_kind, "%.3f" % term.x, "%.3f" % term.y, mark_x, mark_y, mark_distance, evidence, assignment])
+    with open(os.path.join(outdir, "no_connect.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["ref", "pin_identity", "identity_kind", "terminal_x", "terminal_y", "mark_x", "mark_y", "mark_distance", "evidence", "component_assignment"])
+        w.writerows(no_connect_rows)
+    with open(os.path.join(outdir, "no_connect_assignment_debug.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["terminal_x", "terminal_y", "candidate_ref", "distance", "alignment", "score", "decision"])
+        for row in getattr(topo, "nc_component_assignment_debug", []):
+            w.writerow([row.get("terminal_x"), row.get("terminal_y"), row.get("candidate_ref"), row.get("distance"), row.get("alignment"), row.get("score"), row.get("decision")])
+    with open(os.path.join(outdir, "nc_stub_conflicts.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["wire_component", "nc_mark_count", "attached_terminal_count", "status"])
+        for row in getattr(topo, "nc_stub_conflicts", []):
+            w.writerow([row["wire_component"], row["nc_mark_count"], row["attached_terminal_count"], row["status"]])
+    pin_token_debug = []
+    component_terminals = [
+        (g, term) for g in comps
+        for term in (g.terminals + getattr(g, "no_connect_terminals", []))
+    ]
+    for word in text:
+        if not NL.PINTOK.fullmatch(word.text) or id(word) in getattr(topo, "used_words", set()):
+            continue
+        cx, cy = (word.x0 + word.x1) / 2, (word.y0 + word.y1) / 2
+        ranked = []
+        for group, term in component_terminals:
+            distance = min(
+                ((cx - term.x) ** 2 + (cy - term.y) ** 2) ** 0.5,
+                ((cx - (term.x + term.dx * 5)) ** 2 + (cy - (term.y + term.dy * 5)) ** 2) ** 0.5 + 1.5,
+            )
+            ranked.append((distance, group, term))
+        if ranked:
+            distance, group, term = min(ranked, key=lambda row: row[0])
+            pin_token_debug.append([
+                word.text, "%.3f" % word.x0, "%.3f" % word.y0,
+                "%.3f" % word.x1, "%.3f" % word.y1, group.ref,
+                "%.3f" % term.x, "%.3f" % term.y, "%.3f" % distance,
+                pins.get(id(term), ""), "ASSIGNED" if id(term) in pins else "UNASSIGNED",
+            ])
+        else:
+            pin_token_debug.append([word.text, "%.3f" % word.x0, "%.3f" % word.y0,
+                                    "%.3f" % word.x1, "%.3f" % word.y1, "", "", "", "", "", "NO_COMPONENT_TERMINAL"])
+    with open(os.path.join(outdir, "pin_token_candidates.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["token", "x0", "y0", "x1", "y1", "nearest_ref", "terminal_x", "terminal_y", "distance", "assigned_pin", "status"])
+        w.writerows(pin_token_debug)
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
     with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
@@ -255,7 +327,26 @@ def main(argv):
                 nm = min(cand, key=lambda x: (abs((x.x0 + x.x1) / 2 - ix) + abs((x.y0 + x.y1) / 2 - iy)), default=None)
                 side = ("right" if t.dx > 0.5 else "left" if t.dx < -0.5 else "bottom" if t.dy > 0.5 else "top")
                 w.writerow([g.ref, pin, nm.text if nm else "", side])
+    # Emit traceable parser-derived connectivity; this is not independent verification.
+    from .connectivity_evidence import build_connectivity_evidence
+    connectivity_evidence = build_connectivity_evidence(topo, comps, nets, pins)
+    with open(os.path.join(outdir, "connectivity_evidence.json"), "w", encoding="utf-8") as f:
+        json.dump(connectivity_evidence, f, indent=2)
+        f.write("\n")
+    print("connectivity evidence: %d parser-derived pin/net memberships; %d unresolved terminals; independent verification=%d" % (
+        connectivity_evidence["summary"]["parser_derived_memberships"],
+        connectivity_evidence["summary"]["open_unresolved_terminals"],
+        connectivity_evidence["summary"]["independently_verified_memberships"]))
+    # Preserve explicit filled-junction evidence separately from inferred net membership.
+    from .electrical_evidence import classify_page
+    junction_evidence = classify_page(pdf, page)
+    with open(os.path.join(outdir, "junction_evidence.json"), "w", encoding="utf-8") as f:
+        json.dump(junction_evidence, f, indent=2)
+        f.write("\n")
     print("%d components, %d nets -> %s" % (len({g.ref for g in comps}), len(nets), outdir))
+    print("rectangle symbol boxes: %d; internal H/V primitives excluded: %d" %
+          (len(topo.symbol_boxes), topo.rectangle_internal_count))
+    print("pin status ledger: pin_status.csv (open pins remain OPEN_UNRESOLVED; no implicit NC)")
 
 
 def cli():
