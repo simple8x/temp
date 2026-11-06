@@ -33,6 +33,14 @@ on schematic pages 5–11. Confirmed explicit junction marks by page: 5=33, 6=17
 7=20, 8=8, 9=3, 10=62, 11=48. Page 7 has 3 additional filled-mark candidates
 without the required three incident directions; they remain unresolved.
 
+Independent local re-run against the mounted source PDF reproduced the page inventory exactly:
+`(33,33), (17,17), (23,20), (8,8), (3,3), (62,62), (48,48)`.
+The source SHA-256 matched the pinned value. The J2 page-5 render was visually inspected:
+it shows A1–A12 and B1–B12 labels, explicit NC crosses on several pins, and separate
+USB_D+/USB_D- signal labels. The checked-in 24-token unit test validates assignment logic
+with synthetic coordinates; it is **not** a test that the extractor recovered all 24 tokens
+from the source PDF.
+
 This is verified **junction-marker geometry only**. It does not claim verified net
 membership, pin identity, full connectivity, or KiCad ERC. Bare crossings remain
 unjoined and the electrical netlist gate remains blocked pending full topology and
