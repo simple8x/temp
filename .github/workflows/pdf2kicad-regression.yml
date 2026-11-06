@@ -86,6 +86,32 @@ jobs:
           for page in 5 6 7 8 9 10 11; do
             python -m pdf2kicad.cli "$QI9_SOURCE_PDF" "$page" "connectivity-evidence/page${page}"
           done
+      - name: Render explicit NC source-PDF crops for review
+        env:
+          QI9_SOURCE_PDF: ${{ github.workspace }}/evidence/QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf
+        run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          import fitz
+          pdf = fitz.open(__import__("os").environ["QI9_SOURCE_PDF"])
+          out = Path("nc-crops")
+          out.mkdir(exist_ok=True)
+          for page_no in range(5, 12):
+              csv_path = Path(f"connectivity-evidence/page{page_no}/no_connect.csv")
+              if not csv_path.exists():
+                  continue
+              with csv_path.open(newline="", encoding="utf-8") as handle:
+                  rows = list(csv.DictReader(handle))
+              page = pdf[page_no - 1]
+              for index, row in enumerate(rows, 1):
+                  x, y = float(row["terminal_x"]), float(row["terminal_y"])
+                  clip = fitz.Rect(x - 18, y - 18, x + 18, y + 18) & page.rect
+                  pix = page.get_pixmap(matrix=fitz.Matrix(3, 3), clip=clip, alpha=False)
+                  pix.save(out / f"page{page_no:02d}_nc{index:02d}.png")
+          pdf.close()
+          print(f"rendered {len(list(out.glob('*.png')))} explicit-NC review crops")
+          PY
       - name: Upload junction and connectivity evidence
         uses: actions/upload-artifact@v4
         with:
@@ -94,5 +120,6 @@ jobs:
             tools/pdf2kicad/junction-evidence/
             tools/pdf2kicad/connectivity-evidence/
             tools/pdf2kicad/source_manifest.json
+            tools/pdf2kicad/nc-crops/
           if-no-files-found: error
           retention-days: 7
