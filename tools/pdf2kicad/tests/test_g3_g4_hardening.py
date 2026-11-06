@@ -242,3 +242,27 @@ def test_nc_cross_at_pin_stub_end_traces_forward_to_symbol_body():
     assert term.group >= 0
     assert topo.groups[term.group].no_connect_terminals == [term]
     assert topo.groups[term.group].terminals == []
+
+
+
+def test_nc_component_association_requires_direction_and_unique_candidate():
+    from types import SimpleNamespace
+    from pdf2kicad.topology import Terminal
+    from pdf2kicad.netlist import assign_no_connect_terminals
+
+    near = SimpleNamespace(ref="J2", x0=8.0, y0=-2.0, x1=12.0, y1=2.0, no_connect_terminals=[])
+    wrong_direction = SimpleNamespace(ref="R1", x0=-12.0, y0=-2.0, x1=-8.0, y1=2.0, no_connect_terminals=[])
+    term = Terminal(0.0, 0.0, 0, kind="nc", dx=1.0, dy=0.0)
+    topo = SimpleNamespace(terminals=[term], groups=[near, wrong_direction])
+    assigned = assign_no_connect_terminals(topo, [near, wrong_direction])
+    assert len(assigned) == 1
+    assert assigned[0]["ref"] == "J2"
+    assert term.group == 0
+    assert near.no_connect_terminals == [term]
+
+    a = SimpleNamespace(ref="U1", x0=8.0, y0=-2.0, x1=12.0, y1=2.0, no_connect_terminals=[])
+    b = SimpleNamespace(ref="U2", x0=8.0, y0=-2.0, x1=12.0, y1=2.0, no_connect_terminals=[])
+    ambiguous = Terminal(0.0, 0.0, 1, kind="nc", dx=1.0, dy=0.0)
+    topo2 = SimpleNamespace(terminals=[ambiguous], groups=[a, b])
+    assert assign_no_connect_terminals(topo2, [a, b]) == []
+    assert ambiguous.group == -1
