@@ -271,7 +271,7 @@ def main(argv):
     junction_evidence = classify_page(pdf, page)
     with open(os.path.join(outdir, "junction_evidence.json"), "w", encoding="utf-8") as f:
         json.dump(junction_evidence, f, indent=2)
-        f.write("\\n")
+        f.write("\n")
     print("%d components, %d nets -> %s" % (len({g.ref for g in comps}), len(nets), outdir))
     print("rectangle symbol boxes: %d; internal H/V primitives excluded: %d" %
           (len(topo.symbol_boxes), topo.rectangle_internal_count))
