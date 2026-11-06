@@ -173,3 +173,19 @@ def test_vector_cross_detector_rejects_non_crossing_or_non_orthogonal_marks():
     ]
     assert find_no_connect_crosses(offset) == []
     assert find_no_connect_crosses(shallow) == []
+
+
+
+def test_no_connect_terminal_is_assigned_to_symbol_but_not_net_membership():
+    from pdf2kicad.topology import Topology, Terminal
+
+    topo = Topology.__new__(Topology)
+    topo.body_segs = [Seg(0, 0, 20, 0, "line")]
+    terminal = Terminal(10, 0, 0, kind="nc", body=0, anchor_kind="no_connect_cross")
+    topo.terminals = [terminal]
+    topo._groups()
+
+    assert terminal.group >= 0
+    group = topo.groups[terminal.group]
+    assert group.no_connect_terminals == [terminal]
+    assert group.terminals == []
