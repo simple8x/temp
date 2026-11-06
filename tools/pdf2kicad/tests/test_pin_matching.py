@@ -91,3 +91,21 @@ def test_resistor_value_not_mistaken_for_net_label():
     assert not _netlike("2k2")
     assert not _netlike("4R7")
     assert _netlike("INPUT03")
+
+def test_pin_number_inside_symbol_body_is_not_discarded():
+    from types import SimpleNamespace
+
+    terminals = [
+        SimpleNamespace(x=10.0, y=10.0, dx=0.0, dy=0.0, comp=1),
+        SimpleNamespace(x=30.0, y=30.0, dx=0.0, dy=0.0, comp=2),
+        SimpleNamespace(x=50.0, y=50.0, dx=0.0, dy=0.0, comp=3),
+    ]
+    group = SimpleNamespace(
+        x0=0.0, y0=0.0, x1=60.0, y1=60.0, terminals=terminals
+    )
+    topo = SimpleNamespace(groups=[group], used_words=set())
+    token = SimpleNamespace(x0=9.5, y0=9.5, x1=10.5, y1=10.5, text="1")
+    pins, claimed = pin_tokens(topo, [group], [token])
+    assert pins == {id(terminals[0]): "1"}
+    assert claimed == {id(token)}
+
