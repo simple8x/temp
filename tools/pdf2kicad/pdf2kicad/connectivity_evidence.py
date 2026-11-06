@@ -66,6 +66,19 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         for terminal in topo.terminals
         if terminal.kind == "open"
     ]
+    no_connect_marks = [
+        {
+            "x": round(terminal.nc_mark_x, 4),
+            "y": round(terminal.nc_mark_y, 4),
+            "terminal_x": round(terminal.x, 4),
+            "terminal_y": round(terminal.y, 4),
+            "distance": round(terminal.nc_mark_distance, 4),
+            "wire_component": terminal.comp,
+            "status": "EXPLICIT_NO_CONNECT_MARK",
+        }
+        for terminal in topo.terminals
+        if terminal.kind == "nc"
+    ]
     terminal_counts = {
         "all_topology_terminals": len(topo.terminals),
         "attached_terminals": sum(1 for terminal in topo.terminals if terminal.kind == "attach"),
@@ -102,5 +115,6 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         },
         "memberships": memberships,
         "unresolved_terminals": unresolved,
+        "no_connect_marks": no_connect_marks,
         "pin_conflicts": pin_conflicts,
     }
