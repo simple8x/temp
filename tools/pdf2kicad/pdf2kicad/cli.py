@@ -236,8 +236,11 @@ def main(argv):
         w = csv.writer(f); w.writerow(["ref", "x", "y", "status", "evidence"])
         for g in comps:
             for term in g.terminals:
-                status = "NO_CONNECT_MARK" if term.kind == "nc" else "ATTACHED" if term.kind == "attach" else "OPEN_UNRESOLVED"
-                evidence = "vector_no_connect_cross" if term.kind == "nc" else "wire_to_body" if term.kind == "attach" else "no_explicit_nc_or_body_attachment"
+                status = TP.terminal_status(term)
+                evidence = ("vector_no_connect_cross" if status == "NO_CONNECT_MARK" else
+                            "vector_arrowhead_pin_marker" if term.anchor_kind == "arrowhead" else
+                            "wire_to_body" if status == "ATTACHED" else
+                            "no_explicit_nc_or_body_attachment")
                 w.writerow([g.ref, "%.3f" % term.x, "%.3f" % term.y, status, evidence])
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
