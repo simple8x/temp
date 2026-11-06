@@ -260,6 +260,11 @@ def main(argv):
         w = csv.writer(f)
         w.writerow(["ref", "pin_identity", "identity_kind", "terminal_x", "terminal_y", "mark_x", "mark_y", "mark_distance", "evidence", "component_assignment"])
         w.writerows(no_connect_rows)
+    with open(os.path.join(outdir, "no_connect_assignment_debug.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["terminal_x", "terminal_y", "candidate_ref", "distance", "alignment", "score", "decision"])
+        for row in getattr(topo, "nc_component_assignment_debug", []):
+            w.writerow([row.get("terminal_x"), row.get("terminal_y"), row.get("candidate_ref"), row.get("distance"), row.get("alignment"), row.get("score"), row.get("decision")])
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
     with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
