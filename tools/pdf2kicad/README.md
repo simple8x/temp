@@ -66,7 +66,7 @@ reference-netlist comparison.
 
 ## G3/G4 hardening branch audit outputs
 
-The hardened branch additionally writes `pin_status.csv` for every extracted component terminal:
+The hardened branch additionally writes `pin_status.csv` for every topology terminal, including unattached endpoints:
 - `ATTACHED`: the wire endpoint has geometric attachment evidence to a symbol body.
 - `NO_CONNECT_MARK`: an explicit vector no-connect cross was found.
 - `OPEN_UNRESOLVED`: no body attachment or explicit no-connect mark was found. This is **not** silently promoted to NC.
