@@ -60,12 +60,20 @@ def assign_no_connect_terminals(topo, comps, max_distance=24.0, min_alignment=0.
     from the mark toward the component. Assignment is geometry-only and fails
     closed when two component boxes are similarly plausible.
     """
-    assigned = []
+    assigned, diagnostics = [], []
     group_index = {id(group): index for index, group in enumerate(topo.groups)}
     for terminal in topo.terminals:
-        if terminal.kind != "nc" or terminal.group >= 0 or not (terminal.dx or terminal.dy):
+        if terminal.kind != "nc" or terminal.group >= 0:
+            continue
+        if not (terminal.dx or terminal.dy):
+            diagnostics.append({
+                "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+                "candidate_ref": "", "distance": "", "alignment": "", "score": "",
+                "decision": "NO_WIRE_DIRECTION",
+            })
             continue
         candidates = []
+        nearby = []
         for group in comps:
             if not group.ref or id(group) not in group_index:
                 continue
@@ -73,17 +81,29 @@ def assign_no_connect_terminals(topo, comps, max_distance=24.0, min_alignment=0.
             qy = min(max(terminal.y, group.y0), group.y1)
             vx, vy = qx - terminal.x, qy - terminal.y
             distance = math.hypot(vx, vy)
-            if distance > max_distance:
-                continue
             alignment = (vx * terminal.dx + vy * terminal.dy) / distance if distance else 1.0
-            if alignment < min_alignment:
-                continue
             score = distance + (1.0 - alignment) * 8.0
-            candidates.append((score, distance, alignment, group))
+            nearby.append((distance, alignment, score, group))
+            if distance <= max_distance and alignment >= min_alignment:
+                candidates.append((score, distance, alignment, group))
+        for distance, alignment, score, group in sorted(nearby, key=lambda item: item[0])[:10]:
+            diagnostics.append({
+                "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+                "candidate_ref": group.ref, "distance": round(distance, 4),
+                "alignment": round(alignment, 4), "score": round(score, 4),
+                "decision": "ELIGIBLE" if distance <= max_distance and alignment >= min_alignment else
+                            "TOO_FAR" if distance > max_distance else "DIRECTION_MISMATCH",
+            })
         candidates.sort(key=lambda item: item[0])
         if not candidates:
             continue
         if len(candidates) > 1 and candidates[1][0] - candidates[0][0] < score_margin:
+            diagnostics.append({
+                "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+                "candidate_ref": candidates[0][3].ref, "distance": round(candidates[0][1], 4),
+                "alignment": round(candidates[0][2], 4), "score": round(candidates[0][0], 4),
+                "decision": "AMBIGUOUS_TOP_CANDIDATES",
+            })
             continue
         score, distance, alignment, group = candidates[0]
         terminal.group = group_index[id(group)]
@@ -98,6 +118,13 @@ def assign_no_connect_terminals(topo, comps, max_distance=24.0, min_alignment=0.
             "assignment_score": round(score, 4),
             "status": "GEOMETRIC_COMPONENT_ASSOCIATION_NOT_PIN_NET_VERIFICATION",
         })
+        diagnostics.append({
+            "terminal_x": round(terminal.x, 4), "terminal_y": round(terminal.y, 4),
+            "candidate_ref": group.ref, "distance": round(distance, 4),
+            "alignment": round(alignment, 4), "score": round(score, 4),
+            "decision": "ASSIGNED",
+        })
+    topo.nc_component_assignment_debug = diagnostics
     return assigned
 
 
