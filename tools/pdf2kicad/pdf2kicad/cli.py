@@ -231,6 +231,14 @@ def main(argv):
             identity_rows.append([ref, pin, identity_kind, nm])
     with open(os.path.join(outdir, "netlist.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["net", "ref", "pin"]); w.writerows(net_rows)
+    # An unmarked open pin is unresolved, never silently NC.
+    with open(os.path.join(outdir, "pin_status.csv"), "w", newline="") as f:
+        w = csv.writer(f); w.writerow(["ref", "x", "y", "status", "evidence"])
+        for g in comps:
+            for term in g.terminals:
+                status = "NO_CONNECT_MARK" if term.kind == "nc" else "ATTACHED" if term.kind == "attach" else "OPEN_UNRESOLVED"
+                evidence = "vector_no_connect_cross" if term.kind == "nc" else "wire_to_body" if term.kind == "attach" else "no_explicit_nc_or_body_attachment"
+                w.writerow([g.ref, "%.3f" % term.x, "%.3f" % term.y, status, evidence])
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
     with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
@@ -256,6 +264,9 @@ def main(argv):
                 side = ("right" if t.dx > 0.5 else "left" if t.dx < -0.5 else "bottom" if t.dy > 0.5 else "top")
                 w.writerow([g.ref, pin, nm.text if nm else "", side])
     print("%d components, %d nets -> %s" % (len({g.ref for g in comps}), len(nets), outdir))
+    print("rectangle symbol boxes: %d; internal H/V primitives excluded: %d" %
+          (len(topo.symbol_boxes), topo.rectangle_internal_count))
+    print("pin status ledger: pin_status.csv (open pins remain OPEN_UNRESOLVED; no implicit NC)")
 
 
 def cli():
