@@ -265,6 +265,37 @@ def main(argv):
         w.writerow(["terminal_x", "terminal_y", "candidate_ref", "distance", "alignment", "score", "decision"])
         for row in getattr(topo, "nc_component_assignment_debug", []):
             w.writerow([row.get("terminal_x"), row.get("terminal_y"), row.get("candidate_ref"), row.get("distance"), row.get("alignment"), row.get("score"), row.get("decision")])
+    pin_token_debug = []
+    component_terminals = [
+        (g, term) for g in comps
+        for term in (g.terminals + getattr(g, "no_connect_terminals", []))
+    ]
+    for word in text:
+        if not NL.PINTOK.fullmatch(word.text) or id(word) in getattr(topo, "used_words", set()):
+            continue
+        cx, cy = (word.x0 + word.x1) / 2, (word.y0 + word.y1) / 2
+        ranked = []
+        for group, term in component_terminals:
+            distance = min(
+                ((cx - term.x) ** 2 + (cy - term.y) ** 2) ** 0.5,
+                ((cx - (term.x + term.dx * 5)) ** 2 + (cy - (term.y + term.dy * 5)) ** 2) ** 0.5 + 1.5,
+            )
+            ranked.append((distance, group, term))
+        if ranked:
+            distance, group, term = min(ranked, key=lambda row: row[0])
+            pin_token_debug.append([
+                word.text, "%.3f" % word.x0, "%.3f" % word.y0,
+                "%.3f" % word.x1, "%.3f" % word.y1, group.ref,
+                "%.3f" % term.x, "%.3f" % term.y, "%.3f" % distance,
+                pins.get(id(term), ""), "ASSIGNED" if id(term) in pins else "UNASSIGNED",
+            ])
+        else:
+            pin_token_debug.append([word.text, "%.3f" % word.x0, "%.3f" % word.y0,
+                                    "%.3f" % word.x1, "%.3f" % word.y1, "", "", "", "", "", "NO_COMPONENT_TERMINAL"])
+    with open(os.path.join(outdir, "pin_token_candidates.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["token", "x0", "y0", "x1", "y1", "nearest_ref", "terminal_x", "terminal_y", "distance", "assigned_pin", "status"])
+        w.writerows(pin_token_debug)
     with open(os.path.join(outdir, "pin_identity.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["ref", "pin_identity", "identity_kind", "net"]); w.writerows(identity_rows)
     with open(os.path.join(outdir, "pin_conflicts.csv"), "w", newline="") as f:
