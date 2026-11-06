@@ -189,3 +189,34 @@ def test_no_connect_terminal_is_assigned_to_symbol_but_not_net_membership():
     group = topo.groups[terminal.group]
     assert group.no_connect_terminals == [terminal]
     assert group.terminals == []
+
+
+
+def test_pin_token_recovery_includes_nc_pins_without_counting_them_as_connected():
+    from types import SimpleNamespace
+    from pdf2kicad.topology import Terminal
+    from pdf2kicad.netlist import pin_tokens
+
+    attached = [
+        Terminal(20.0 + 20.0 * i, 100.0, i, kind="attach", dx=1.0)
+        for i in range(3)
+    ]
+    no_connect = Terminal(80.0, 100.0, 3, kind="nc", anchor_kind="no_connect_cross")
+    group = SimpleNamespace(
+        x0=0.0, y0=0.0, x1=200.0, y1=200.0,
+        terminals=attached, no_connect_terminals=[no_connect],
+    )
+    all_terms = attached + [no_connect]
+    words = [
+        SimpleNamespace(x0=term.x + 1.0, x1=term.x + 3.0,
+                        y0=term.y - 1.0, y1=term.y + 1.0, text=token)
+        for term, token in zip(all_terms, ["1", "2", "3", "4"])
+    ]
+    topo = SimpleNamespace(used_words=set())
+
+    assigned, claimed = pin_tokens(topo, [group], words)
+
+    assert assigned[id(no_connect)] == "4"
+    assert len(assigned) == 4
+    assert len(group.terminals) == 3
+    assert group.no_connect_terminals == [no_connect]
