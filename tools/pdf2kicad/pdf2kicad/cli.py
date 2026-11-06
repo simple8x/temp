@@ -173,11 +173,10 @@ def main(argv):
     by = {}
     for g in comps:
         by.setdefault(g.ref, []).extend(g.terminals)
-    for ref, ts in by.items():                 # 2-pin parts with no printed pin numbers -> 1/2 by position
-        ts = list({t.comp: t for t in ts}.values())
-        if len(ts) == 2 and (not any(id(t) in pins for t in ts) or re.match(r'[RLFC]\d', ref)):
-            for n, t in enumerate(sorted(ts, key=lambda t: (t.y, t.x)), 1):
-                pins[id(t)] = str(n)
+    # A two-terminal symbol's visual order does not prove its library pin numbers.
+    # Keep its terminals unresolved unless the PDF prints an explicit pin token or
+    # symbol geometry establishes a semantic polarity (handled below for diode/capacitor).
+    explicit_pin_ids = set(pins)
     symbol = {}
     LEDV = re.compile(r"red|green|yellow|blue|white|orange|led", re.I)
     for g in comps:
@@ -223,7 +222,12 @@ def main(argv):
             pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
             net_rows.append([nm, ref, pin])
             pin_owners.setdefault((ref, pin), set()).add(nm)
-            identity_kind = "coordinate_fallback" if re.fullmatch(r"-?\d+_-?\d+", pin) else "text_or_geometry_inferred"
+            if id(t) in explicit_pin_ids:
+                identity_kind = "printed_text"
+            elif pin in ("A", "K", "+", "-"):
+                identity_kind = "geometry_inferred"
+            else:
+                identity_kind = "coordinate_fallback"
             identity_rows.append([ref, pin, identity_kind, nm])
     with open(os.path.join(outdir, "netlist.csv"), "w", newline="") as f:
         w = csv.writer(f); w.writerow(["net", "ref", "pin"]); w.writerows(net_rows)
