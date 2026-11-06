@@ -56,3 +56,14 @@ def test_authoritative_qi9_pdf_junction_inventory():
         assert result["summary"]["explicit_junctions_confirmed"] == expected
         assert result["summary"]["filled_circle_mark_candidates"] == EXPECTED_CANDIDATES[page]
         assert result["summary"]["verified_net_memberships"] == 0
+
+
+@pytest.mark.skipif(not os.environ.get("QI9_SOURCE_PDF"), reason="source PDF fixture not supplied")
+def test_authoritative_qi9_page5_detects_explicit_no_connect_marks():
+    from pdf2kicad.cli import extract
+
+    comps, nets, words, topo = extract(os.environ["QI9_SOURCE_PDF"], 5, full=True)
+    no_connect = [term for term in topo.terminals if term.kind == "nc"]
+    assert no_connect, "page 5 visibly contains explicit NC crosses; parser must detect at least one"
+    assert all(term.anchor_kind == "no_connect_cross" for term in no_connect)
+    assert all(term.nc_mark_distance <= 1.6 for term in no_connect)
