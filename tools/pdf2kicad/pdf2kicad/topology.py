@@ -136,7 +136,7 @@ def is_arrowhead_geometry(segs, tol=0.4):
     diag = [s for s in segs if s.kind in ("line", "rect") and not (s.is_h or s.is_v)
             and 1.0 <= s.length <= 8.0]
     # Require exactly two diagonal strokes: a three-sided diode/triangle body is not an arrow.
-    if len(diag) != 2:
+    if len(diag) != 2 or len(segs) != 2:
         return False
     a, b = diag
     ae = ((a.x0, a.y0), (a.x1, a.y1))
