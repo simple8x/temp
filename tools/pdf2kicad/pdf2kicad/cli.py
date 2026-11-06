@@ -219,7 +219,7 @@ def main(argv):
     identity_rows = []
     for nm, lst in sorted(nets.items()):
         for ref, t in lst:
-            pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
+            pin = pins.get(id(t), "%.2f_%.2f" % (t.x, t.y))
             net_rows.append([nm, ref, pin])
             pin_owners.setdefault((ref, pin), set()).add(nm)
             if id(t) in explicit_pin_values and pin == explicit_pin_values[id(t)]:
@@ -248,7 +248,7 @@ def main(argv):
             if (g.x1 - g.x0) < 20 or (g.y1 - g.y0) < 20 or len({t.comp for t in g.terminals}) < 3:
                 continue
             for t in g.terminals:
-                pin = pins.get(id(t), "%.0f_%.0f" % (t.x, t.y))
+                pin = pins.get(id(t), "%.2f_%.2f" % (t.x, t.y))
                 # name = nearest word just inside the body, along the pin axis
                 ix, iy = t.x - t.dx * 6, t.y - t.dy * 6
                 cand = [x for x in text if x.text != pin and not NL.REF.match(x.text) and g.x0 - 1 <= x.x0 and x.x1 <= g.x1 + 1 and g.y0 - 1 <= x.y0 and x.y1 <= g.y1 + 1]
