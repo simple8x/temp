@@ -3,6 +3,7 @@ import csv, json, re, sys
 from .primitives import load_page
 from .normalize import classify, text_layer_words, estimate_scale
 from . import glyphs as G, font, textdecode as T, topology as TP, netlist as NL
+from .sheet_geometry import exclude_sheet_metadata
 
 
 def _quality(pg):
@@ -125,10 +126,19 @@ def _core(pg, use, pre=None):
         text = text_layer_words(pg)
         marks = TP.find_no_connect_crosses(pg.segs)
         segs = list(pg.segs)
-    # sheet frame / title block: long lines and everything in the bottom strip (84% of height)
-    lim = 0.84 * pg.height
-    segs = [s for s in segs if s.length <= 0.36 * max(pg.width, pg.height) and s.y0 < lim and s.y1 < lim]
+    # Exclude sheet metadata only when page-edge continuity or a closed,
+    # text-bearing title-block enclosure provides geometric evidence. Do not
+    # discard a whole y-band: real circuitry may extend into the lower sheet.
+    metadata_filter = exclude_sheet_metadata(segs, pg.width, pg.height, [
+        (w.x0, w.y0, w.x1, w.y1, w.text) for w in text
+    ])
+    segs = [
+        s for s in segs
+        if s.kind not in ("sheet_frame", "title_block")
+        and s.length <= 0.36 * max(pg.width, pg.height)
+    ]
     topo = TP.Topology(segs, pg.dots, marks)
+    topo.sheet_metadata_filter = metadata_filter
     comps = NL.assign(topo, text)
     topo.nc_component_assignments = NL.assign_no_connect_terminals(topo, comps)
     for g in comps:                                  # LED arrow heads are tiny wire bits, not pins
