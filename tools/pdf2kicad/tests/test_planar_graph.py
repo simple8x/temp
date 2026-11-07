@@ -19,17 +19,21 @@ class PlanarGraphTests(unittest.TestCase):
         g = self.graph([(0, 0, 10, 0), (5, 0, 5, 4)])
         self.assertTrue(any(c.decision == "UNKNOWN" and c.kind == "endpoint_on_segment"
                             for c in g.contacts))
-        self.assertEqual(sum(1 for n in g.nodes if abs(n.x - 5) < 1e-6 and abs(n.y) < 1e-6), 1)
+        self.assertEqual(len(g.connected_components()), 2)
+        self.assertEqual(sum(1 for n in g.nodes if abs(n.x - 5) < 1e-6 and abs(n.y) < 1e-6), 2)
 
     def test_t_junction_with_dot_connects(self):
         g = self.graph([(0, 0, 10, 0), (5, 0, 5, 4)], [(5, 0)])
         self.assertTrue(any(c.decision == "CONNECTED" and c.reason == "explicit_junction_dot"
                             for c in g.contacts))
+        self.assertEqual(len(g.connected_components()), 1)
+        self.assertEqual(len(g.connected_components()), 1)
 
     def test_x_crossing_without_dot_is_disconnected(self):
         g = self.graph([(0, 0, 10, 10), (0, 10, 10, 0)])
         self.assertTrue(any(c.decision == "DISCONNECTED" and c.kind == "proper_crossing"
                             for c in g.contacts))
+        self.assertEqual(len(g.connected_components()), 2)
 
     def test_x_crossing_with_dot_connects(self):
         g = self.graph([(0, 0, 10, 10), (0, 10, 10, 0)], [(5, 5)])
