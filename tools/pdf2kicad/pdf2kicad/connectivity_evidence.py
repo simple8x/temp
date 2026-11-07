@@ -14,6 +14,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
     for group in comps:
         component_by_ref.setdefault(group.ref, []).append(group)
 
+    terminal_index = {id(terminal): index for index, terminal in enumerate(topo.terminals)}
     memberships = []
     for net_name, entries in sorted(netmap.items()):
         for ref, terminal in entries:
@@ -34,6 +35,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
             pin_identity_kind = "parser_pin_token" if pin is not None else "coordinate_fallback"
             pin_identity = pin if pin is not None else "%.2f_%.2f" % (terminal.x, terminal.y)
             memberships.append({
+                "terminal_index": terminal_index.get(id(terminal)),
                 "net": net_name,
                 "ref": ref,
                 "pin_identity": pin_identity,
@@ -51,9 +53,55 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
                 "independent_verification": "NOT_PERFORMED",
             })
 
+    # Preserve every topology terminal, including attached terminals that the
+    # production net exporter omitted. The reference builder must not silently
+    # lose terminals just because they have no production net membership.
+    group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
+    memberships_by_terminal = {}
+    for row in memberships:
+        memberships_by_terminal.setdefault(row.get("terminal_index"), []).append(row)
+    terminal_inventory = []
+    for index, terminal in enumerate(topo.terminals):
+        wire_component = terminal.comp
+        primitive_indices = [
+            topo.W[k] for k in topo.comps[wire_component]
+        ] if 0 <= wire_component < len(topo.comps) else []
+        wire_primitives = []
+        for primitive_index in primitive_indices:
+            segment = topo.segs[primitive_index]
+            wire_primitives.append({
+                "primitive_index": primitive_index,
+                "kind": segment.kind,
+                "a": [round(segment.x0, 4), round(segment.y0, 4)],
+                "b": [round(segment.x1, 4), round(segment.y1, 4)],
+            })
+        pin = pin_numbers.get(id(terminal))
+        terminal_memberships = memberships_by_terminal.get(index, [])
+        candidate_nets = sorted({row["net"] for row in terminal_memberships if row.get("net")})
+        terminal_inventory.append({
+            "terminal_index": index,
+            "ref": group_ref.get(terminal.group),
+            "pin_identity": pin,
+            "pin_identity_kind": "parser_pin_token" if pin is not None else "UNKNOWN",
+            "x": round(terminal.x, 4),
+            "y": round(terminal.y, 4),
+            "status": terminal_status(terminal),
+            "anchor_kind": terminal.anchor_kind or None,
+            "symbol_group": terminal.group,
+            "wire_component": wire_component,
+            "wire_primitives": wire_primitives,
+            "candidate_memberships": terminal_memberships,
+            "candidate_net_names_diagnostic_only": candidate_nets,
+            "candidate_net_status": (
+                "SINGLE_PARSER_CANDIDATE" if len(candidate_nets) == 1 else
+                "MULTIPLE_PARSER_CANDIDATES" if len(candidate_nets) > 1 else
+                "NO_PRODUCTION_NET_MEMBERSHIP"
+            ),
+            "reference_status": "UNKNOWN",
+        })
+
     # Inspect the full topology terminal inventory, not only component groups.
     # Unattached terminals are not included in Group.terminals by Topology._groups().
-    group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
     unresolved = [
         {
             "ref": group_ref.get(terminal.group),
@@ -106,6 +154,8 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         "scope": "single_page_parser_output",
         "summary": {
             "parser_derived_memberships": len(memberships),
+            "topology_terminal_inventory": len(terminal_inventory),
+            "terminals_without_production_membership": sum(1 for row in terminal_inventory if not row["candidate_memberships"]),
             "distinct_nets": len(netmap),
             **terminal_counts,
             "pin_identity_conflicts": len(pin_conflicts),
@@ -119,6 +169,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
             "independent_verification": "requires a separately derived reference topology or reviewed source-PDF pin/net evidence",
         },
         "memberships": memberships,
+        "terminal_inventory": terminal_inventory,
         "unresolved_terminals": unresolved,
         "no_connect_marks": no_connect_marks,
         "nc_stub_conflicts": getattr(topo, "nc_stub_conflicts", []),

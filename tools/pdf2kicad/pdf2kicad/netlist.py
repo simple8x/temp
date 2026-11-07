@@ -341,7 +341,7 @@ def pin_tokens(topo, comps, words):
     used = getattr(topo, "used_words", ())
     candidates = [w for w in words
                   if PINTOK.fullmatch(w.text) and id(w) not in used]
-    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]
+    multi = [g for g in comps if len(g.terminals + getattr(g, "no_connect_terminals", [])) >= 3]
     out, claimed = {}, set()
     BIG, UNMATCHED, MAX_DISTANCE = 1e6, 12.0, 12.0
 

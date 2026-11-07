@@ -41,49 +41,40 @@ def write_json(path: Path, value):
 def candidate_ledger(pdf: Path, page: int, page_dir: Path, source_sha: str):
     evidence = load_json(page_dir / "connectivity_evidence.json")
     entries = []
+    inventory = evidence.get("terminal_inventory", [])
+    if not inventory:
+        raise ValueError(
+            "connectivity evidence has no complete terminal_inventory; "
+            "refusing to build a partial PDF reference ledger"
+        )
 
     def add(row):
         row["source_candidate_index"] = len(entries)
         entries.append(row)
 
-    for row in evidence.get("memberships", []):
-        terminal = row.get("terminal", {})
-        wire = row.get("wire_primitives", [])
+    for terminal in inventory:
+        wire = terminal.get("wire_primitives", [])
+        candidate_nets = terminal.get("candidate_net_names_diagnostic_only", [])
+        candidate_net = candidate_nets[0] if len(candidate_nets) == 1 else None
+        pin = terminal.get("pin_identity")
         add({
-            "ref": row.get("ref"),
-            "pin": row.get("pin_identity") if row.get("pin_identity_kind") != "coordinate_fallback" else None,
-            "net": row.get("net"),
+            "terminal_index": terminal.get("terminal_index"),
+            "ref": terminal.get("ref"),
+            "pin": pin if terminal.get("pin_identity_kind") == "parser_pin_token" else None,
+            "net": candidate_net,
             "status": "UNKNOWN",
             "evidence": {
                 "pdf_page": page,
                 "terminal_xy_pdf_pt": [terminal.get("x"), terminal.get("y")],
+                "terminal_status": terminal.get("status"),
+                "anchor_kind": terminal.get("anchor_kind"),
+                "symbol_group": terminal.get("symbol_group"),
+                "wire_component": terminal.get("wire_component"),
                 "primitive_ids": [str(x.get("primitive_index")) for x in wire],
                 "wire_primitives": wire,
-                "candidate_lineage": "parser_candidate_only_not_reference_truth",
-            },
-        })
-    for row in evidence.get("unresolved_terminals", []):
-        add({
-            "ref": row.get("ref"), "pin": None, "net": None, "status": "UNKNOWN",
-            "evidence": {
-                "pdf_page": page,
-                "terminal_xy_pdf_pt": [row.get("x"), row.get("y")],
-                "primitive_ids": [], "wire_primitives": [],
-                "candidate_lineage": "unresolved_terminal_from_pdf_parser",
-            },
-        })
-    for row in evidence.get("no_connect_marks", []):
-        add({
-            "ref": row.get("ref"),
-            "pin": row.get("pin_identity") if row.get("pin_identity_kind") != "coordinate_fallback" else None,
-            "net": None, "status": "UNKNOWN",
-            "evidence": {
-                "pdf_page": page,
-                "terminal_xy_pdf_pt": [row.get("terminal_x"), row.get("terminal_y")],
-                "no_connect_mark_xy_pdf_pt": [row.get("x"), row.get("y")],
-                "primitive_ids": ["nc-mark-candidate:" + str(row.get("x")) + ":" + str(row.get("y"))],
-                "wire_primitives": [],
-                "candidate_lineage": "parser_no_connect_candidate_requires_pdf_review",
+                "candidate_net_names_diagnostic_only": candidate_nets,
+                "candidate_net_status": terminal.get("candidate_net_status"),
+                "candidate_lineage": "complete_topology_terminal_inventory_parser_candidates_not_reference_truth",
             },
         })
     return {
@@ -94,6 +85,7 @@ def candidate_ledger(pdf: Path, page: int, page_dir: Path, source_sha: str):
         "mode": "REVIEW_CANDIDATES_NOT_VERIFIED_REFERENCE",
         "summary": {
             "candidate_entries": len(entries),
+            "topology_terminal_coverage": len(inventory),
             "verified_entries": 0,
             "unknown_entries": len(entries),
             "status": "BLOCKED_REFERENCE_REVIEW_REQUIRED",
@@ -103,6 +95,7 @@ def candidate_ledger(pdf: Path, page: int, page_dir: Path, source_sha: str):
             "coordinate_tokens_are_never_pin_numbers": True,
             "no_automatic_promotion_to_verified": True,
             "complete_candidate_coverage_required": True,
+            "one_entry_per_topology_terminal": True,
             "review_source": "inspect the cited page and evidence coordinates in the original PDF",
         },
         "entries": entries,
