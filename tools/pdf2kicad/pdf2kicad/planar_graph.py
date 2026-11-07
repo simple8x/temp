@@ -182,6 +182,58 @@ def build_planar_graph(
             if decision == "CONNECTED":
                 joins.append((i, ta, j, tb, len(contacts)-1))
 
+        # Tolerant endpoint contacts must also be found when the two supporting
+        # infinite lines are parallel or slightly offset (no mathematical crossing).
+        pair_has = lambda kind: any(
+            c.primitive_a == a.primitive_id and c.primitive_b == b.primitive_id and c.kind == kind
+            for c in contacts
+        )
+        endpoint_a = ((0.0, a.x0, a.y0), (1.0, a.x1, a.y1))
+        endpoint_b = ((0.0, b.x0, b.y0), (1.0, b.x1, b.y1))
+        if not pair_has("endpoint_endpoint"):
+            for ta, ax, ay in endpoint_a:
+                for tb, bx, by in endpoint_b:
+                    if math.hypot(ax-bx, ay-by) <= tolerance:
+                        cuts[i].add(ta)
+                        cuts[j].add(tb)
+                        contacts.append(Contact((ax+bx)/2, (ay+by)/2,
+                            a.primitive_id, b.primitive_id, "endpoint_endpoint",
+                            "CONNECTED", "endpoint_contact_within_tolerance"))
+                        joins.append((i, ta, j, tb, len(contacts)-1))
+                        break
+                else:
+                    continue
+                break
+
+        if not pair_has("endpoint_on_segment"):
+            for ta, ax, ay in endpoint_a:
+                tb = _point_on_segment(ax, ay, b, tolerance)
+                if tb is not None and tolerance / max(b.length, tolerance) < tb < 1-tolerance / max(b.length, tolerance):
+                    cuts[i].add(ta)
+                    cuts[j].add(tb)
+                    dot = any(math.hypot(ax-dx, ay-dy) <= dot_radius for dx, dy in dots)
+                    decision, reason = (("CONNECTED", "explicit_junction_dot") if dot else
+                                        ("UNKNOWN", "endpoint_on_segment_without_dot"))
+                    contacts.append(Contact(ax, ay, a.primitive_id, b.primitive_id,
+                        "endpoint_on_segment", decision, reason))
+                    if decision == "CONNECTED":
+                        joins.append((i, ta, j, tb, len(contacts)-1))
+                    break
+            else:
+                for tb, bx, by in endpoint_b:
+                    ta = _point_on_segment(bx, by, a, tolerance)
+                    if ta is not None and tolerance / max(a.length, tolerance) < ta < 1-tolerance / max(a.length, tolerance):
+                        cuts[i].add(ta)
+                        cuts[j].add(tb)
+                        dot = any(math.hypot(bx-dx, by-dy) <= dot_radius for dx, dy in dots)
+                        decision, reason = (("CONNECTED", "explicit_junction_dot") if dot else
+                                            ("UNKNOWN", "endpoint_on_segment_without_dot"))
+                        contacts.append(Contact(bx, by, a.primitive_id, b.primitive_id,
+                            "endpoint_on_segment", decision, reason))
+                        if decision == "CONNECTED":
+                            joins.append((i, ta, j, tb, len(contacts)-1))
+                        break
+
     # A dot can be slightly offset from a wire. Project it, split there, then
     # connect all distinct primitive pairs hit by the same explicit dot.
     for dx, dy in dots:
