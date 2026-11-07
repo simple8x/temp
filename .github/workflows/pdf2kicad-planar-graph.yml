@@ -64,6 +64,8 @@ jobs:
           name: pdf2kicad-planar-graph-real-pdf-audit
           path: |
             planar_graph_real_pdf_audit.json
+            reference_connectivity_review.json
+            reference_connectivity_review.csv
             graph_netlist_candidate.csv
             production_graph_net_memberships.csv
             production_cli_real_pdf/**
