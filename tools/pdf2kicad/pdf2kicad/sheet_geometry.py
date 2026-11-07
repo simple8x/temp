@@ -32,6 +32,7 @@ def _covered_length(intervals):
 def _edge_profile(segs, width, height):
     band_x, band_y = max(4.0, width * 0.018), max(4.0, height * 0.018)
     groups = {"top": [], "bottom": [], "left": [], "right": []}
+    samples = {key: [] for key in groups}
     counts = {key: 0 for key in groups}
     for seg in segs:
         if seg.kind not in ("line", "rect"):
@@ -42,6 +43,7 @@ def _edge_profile(segs, width, height):
             )
             if side:
                 groups[side].append((seg.x0, seg.x1))
+                samples[side].append([index, seg.kind, round(seg.x0, 3), round(seg.y0, 3), round(seg.x1, 3), round(seg.y1, 3)])
                 counts[side] += 1
         elif _is_v(seg):
             side = "left" if abs(seg.x0) <= band_x else (
@@ -49,6 +51,7 @@ def _edge_profile(segs, width, height):
             )
             if side:
                 groups[side].append((seg.y0, seg.y1))
+                samples[side].append([index, seg.kind, round(seg.x0, 3), round(seg.y0, 3), round(seg.x1, 3), round(seg.y1, 3)])
                 counts[side] += 1
     dimensions = {"top": width, "bottom": width, "left": height, "right": height}
     return {
@@ -56,6 +59,7 @@ def _edge_profile(segs, width, height):
             "segments": counts[side],
             "coverage_pt": round(_covered_length(groups[side]), 3),
             "coverage_ratio": round(_covered_length(groups[side]) / dimensions[side], 4),
+            "samples": samples[side][:20],
         }
         for side in groups
     }
