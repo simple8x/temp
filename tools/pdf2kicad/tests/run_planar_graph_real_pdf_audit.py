@@ -25,7 +25,7 @@ NODE_TOLERANCE = 0.4
 def _map_terminal(term, topo, graph, component_by_node):
     """Map only against nodes carrying provenance from this terminal's own wire component."""
     wire_indices = topo.comps[term.comp] if 0 <= term.comp < len(topo.comps) else []
-    allowed_ids = {f"page{topo.page_no}:seg{topo.W[k]}" for k in wire_indices}
+    allowed_ids = {f"page{topo.page_no}:wire{k}" for k in wire_indices}
     ranked = sorted(
         (math.hypot(node.x - term.x, node.y - term.y), node.node_id)
         for node in graph.nodes if node.provenance.intersection(allowed_ids)
@@ -55,14 +55,17 @@ def main():
     for page_no in PAGES:
         comps, legacy_nets, words, topo = extract(str(PDF), page_no, full=True)
         topo.page_no = page_no
+        # Exclude symbol-body and inner-artwork components. The legacy Topology
+        # classifier already separates these from electrical wire components.
+        wire_indices = sorted({k for component in topo.wire_comps for k in topo.comps[component]})
         primitives = [
             Primitive(
-                primitive_id=f"page{page_no}:seg{seg_idx}",
-                x0=topo.segs[seg_idx].x0, y0=topo.segs[seg_idx].y0,
-                x1=topo.segs[seg_idx].x1, y1=topo.segs[seg_idx].y1,
-                kind=topo.segs[seg_idx].kind,
+                primitive_id=f"page{page_no}:wire{k}",
+                x0=topo.segs[topo.W[k]].x0, y0=topo.segs[topo.W[k]].y0,
+                x1=topo.segs[topo.W[k]].x1, y1=topo.segs[topo.W[k]].y1,
+                kind=topo.segs[topo.W[k]].kind,
             )
-            for seg_idx in topo.W
+            for k in wire_indices
         ]
         graph = build_planar_graph(
             primitives, junction_dots=topo.dots,
@@ -149,6 +152,8 @@ def main():
         results.append({
             "page": page_no,
             "wire_primitives": len(primitives),
+            "topology_wire_components": len(topo.wire_comps),
+            "body_or_inner_components_excluded": len(topo.comps) - len(topo.wire_comps),
             "normalized_junction_dots_applied": len(topo.dots),
             "raw_pdf_confirmed_junction_marks_evidence_only": raw_confirmed,
             "graph_nodes": len(graph.nodes), "graph_edges": len(graph.edges),
@@ -197,7 +202,7 @@ def main():
         },
         "overall_status": "BLOCKED_PRODUCTION_EXPORT_AND_INDEPENDENT_VERIFICATION_NOT_PERFORMED",
         "limitations": [
-            "Graph uses normalized wire primitives and normalized junction dots from the extractor.",
+            "Graph uses only Topology-classified electrical wire components; symbol-body and inner-artwork components are excluded. Normalized junction dots are applied.",
             "Terminal mapping is constrained by exact source-wire-component primitive provenance and 0.4 coordinate tolerance.",
             "Graph candidate CSV preserves UNKNOWN pin identities; graph_component is not a KiCad net name.",
             "Legacy net names are diagnostic-only and are not used to construct graph connectivity.",
