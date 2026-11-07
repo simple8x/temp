@@ -19,6 +19,12 @@ class PlanarGraphTests(unittest.TestCase):
         g = self.graph([(0, 0, 5, 0), (5.03, 0, 5.03, 4)], tolerance=0.05)
         self.assertEqual(len(g.connected_components()), 1)
 
+    def test_near_endpoint_pair_connects_without_infinite_line_intersection(self):
+        g = self.graph([(0, 0, 5, 0), (5.03, 0.03, 8, 3)], tolerance=0.05)
+        self.assertTrue(any(c.kind == "endpoint_endpoint" and c.decision == "CONNECTED"
+                            for c in g.contacts))
+        self.assertEqual(len(g.connected_components()), 1)
+
     def test_t_junction_without_dot_is_unknown_and_split(self):
         g = self.graph([(0, 0, 10, 0), (5, 0, 5, 4)])
         self.assertTrue(any(c.decision == "UNKNOWN" and c.kind == "endpoint_on_segment" for c in g.contacts))
