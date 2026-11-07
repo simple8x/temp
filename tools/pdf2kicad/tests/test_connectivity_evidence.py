@@ -4,7 +4,9 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pdf2kicad.connectivity_evidence import (\n    build_connectivity_evidence, build_terminal_reference_map, resolve_terminal_ref,\n)
+from pdf2kicad.connectivity_evidence import (
+    build_connectivity_evidence, build_terminal_reference_map, resolve_terminal_ref,
+)
 from pdf2kicad.primitives import Seg
 from pdf2kicad.topology import Terminal
 
