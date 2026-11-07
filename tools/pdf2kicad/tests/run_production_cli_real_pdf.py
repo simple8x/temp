@@ -53,18 +53,16 @@ def main() -> None:
         read_csv(page_dir / "no_connect.csv", {"ref", "pin_identity", "identity_kind", "evidence"})
         if any(not row["net"] or not row["ref"] or not row["pin"] for row in net_rows):
             raise AssertionError(f"page {page}: netlist.csv contains empty net/ref/pin fields")
-        unknown = sum(1 for row in net_rows if row["pin"].replace(".", "", 1).isdigit())
-        coordinate = sum(1 for row in net_rows if row["pin"] and row["pin"][0].isdigit())
+        coordinate = sum(1 for row in net_rows if "_" in row["pin"] and all(part.replace(".", "", 1).isdigit() for part in row["pin"].split("_", 1)))
         total_net_rows += len(net_rows)
         total_status_rows += len(status_rows)
-        total_unknown += unknown
         total_coordinate_fallback += coordinate
         pages.append({
             "page": page,
             "netlist_rows": len(net_rows),
             "pin_status_rows": len(status_rows),
             "coordinate_like_pin_tokens_in_netlist": coordinate,
-            "coordinate_fallback_candidate_rows": unknown,
+            "coordinate_fallback_candidate_rows": coordinate,
             "no_connect_rows": sum(1 for row in read_csv(
                 page_dir / "no_connect.csv",
                 {"ref", "pin_identity", "identity_kind", "evidence"},
