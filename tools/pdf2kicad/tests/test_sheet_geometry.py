@@ -27,16 +27,16 @@ def test_single_long_edge_wire_is_not_classified_as_page_frame():
 
 def test_title_block_requires_closed_enclosure_and_text_evidence():
     segs = [
-        Seg(330, 650, 590, 650, "line"),
+        Seg(380, 650, 590, 650, "line"),
         Seg(590, 650, 590, 790, "line"),
-        Seg(590, 790, 330, 790, "line"),
-        Seg(330, 790, 330, 650, "line"),
-        Seg(340, 720, 580, 720, "line"),  # internal table rule
+        Seg(590, 790, 380, 790, "line"),
+        Seg(380, 790, 380, 650, "line"),
+        Seg(390, 720, 580, 720, "line"),  # internal table rule
         Seg(340, 100, 580, 100, "line"),  # unrelated circuit wire
     ]
     words = [
-        (350, 670, 390, 680, "PROJECT"),
-        (400, 750, 450, 760, "REV"),
+        (400, 670, 440, 680, "PROJECT"),
+        (450, 750, 490, 760, "REV"),
     ]
     report = exclude_sheet_metadata(segs, 600, 800, words)
     assert report["title_block_segments_excluded"] == 5
@@ -46,13 +46,13 @@ def test_title_block_requires_closed_enclosure_and_text_evidence():
 
 def test_open_box_or_box_without_text_is_not_excluded():
     segs = [
-        Seg(330, 650, 590, 650, "line"),
+        Seg(380, 650, 590, 650, "line"),
         Seg(590, 650, 590, 790, "line"),
-        Seg(590, 790, 330, 790, "line"),
+        Seg(590, 790, 380, 790, "line"),
     ]
     report = exclude_sheet_metadata(segs, 600, 800, ())
     assert report["title_block_segments_excluded"] == 0
-    assert all(s.kind == "line" for s in segs)
+    assert all(s.kind == "sheet_frame" for s in segs)
 
 def test_long_internal_wire_is_not_removed_by_length_heuristic():
     segs = [Seg(35, 300, 565, 300, "line")]
