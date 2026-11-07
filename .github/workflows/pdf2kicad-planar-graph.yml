@@ -29,6 +29,11 @@ jobs:
       - run: python -m pytest -q tools/pdf2kicad/tests
       - name: Run real QI9 PDF planar-graph diagnostic
         run: python tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py
+      - name: Import independently reviewed QI9 pin/net facts
+        run: >-
+          python -m pdf2kicad.reviewed_reference_import
+          --ledger reference_connectivity_review.json
+          --verification "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/reference_holdout/schematic_reference_verification.json"
       - name: Produce strict electrical proof and exception ledger
         run: >-
           python -m pdf2kicad.proof_and_exceptions
