@@ -72,3 +72,19 @@ def test_fragmented_page_frame_is_detected_by_aggregated_edge_coverage():
     report = exclude_sheet_metadata(segs, 600, 800)
     assert report["sheet_frame_segments_excluded"] == len(segs)
     assert all(s.kind == "sheet_frame" for s in segs)
+
+def test_top_edge_title_block_requires_closed_box_and_text():
+    segs = [
+        Seg(100, 8, 260, 8, "line"),
+        Seg(260, 8, 260, 50, "line"),
+        Seg(260, 50, 100, 50, "line"),
+        Seg(100, 50, 100, 8, "line"),
+        Seg(110, 28, 250, 28, "line"),
+    ]
+    words = [
+        (112, 12, 160, 20, "DRAWING"),
+        (170, 34, 220, 42, "SHEET"),
+    ]
+    report = exclude_sheet_metadata(segs, 842, 595, words)
+    assert report["title_block_segments_excluded"] == 5
+    assert all(s.kind == "title_block" for s in segs)
