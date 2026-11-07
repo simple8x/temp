@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - "knowledge_vault/**"
-      - "tests/test_knowledge_vault.py"
+      - "tests/test_knowledge_vault*.py"
+      - "benchmarks/**"
       - "docs/knowledge-vault.md"
       - ".github/workflows/knowledge-vault.yml"
   push:
@@ -12,7 +13,8 @@ on:
       - "feat/aios-knowledge-vault"
     paths:
       - "knowledge_vault/**"
-      - "tests/test_knowledge_vault.py"
+      - "tests/test_knowledge_vault*.py"
+      - "benchmarks/**"
       - "docs/knowledge-vault.md"
       - ".github/workflows/knowledge-vault.yml"
 
@@ -20,12 +22,14 @@ permissions:
   contents: read
 
 jobs:
-  unit-tests:
+  unit-and-benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run standard-library tests
+      - name: Run unit and benchmark tests
         run: python -m unittest discover -s tests -v
+      - name: Run retrieval benchmark
+        run: python benchmarks/run_benchmark.py
