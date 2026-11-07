@@ -13,6 +13,7 @@ on:
       - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - "tools/pdf2kicad/tools/roundtrip_pipeline.py"
       - "tools/pdf2kicad/tests/test_roundtrip_pipeline.py"
+      - "tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
       - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/**"
   push:
@@ -48,11 +49,15 @@ jobs:
         run: python tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py
       - name: Exercise production CLI writer on pages 5-11
         run: python tools/pdf2kicad/tests/run_production_cli_real_pdf.py
-      - name: Build PDF-linked reference connectivity review candidates (page 5 smoke)
+      - name: Build PDF-linked reference connectivity review candidates (pages 5-11)
         run: >-
           python tools/pdf2kicad/tools/roundtrip_pipeline.py
           "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
-          --pages 5-5 --outdir pdf2kicad_roundtrip_smoke
+          --pages 5-11 --outdir pdf2kicad_roundtrip
+      - name: Generate candidate KiCad sheets and independent read-back (pages 5-11)
+        run: >-
+          python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
+          --input production_cli_real_pdf --outdir pdf2kicad_candidate_schematics --pages 5-11
       - name: Upload real-PDF audit report
         uses: actions/upload-artifact@v4
         with:
@@ -62,5 +67,6 @@ jobs:
             graph_netlist_candidate.csv
             production_graph_net_memberships.csv
             production_cli_real_pdf/**
-            pdf2kicad_roundtrip_smoke/**
+            pdf2kicad_roundtrip/**
+            pdf2kicad_candidate_schematics/**
           retention-days: 3
