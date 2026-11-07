@@ -7,9 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import tempfile
-from knowledge_vault import KnowledgeVault
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from knowledge_vault import KnowledgeVault
+
 CASES = ROOT / "benchmarks" / "knowledge_vault_cases.json"
 
 def build_vault(vault: KnowledgeVault, dataset: dict) -> None:
