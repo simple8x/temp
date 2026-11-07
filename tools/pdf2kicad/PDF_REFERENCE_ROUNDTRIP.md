@@ -1,18 +1,28 @@
-# PDF reference connectivity → KiCad → read-back gate
+# PDF reference connectivity → KiCad → round-trip gates
+
+## What this pipeline does
 
 ~~~text
 Original PDF
-  └─ pdf2kicad candidate extraction (not trusted as truth)
-       └─ page-NNN.json review ledger (PDF coordinates + primitive lineage)
-            └─ human verification against the rendered/vector PDF
-                 └─ reviewed reference connectivity (VERIFIED / NC only)
-                      └─ netlist.csv generated from reviewed reference
-                           └─ gen_kicad_sch.py
-                                └─ verify_kicad_sch.py reads .kicad_sch independently
-                                     └─ compare read-back with reviewed PDF reference
+  ├─ Production parser → candidate connectivity ledger (NOT reference truth)
+  └─ Direct PyMuPDF evidence → independent explicit-junction report
+         |
+         v
+Complete page-specific review ledger (every candidate resolved)
+         |
+         v
+Reviewed reference netlist (VERIFIED / NC only)
+         |
+         v
+KiCad schematic generator
+         |
+         v
+Separate KiCad S-expression parser / pin-net read-back
 ~~~
 
-## 1. Generate review candidates from the pinned PDF
+The independent PDF branch currently verifies explicit filled-junction marks from raw PDF vector drawings. It does not independently infer all component pins, labels, or complete net membership. Do not call it a complete electrical oracle.
+
+## 1. Run all pages
 
 From repository root:
 
@@ -21,61 +31,67 @@ python tools/pdf2kicad/tools/roundtrip_pipeline.py "QI9-2604-A01_G3-G4_PAGE6_REF
 ~~~
 
 Outputs:
-- pdf2kicad-roundtrip/page-NNN/: ordinary parser output and traceable evidence.
-- pdf2kicad-roundtrip/reference-candidates/page-NNN.json: review worksheet containing PDF page, terminal coordinates, candidate net/ref/pin and source wire primitive lineage.
-- pdf2kicad-roundtrip/roundtrip_report.json: expected status BLOCKED_REFERENCE_REVIEW_REQUIRED.
+- page-NNN/: parser output and traceable wire/terminal evidence.
+- reference-candidates/page-NNN.json: candidate ledger; every entry starts UNKNOWN.
+- independent-pdf-evidence/page-NNN-junctions.json: direct raw-PDF junction evidence, separately derived from PyMuPDF drawing primitives.
+- roundtrip_report.json: remains BLOCKED_REFERENCE_REVIEW_REQUIRED until a complete reviewed reference exists.
 
-Candidate net/ref/pin values are hints only. Every candidate starts UNKNOWN; coordinate fallback is never copied into pin. Do not promote candidates by bulk-changing status.
+The candidate ledger contains attached terminals, open/unresolved terminals, and explicit NC mark candidates. Coordinate fallbacks are not copied into pin numbers.
 
-## 2. Review each candidate against the PDF
+## 2. Review every candidate
 
-Create reviewed-reference/page-NNN.json from the candidate file. For every electrical terminal:
-- inspect the exact PDF page and cited coordinates/primitive lineage;
-- correct ref, pin, and net using visible evidence;
-- set status to VERIFIED only when the pin identity and its electrical connection are unambiguous;
-- set status to NC only when an explicit no-connect mark is visible;
-- add evidence.review_note describing what was visually checked;
-- ensure evidence.primitive_ids is non-empty.
-
-Unresolved or ambiguous entries must remain unresolved. The gate rejects them. Also reject coordinate-shaped pin strings, duplicate (ref,pin) assignments, wrong PDF hashes, wrong pages, and references without review evidence.
-
-Reference entry shape:
+Create reviewed-reference/page-NNN.json from each candidate ledger. Keep the original candidate ledger unchanged. The review file must include these top-level fields:
 
 ~~~json
 {
-  "ref": "U1",
-  "pin": "3",
-  "net": "GND",
-  "status": "VERIFIED",
-  "evidence": {
-    "pdf_page": 5,
-    "primitive_ids": ["17", "18"],
-    "review_note": "Pin 3 label and continuous wire path inspected on source PDF page 5."
-  }
+  "schema": "pdf2kicad-pdf-reference-connectivity/v1",
+  "source_pdf_sha256": "<exact SHA-256 from candidate ledger>",
+  "page": 5,
+  "candidate_ledger_sha256": "<SHA-256 of the exact candidate JSON file>",
+  "expected_entry_count": 1,
+  "entries": []
 }
 ~~~
 
-This example is a schema example only; it is not a claim about the actual QI9 pinout.
+The example count is illustrative only. Use the actual candidate count. Each reviewed entry must preserve source_candidate_index and contain:
+- ref, pin, net;
+- status: VERIFIED or NC;
+- evidence.pdf_page;
+- non-empty evidence.primitive_ids;
+- evidence.review_note describing what was checked directly on the PDF.
 
-## 3. Generate KiCad only from reviewed reference
+Rules:
+- Every candidate index must occur exactly once. Missing entries block export.
+- All pins must be resolved. Ambiguous or unknown terminals block export.
+- Explicit no-connect marks must be reviewed and recorded as NC, not as a net.
+- Coordinate-shaped tokens are rejected as pin numbers.
+- Duplicate physical (ref,pin) assignments and conflicting assignments are rejected.
+- Candidate ledger hash and source PDF hash must match exactly.
+- Never bulk-promote UNKNOWN to VERIFIED.
+
+## 3. Generate KiCad only from the complete reviewed reference
 
 ~~~powershell
 python tools/pdf2kicad/tools/roundtrip_pipeline.py "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" --pages 5-11 --outdir pdf2kicad-roundtrip --reference-dir reviewed-reference
 ~~~
 
-For each page, the pipeline:
-1. verifies the reviewed reference is bound to the exact source PDF SHA-256 and page;
-2. rejects UNKNOWN/AMBIGUOUS entries, coordinate pin tokens, duplicate physical pins, and missing evidence;
-3. creates the generator input netlist from the reviewed reference, not parser-derived netlist.csv;
-4. generates .kicad_sch;
-5. invokes a separate parser (verify_kicad_sch.py) to read the saved schematic and compare its pin/net assignments against the reviewed reference netlist.
+For each page, the pipeline verifies source and candidate hashes, complete candidate-index coverage, pin identity, NC handling, and evidence. It then writes a netlist from the reviewed reference (never from parser-derived netlist.csv), generates .kicad_sch, and uses the separate verify_kicad_sch.py parser to read the saved schematic back and compare pin/net assignments.
 
-The parser-derived pins.csv is deliberately not supplied to the generator, so parser-inferred pin identities cannot silently override reviewed pin identities.
+## 4. Candidate schematic preview (not electrical sign-off)
 
-## 4. Gate meanings and limits
+CI also generates pdf2kicad_candidate_schematics/page-N/ from only non-coordinate parser pin candidates, preserving explicit parser NC candidates where pin tokens exist. It then reads each generated schematic back.
+
+This is useful to test the KiCad writer and expose serialization/layout issues. It is explicitly marked UNVERIFIED:
+- parser-derived memberships are not independent reference truth;
+- coordinate fallback pins are excluded;
+- generator places symbols by block, not at their original PDF positions;
+- a read-back PASS means the saved KiCad structure matches its candidate input, not that the PDF was interpreted correctly.
+
+## 5. Gate meanings
 
 - BLOCKED_REFERENCE_REVIEW_REQUIRED: candidate ledgers exist; no electrical sign-off.
-- BLOCKED_REFERENCE_REVIEW_OR_READBACK: reference incomplete/invalid or KiCad read-back failed.
-- PDF_REFERENCE_TO_KICAD_READBACK_PASS: all supplied pages have reviewed references and the saved KiCad files read back to the same pin/net assignments.
+- DRAFT_READBACK_PASS_NOT_ELECTRICAL_SIGNOFF: candidate schematic generation and read-back succeeded; electrical correctness remains blocked.
+- BLOCKED_REFERENCE_REVIEW_OR_READBACK: reviewed reference incomplete/invalid or KiCad read-back failed.
+- PDF_REFERENCE_TO_KICAD_READBACK_PASS: all in-scope reviewed references cover every candidate and the saved KiCad files read back to the same pin/net assignments.
 
-A read-back PASS proves the generated KiCad file preserves the reviewed PDF-derived reference. It does not prove a human reviewer interpreted an inherently ambiguous PDF correctly. The current KiCad verifier checks the generated label-at-pin representation; it is not a full KiCad ERC engine and does not independently infer the source PDF's electrical semantics. Electrical sign-off still requires reviewing every PDF-derived reference entry.
+A final electrical sign-off still requires a complete reviewed reference and resolution of every ambiguity visible in the original PDF. KiCad ERC should be run on the resulting project as a separate design-rule check; ERC PASS alone is not proof of PDF equivalence.
