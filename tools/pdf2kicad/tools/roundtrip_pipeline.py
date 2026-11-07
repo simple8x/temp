@@ -212,14 +212,19 @@ def run(pdf: Path, pages: list[int], outdir: Path, reference_dir: Path | None):
             page_result["reference_error"] = str(exc)
             all_verified = False
         summary["pages"].append(page_result)
-    summary["status"] = (
-        "PDF_REFERENCE_TO_KICAD_READBACK_PASS"
-        if all_verified and all(x["status"] == "PDF_REFERENCE_TO_KICAD_READBACK_PASS" for x in summary["pages"])
-        else "BLOCKED_REFERENCE_REVIEW_OR_READBACK"
-    )
+    if reference_dir is None:
+        summary["status"] = "BLOCKED_REFERENCE_REVIEW_REQUIRED"
+    else:
+        summary["status"] = (
+            "PDF_REFERENCE_TO_KICAD_READBACK_PASS"
+            if all_verified and all(x["status"] == "PDF_REFERENCE_TO_KICAD_READBACK_PASS" for x in summary["pages"])
+            else "BLOCKED_REFERENCE_REVIEW_OR_READBACK"
+        )
     write_json(outdir / "roundtrip_report.json", summary)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
-    return 0 if summary["status"] == "PDF_REFERENCE_TO_KICAD_READBACK_PASS" else 2
+    # Candidate generation is a successful preparation step, not a sign-off.
+    # Only a supplied reviewed reference that fails validation/read-back exits non-zero.
+    return 0 if reference_dir is None or summary["status"] == "PDF_REFERENCE_TO_KICAD_READBACK_PASS" else 2
 
 
 def main():
