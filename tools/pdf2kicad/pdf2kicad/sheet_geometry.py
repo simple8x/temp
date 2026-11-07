@@ -6,6 +6,7 @@ title-block rectangle are excluded. No fixed y-coordinate cutoff is used.
 from __future__ import annotations
 
 from collections import defaultdict
+import re
 from typing import Iterable
 
 
@@ -171,18 +172,81 @@ def _title_block_segments(segs, words, width, height):
     return excluded
 
 
+def _confidential_badge_segments(segs, words, width, height):
+    """Exclude a rounded, text-bearing confidentiality badge at the page edge.
+
+    Some PDF exports draw the confidentiality badge as two nested rounded
+    outlines. Their short corner arcs are flattened into separate line
+    fragments, so the strict rectangular title-block detector cannot close
+    the box. Require both an explicit metadata word and a four-sided outline;
+    page position alone is never sufficient.
+    """
+    metadata = re.compile(r"\\b(?:CONFIDENTIAL|PROPRIETARY|DO NOT DISTRIBUTE)\\b", re.I)
+    excluded = set()
+    edge_limit = max(16.0, min(width, height) * 0.05)
+
+    for word in words:
+        if len(word) < 5 or not metadata.search(str(word[4])):
+            continue
+        x0, y0, x1, y1 = (float(word[i]) for i in range(4))
+        if min(x0, y0, width - x1, height - y1) > edge_limit:
+            continue
+        word_w, word_h = max(1.0, x1 - x0), max(1.0, y1 - y0)
+        pad_x, pad_y = max(16.0, word_w * 0.22), max(7.0, word_h * 0.85)
+        left, right = x0 - pad_x, x1 + pad_x
+        top, bottom = y0 - pad_y, y1 + pad_y
+
+        top_lines, bottom_lines, left_lines, right_lines = [], [], [], []
+        for i, seg in enumerate(segs):
+            if seg.kind not in ("line", "rect"):
+                continue
+            sx0, sx1 = sorted((seg.x0, seg.x1))
+            sy0, sy1 = sorted((seg.y0, seg.y1))
+            if _is_h(seg):
+                overlap = max(0.0, min(sx1, x1) - max(sx0, x0))
+                if overlap < word_w * 0.70:
+                    continue
+                if top <= seg.y0 <= y0 + 2.0:
+                    top_lines.append(i)
+                if y1 - 2.0 <= seg.y0 <= bottom:
+                    bottom_lines.append(i)
+            elif _is_v(seg):
+                overlap = max(0.0, min(sy1, bottom) - max(sy0, top))
+                if overlap < word_h * 0.40:
+                    continue
+                if left <= seg.x0 < x0:
+                    left_lines.append(i)
+                if x1 < seg.x0 <= right:
+                    right_lines.append(i)
+
+        if not top_lines or not bottom_lines or not left_lines or not right_lines:
+            continue
+        left_x = min(segs[i].x0 for i in left_lines)
+        right_x = max(segs[i].x0 for i in right_lines)
+        if right_x - left_x < word_w * 0.85:
+            continue
+        excluded.update(top_lines + bottom_lines + left_lines + right_lines)
+
+    return excluded
+
+
 def exclude_sheet_metadata(segs, width, height, words=()):
     """Mutate metadata-only segments to non-electrical kinds; return audit counts."""
     frame = _frame_sides(segs, width, height)
     title = _title_block_segments(segs, words, width, height)
-    title -= frame
+    badge = _confidential_badge_segments(segs, words, width, height)
+    title -= frame | badge
+    badge -= frame
     for index in frame:
         segs[index].kind = "sheet_frame"
     for index in title:
         segs[index].kind = "title_block"
+    for index in badge:
+        segs[index].kind = "sheet_metadata_badge"
     return {
         "sheet_frame_segments_excluded": len(frame),
         "title_block_segments_excluded": len(title),
+        "confidential_badge_segments_excluded": len(badge),
         "edge_profile": _edge_profile(segs, width, height),
         "page_size_pt": [round(width, 3), round(height, 3)],
         "excluded_segment_indices": sorted(frame | title),
