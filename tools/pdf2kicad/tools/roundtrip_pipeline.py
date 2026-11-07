@@ -191,7 +191,6 @@ def run(pdf: Path, pages: list[int], outdir: Path, reference_dir: Path | None):
             sch = page_dir / f"page-{page:03d}.kicad_sch"
             cmd = [sys.executable, str(GENERATOR), str(netlist), str(sch),
                    "--parts", str(page_dir / "parts.csv"),
-                   "--pins", str(page_dir / "pins.csv"),
                    "--title", f"PDF page {page}"]
             generated = subprocess.run(cmd, capture_output=True, text=True)
             if generated.returncode:
