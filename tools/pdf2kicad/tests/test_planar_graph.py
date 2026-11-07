@@ -30,6 +30,12 @@ class PlanarGraphTests(unittest.TestCase):
         self.assertTrue(any(c.decision == "UNKNOWN" and c.kind == "endpoint_on_segment" for c in g.contacts))
         self.assertEqual(len(g.connected_components()), 2)
 
+    def test_offset_t_endpoint_without_dot_remains_unknown(self):
+        g = self.graph([(0, 0, 10, 0), (5, 0.03, 5, 4)], tolerance=0.05)
+        self.assertTrue(any(c.kind == "endpoint_on_segment" and c.decision == "UNKNOWN"
+                            for c in g.contacts))
+        self.assertEqual(len(g.connected_components()), 2)
+
     def test_t_junction_with_dot_connects(self):
         g = self.graph([(0, 0, 10, 0), (5, 0, 5, 4)], [(5, 0)])
         self.assertEqual(len(g.connected_components()), 1)
