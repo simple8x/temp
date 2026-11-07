@@ -18,7 +18,10 @@ def setup_reference(tmp_path, entries, sha="abc"):
         "source_pdf_sha256": sha,
         "page": 5,
         "summary": {"candidate_entries": len(entries)},
-        "entries": [{"source_candidate_index": i} for i in range(len(entries))],
+        "entries": [
+            {"source_candidate_index": i, "ref": "U1", "pin": "1"}
+            for i in range(len(entries))
+        ],
     }
     candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
     rows = []
@@ -132,3 +135,29 @@ def test_rejects_missing_candidate_index(tmp_path):
         assert "duplicate source_candidate_index" in str(exc)
     else:
         raise AssertionError("duplicate candidate index was accepted")
+
+    
+def test_rejects_reference_identity_that_rewrites_candidate_ref(tmp_path):
+    path, candidate, candidate_path = setup_reference(tmp_path, [row()])
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["entries"][0]["ref"] = "S1"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    try:
+        validate_reference(path, 5, "abc", candidate, candidate_path)
+    except ValueError as exc:
+        assert "reviewed ref conflicts with candidate ref" in str(exc)
+    else:
+        raise AssertionError("review silently rewrote an explicit candidate reference")
+
+
+def test_rejects_reference_identity_that_rewrites_explicit_pin(tmp_path):
+    path, candidate, candidate_path = setup_reference(tmp_path, [row()])
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["entries"][0]["pin"] = "2"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    try:
+        validate_reference(path, 5, "abc", candidate, candidate_path)
+    except ValueError as exc:
+        assert "reviewed pin conflicts with explicit candidate pin" in str(exc)
+    else:
+        raise AssertionError("review silently rewrote an explicit printed pin token")
