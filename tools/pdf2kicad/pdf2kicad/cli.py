@@ -3,6 +3,7 @@ import csv, json, re, sys
 from .primitives import load_page
 from .normalize import classify, text_layer_words, estimate_scale
 from . import glyphs as G, font, textdecode as T, topology as TP, netlist as NL
+from .sheet_geometry import exclude_sheet_metadata
 
 
 def _quality(pg):
@@ -125,10 +126,17 @@ def _core(pg, use, pre=None):
         text = text_layer_words(pg)
         marks = TP.find_no_connect_crosses(pg.segs)
         segs = list(pg.segs)
-    # sheet frame / title block: long lines and everything in the bottom strip (84% of height)
-    lim = 0.84 * pg.height
-    segs = [s for s in segs if s.length <= 0.36 * max(pg.width, pg.height) and s.y0 < lim and s.y1 < lim]
+    # Exclude sheet metadata only when page-edge continuity or a closed,
+    # text-bearing title-block enclosure provides geometric evidence. Do not
+    # discard a whole y-band: real circuitry may extend into the lower sheet.
+    metadata_words = [(w.x0, w.y0, w.x1, w.y1, w.text) for w in text]
+    # Also use PyMuPDF text-layer boxes: stroke-font decoding can omit a page-edge
+    # classification label even when the PDF retains its searchable text layer.
+    metadata_words.extend(getattr(pg, "words", []))
+    metadata_filter = exclude_sheet_metadata(segs, pg.width, pg.height, metadata_words)
+    segs = [s for s in segs if s.kind not in ("sheet_frame", "title_block")]
     topo = TP.Topology(segs, pg.dots, marks)
+    topo.sheet_metadata_filter = metadata_filter
     comps = NL.assign(topo, text)
     topo.nc_component_assignments = NL.assign_no_connect_terminals(topo, comps)
     for g in comps:                                  # LED arrow heads are tiny wire bits, not pins
@@ -137,7 +145,10 @@ def _core(pg, use, pre=None):
                                                  topo._comp_box(t.comp)[3] - topo._comp_box(t.comp)[1]) >= 6]
             if len({t.comp for t in big}) >= 2:
                 g.terminals = big
-    n = NL.nets(topo, comps, text)
+    # Legacy extraction supplies label names only; graph geometry now owns wire membership.
+    legacy_nets = NL.nets(topo, comps, text)
+    from .graph_netlist import graph_nets
+    n = graph_nets(topo, comps, legacy_nets)
     netnames = set(n)
     topo.used_words |= {id(w) for w in text if w.text in netnames}
     return comps, n, text, topo
@@ -180,6 +191,7 @@ def main(argv):
     # Keep its terminals unresolved unless the PDF prints an explicit pin token or
     # symbol geometry establishes a semantic polarity (handled below for diode/capacitor).
     explicit_pin_values = {terminal_id: value for terminal_id, value in pins.items()}
+    inferred_pin_values = set()
     symbol = {}
     LEDV = re.compile(r"red|green|yellow|blue|white|orange|led", re.I)
     for g in comps:
@@ -208,12 +220,25 @@ def main(argv):
             if plus:
                 k = min(ts, key=lambda t: (t.x - (plus[0].x0 + plus[0].x1) / 2) ** 2 + (t.y - (plus[0].y0 + plus[0].y1) / 2) ** 2)
                 o = [t for t in ts if t is not k][0]
-                pins[id(k)], pins[id(o)] = "+", "-"
+                # KiCad's polarized-capacitor convention is pin 1 (+), pin 2 (-).
+                # Preserve that as geometry-inferred identity, not printed evidence.
+                pins[id(k)], pins[id(o)] = "1", "2"
+                inferred_pin_values.update((id(k), id(o)))
                 symbol[g.ref] = "CP"
             else:
                 symbol[g.ref] = "C"
         elif pre in ("R", "L", "F"):
             symbol[g.ref] = {"R": "R", "L": "L", "F": "FUSE"}[pre]
+            # For a two-terminal passive, infer only the complementary pin when
+            # exactly one endpoint has an explicit printed numeric pin 1 or 2.
+            # Never infer from drawing order or coordinates alone.
+            explicit = [(t, pins.get(id(t))) for t in ts if pins.get(id(t)) in ("1", "2")]
+            if len(explicit) == 1:
+                known_term, known_pin = explicit[0]
+                other_terms = [t for t in ts if t is not known_term]
+                if len(other_terms) == 1 and id(other_terms[0]) not in pins:
+                    pins[id(other_terms[0])] = "2" if known_pin == "1" else "1"
+                    inferred_pin_values.add(id(other_terms[0]))
     # Preserve the extractor's actual pin identity. Never mint a new pin number
     # merely because the same (ref, pin) appears on multiple nets: that hides a
     # topology conflict and fabricates a second physical pin.
@@ -227,7 +252,7 @@ def main(argv):
             pin_owners.setdefault((ref, pin), set()).add(nm)
             if id(t) in explicit_pin_values and pin == explicit_pin_values[id(t)]:
                 identity_kind = "printed_text"
-            elif pin in ("A", "K", "+", "-"):
+            elif id(t) in inferred_pin_values or pin in ("A", "K", "+", "-"):
                 identity_kind = "geometry_inferred"
             else:
                 identity_kind = "coordinate_fallback"
@@ -329,7 +354,9 @@ def main(argv):
                 w.writerow([g.ref, pin, nm.text if nm else "", side])
     # Emit traceable parser-derived connectivity; this is not independent verification.
     from .connectivity_evidence import build_connectivity_evidence
-    connectivity_evidence = build_connectivity_evidence(topo, comps, nets, pins)
+    connectivity_evidence = build_connectivity_evidence(
+        topo, comps, nets, pins, explicit_pin_numbers=explicit_pin_values
+    )
     with open(os.path.join(outdir, "connectivity_evidence.json"), "w", encoding="utf-8") as f:
         json.dump(connectivity_evidence, f, indent=2)
         f.write("\n")

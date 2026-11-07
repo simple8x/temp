@@ -341,7 +341,14 @@ def pin_tokens(topo, comps, words):
     used = getattr(topo, "used_words", ())
     candidates = [w for w in words
                   if PINTOK.fullmatch(w.text) and id(w) not in used]
-    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]
+    # A two-terminal component still has two physical pin identities. Excluding
+    # it here silently converts both printed pin numbers to coordinate fallbacks.
+    # Use conservative mutual-unique matching for 2-terminal parts; retain the
+    # global assignment for denser multi-pin groups.
+    multi = [
+        g for g in comps
+        if len(g.terminals + getattr(g, "no_connect_terminals", [])) >= 2
+    ]
     out, claimed = {}, set()
     BIG, UNMATCHED, MAX_DISTANCE = 1e6, 12.0, 12.0
 
@@ -364,6 +371,24 @@ def pin_tokens(topo, comps, words):
             if math.hypot(dx, dy) <= 20.0:
                 local.append(word)
         if not local:
+            continue
+
+        if len(terminals) <= 2:
+            # For small symbols, accept only mutual nearest matches with a
+            # distance margin on both sides; do not infer pin order from layout.
+            distances = [
+                [dist(word, terminal) for word in local]
+                for terminal in terminals
+            ]
+            matched = _unambiguous_pin_assignment(
+                distances, max_distance=MAX_DISTANCE, margin=1.5
+            )
+            for ti, wi in matched.items():
+                word = local[wi]
+                if id(word) in claimed:
+                    continue
+                out[id(terminals[ti])] = word.text
+                claimed.add(id(word))
             continue
 
         # One private dummy column per terminal means a terminal may remain UNKNOWN
