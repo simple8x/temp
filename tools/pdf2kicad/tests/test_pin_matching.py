@@ -131,3 +131,27 @@ def test_pin_matching_uses_terminal_count_not_wire_component_count():
     pins, claimed = pin_tokens(topo, [group], tokens)
     assert pins == {id(terminals[i]): str(i + 1) for i in range(3)}
     assert claimed == {id(token) for token in tokens}
+
+
+
+def test_two_terminal_pin_ids_are_recovered_without_order_guessing():
+    from types import SimpleNamespace
+
+    terminals = [
+        SimpleNamespace(x=0.0, y=10.0, dx=0.0, dy=0.0, comp=1),
+        SimpleNamespace(x=20.0, y=10.0, dx=0.0, dy=0.0, comp=2),
+    ]
+    group = SimpleNamespace(
+        x0=0.0, y0=0.0, x1=20.0, y1=20.0,
+        terminals=terminals, no_connect_terminals=[],
+    )
+    topo = SimpleNamespace(groups=[group], used_words=set())
+    tokens = [
+        SimpleNamespace(x0=-0.5, y0=9.5, x1=0.5, y1=10.5, text="1"),
+        SimpleNamespace(x0=19.5, y0=9.5, x1=20.5, y1=10.5, text="2"),
+    ]
+
+    pins, claimed = pin_tokens(topo, [group], tokens)
+
+    assert pins == {id(terminals[0]): "1", id(terminals[1]): "2"}
+    assert claimed == {id(token) for token in tokens}
