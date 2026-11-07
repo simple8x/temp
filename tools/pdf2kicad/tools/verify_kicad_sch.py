@@ -73,6 +73,24 @@ def num(x):
     return float(x)
 
 
+def compare_assignments(expected, got):
+    """Return exact CSV-vs-KiCad assignment mismatches for mapped pins."""
+    problems = []
+    for key, expected_net in expected.items():
+        actual_net = got.get(key)
+        if actual_net is None:
+            problems.append("CSV %s.%s expected %s but schematic has no electrical assignment" %
+                            (key[0], key[1], expected_net))
+        elif actual_net != expected_net:
+            problems.append("CSV %s.%s net mismatch: expected %r, got %r" %
+                            (key[0], key[1], expected_net, actual_net))
+    for key, actual_net in got.items():
+        if key not in expected:
+            problems.append("schematic pin %s.%s has unexpected electrical assignment %r absent from CSV" %
+                            (key[0], key[1], actual_net))
+    return problems
+
+
 def main(sch_path, csv_path, allow_unmapped_pins=False):
     root = parse(open(sch_path).read())
     if head(root) != "kicad_sch":
@@ -191,21 +209,7 @@ def main(sch_path, csv_path, allow_unmapped_pins=False):
             if key not in expected:
                 problems.append("schematic pin %s.%s (%s) absent from CSV" % (key[0], key[1], pin_name[key]))
 
-    # P0: compare the independently re-extracted KiCad assignments with the
-    # expected CSV for every mapped pin. Merely finding a label at the pin end
-    # is insufficient: a wrong net label must fail read-back.
-    for key, expected_net in expected.items():
-        actual_net = got.get(key)
-        if actual_net is None:
-            problems.append("CSV %s.%s expected %s but schematic has no electrical assignment" %
-                            (key[0], key[1], expected_net))
-        elif actual_net != expected_net:
-            problems.append("CSV %s.%s net mismatch: expected %r, got %r" %
-                            (key[0], key[1], expected_net, actual_net))
-    for key, actual_net in got.items():
-        if key not in expected:
-            problems.append("schematic pin %s.%s has unexpected electrical assignment %r absent from CSV" %
-                            (key[0], key[1], actual_net))
+    problems.extend(compare_assignments(expected, got))
 
     # net summary: nets that only touch a single pin are suspicious
     members = defaultdict(list)
