@@ -45,9 +45,9 @@ def candidate_ledger(pdf: Path, page: int, page_dir: Path, source_sha: str):
         terminal = row.get("terminal", {})
         wire = row.get("wire_primitives", [])
         entries.append({
-            "ref_candidate": row.get("ref"),
-            "pin_candidate": row.get("pin_identity") if row.get("pin_identity_kind") != "coordinate_fallback" else None,
-            "net_candidate": row.get("net"),
+            "ref": row.get("ref"),
+            "pin": row.get("pin_identity") if row.get("pin_identity_kind") != "coordinate_fallback" else None,
+            "net": row.get("net"),
             "status": "UNKNOWN",
             "evidence": {
                 "pdf_page": page,
@@ -59,9 +59,9 @@ def candidate_ledger(pdf: Path, page: int, page_dir: Path, source_sha: str):
         })
     for row in evidence.get("unresolved_terminals", []):
         entries.append({
-            "ref_candidate": row.get("ref"),
-            "pin_candidate": None,
-            "net_candidate": None,
+            "ref": row.get("ref"),
+            "pin": None,
+            "net": None,
             "status": "UNKNOWN",
             "evidence": {
                 "pdf_page": page,
