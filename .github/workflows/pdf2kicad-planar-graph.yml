@@ -26,6 +26,7 @@ on:
       - "feat/pdf2kicad-planar-graph-v1"
       - "manus"
     paths:
+      - "tools/pdf2kicad/tests/test_pin_matching.py"
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
       - "tools/pdf2kicad/pdf2kicad/cli.py"
       - "tools/pdf2kicad/pdf2kicad/netlist.py"
