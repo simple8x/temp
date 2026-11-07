@@ -340,7 +340,9 @@ def main(argv):
                 w.writerow([g.ref, pin, nm.text if nm else "", side])
     # Emit traceable parser-derived connectivity; this is not independent verification.
     from .connectivity_evidence import build_connectivity_evidence
-    connectivity_evidence = build_connectivity_evidence(\n        topo, comps, nets, pins, explicit_pin_numbers=explicit_pin_values\n    )
+    connectivity_evidence = build_connectivity_evidence(
+        topo, comps, nets, pins, explicit_pin_numbers=explicit_pin_values
+    )
     with open(os.path.join(outdir, "connectivity_evidence.json"), "w", encoding="utf-8") as f:
         json.dump(connectivity_evidence, f, indent=2)
         f.write("\n")
