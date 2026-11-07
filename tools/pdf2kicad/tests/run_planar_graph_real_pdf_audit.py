@@ -291,7 +291,7 @@ def main():
         "page_evidence": review_page_evidence,
         "entries": review_rows,
     }
-    review_json_path.write_text(json.dumps(review_doc, indent=2) + "\\n", encoding="utf-8")
+    review_json_path.write_text(json.dumps(review_doc, indent=2) + "\n", encoding="utf-8")
     review_csv_path = Path("reference_connectivity_review.csv")
     with review_csv_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=[
