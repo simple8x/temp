@@ -191,6 +191,7 @@ def main(argv):
     # Keep its terminals unresolved unless the PDF prints an explicit pin token or
     # symbol geometry establishes a semantic polarity (handled below for diode/capacitor).
     explicit_pin_values = {terminal_id: value for terminal_id, value in pins.items()}
+    inferred_pin_values = set()
     symbol = {}
     LEDV = re.compile(r"red|green|yellow|blue|white|orange|led", re.I)
     for g in comps:
@@ -219,12 +220,25 @@ def main(argv):
             if plus:
                 k = min(ts, key=lambda t: (t.x - (plus[0].x0 + plus[0].x1) / 2) ** 2 + (t.y - (plus[0].y0 + plus[0].y1) / 2) ** 2)
                 o = [t for t in ts if t is not k][0]
-                pins[id(k)], pins[id(o)] = "+", "-"
+                # KiCad's polarized-capacitor convention is pin 1 (+), pin 2 (-).
+                # Preserve that as geometry-inferred identity, not printed evidence.
+                pins[id(k)], pins[id(o)] = "1", "2"
+                inferred_pin_values.update((id(k), id(o)))
                 symbol[g.ref] = "CP"
             else:
                 symbol[g.ref] = "C"
         elif pre in ("R", "L", "F"):
             symbol[g.ref] = {"R": "R", "L": "L", "F": "FUSE"}[pre]
+            # For a two-terminal passive, infer only the complementary pin when
+            # exactly one endpoint has an explicit printed numeric pin 1 or 2.
+            # Never infer from drawing order or coordinates alone.
+            explicit = [(t, pins.get(id(t))) for t in ts if pins.get(id(t)) in ("1", "2")]
+            if len(explicit) == 1:
+                known_term, known_pin = explicit[0]
+                other_terms = [t for t in ts if t is not known_term]
+                if len(other_terms) == 1 and id(other_terms[0]) not in pins:
+                    pins[id(other_terms[0])] = "2" if known_pin == "1" else "1"
+                    inferred_pin_values.add(id(other_terms[0]))
     # Preserve the extractor's actual pin identity. Never mint a new pin number
     # merely because the same (ref, pin) appears on multiple nets: that hides a
     # topology conflict and fabricates a second physical pin.
@@ -238,7 +252,7 @@ def main(argv):
             pin_owners.setdefault((ref, pin), set()).add(nm)
             if id(t) in explicit_pin_values and pin == explicit_pin_values[id(t)]:
                 identity_kind = "printed_text"
-            elif pin in ("A", "K", "+", "-"):
+            elif id(t) in inferred_pin_values or pin in ("A", "K", "+", "-"):
                 identity_kind = "geometry_inferred"
             else:
                 identity_kind = "coordinate_fallback"
