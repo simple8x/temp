@@ -171,19 +171,127 @@ def _title_block_segments(segs, words, width, height):
     return excluded
 
 
+def _footer_table_segments(segs, width, height):
+    """Detect the open, bottom-right revision/approval table used by this PDF.
+
+    Unlike the strict title-block detector, this table is not a closed rectangle:
+    its long horizontal rules share endpoints with vertical cell dividers that
+    continue beyond the row. Require two aligned footer rules plus left, right,
+    and at least one internal vertical divider; position alone is never enough.
+    """
+    horizontal = []
+    for i, seg in enumerate(segs):
+        if seg.kind not in ("line", "rect") or not _is_h(seg):
+            continue
+        x0, x1 = sorted((seg.x0, seg.x1))
+        if (seg.y0 >= height * 0.78 and seg.length >= width * 0.50
+                and x0 >= width * 0.15 and x1 >= width * 0.95):
+            horizontal.append((i, x0, x1, seg.y0))
+    excluded = set()
+    for pos, a in enumerate(horizontal):
+        for b in horizontal[pos + 1:]:
+            top, bottom = sorted((a[3], b[3]))
+            gap = bottom - top
+            if not height * 0.02 <= gap <= height * 0.05:
+                continue
+            overlap = max(0.0, min(a[2], b[2]) - max(a[1], b[1]))
+            if overlap / max(1.0, min(a[2] - a[1], b[2] - b[1])) < 0.90:
+                continue
+            x0, x1 = min(a[1], b[1]), max(a[2], b[2])
+            verticals = []
+            for i, seg in enumerate(segs):
+                if seg.kind not in ("line", "rect") or not _is_v(seg):
+                    continue
+                x = seg.x0
+                sy0, sy1 = sorted((seg.y0, seg.y1))
+                if x0 - 2.0 <= x <= x1 + 2.0 and sy1 >= top - 2.0 and sy0 <= bottom + 2.0:
+                    verticals.append((i, x))
+            left = any(abs(x - x0) <= 3.0 for _, x in verticals)
+            right = any(abs(x - x1) <= 3.0 for _, x in verticals)
+            inner = {round(x, 1) for _, x in verticals if x0 + 3.0 < x < x1 - 3.0}
+            if not (left and right and inner):
+                continue
+            excluded.update((a[0], b[0]))
+            excluded.update(i for i, _ in verticals)
+            for i, seg in enumerate(segs):
+                sx0, sx1 = sorted((seg.x0, seg.x1))
+                sy0, sy1 = sorted((seg.y0, seg.y1))
+                if (sx0 >= x0 - 2.0 and sx1 <= x1 + 2.0
+                        and sy0 >= top - 2.0 and sy1 <= bottom + 2.0):
+                    excluded.add(i)
+    return excluded
+
+
+def _top_badge_geometry_segments(segs, width, height):
+    """Recognize the small rounded classification badge at the top page edge.
+
+    Some exports retain the rounded vector outline but omit the red label from
+    the searchable/stroke text layer. Require a compact four-sided outline in
+    the top 6% of the page with a wide aspect ratio and both vertical sides.
+    """
+    hs = [(i, min(seg.x0, seg.x1), max(seg.x0, seg.x1), seg.y0)
+          for i, seg in enumerate(segs)
+          if seg.kind in ("line", "rect") and _is_h(seg)
+          and seg.y0 <= height * 0.06 and width * 0.10 <= seg.length <= width * 0.25]
+    vs = [(i, seg.x0, min(seg.y0, seg.y1), max(seg.y0, seg.y1))
+          for i, seg in enumerate(segs)
+          if seg.kind in ("line", "rect") and _is_v(seg)
+          and seg.y0 <= height * 0.08 and seg.y1 <= height * 0.08]
+    for a_pos, a in enumerate(hs):
+        for b in hs[a_pos + 1:]:
+            top, bottom = sorted((a[3], b[3]))
+            box_h = bottom - top
+            if not height * 0.025 <= box_h <= height * 0.06:
+                continue
+            overlap = max(0.0, min(a[2], b[2]) - max(a[1], b[1]))
+            if overlap / max(1.0, min(a[2] - a[1], b[2] - b[1])) < 0.85:
+                continue
+            left_edge, right_edge = min(a[1], b[1]), max(a[2], b[2])
+            left = [(i, x, y0, y1) for i, x, y0, y1 in vs
+                    if left_edge - 6.0 <= x <= left_edge + 1.0
+                    and y1 >= top - 2.0 and y0 <= bottom + 2.0]
+            right = [(i, x, y0, y1) for i, x, y0, y1 in vs
+                     if right_edge - 1.0 <= x <= right_edge + 6.0
+                     and y1 >= top - 2.0 and y0 <= bottom + 2.0]
+            if not left or not right:
+                continue
+            x0, x1 = min(x for _, x, _, _ in left), max(x for _, x, _, _ in right)
+            box_w = x1 - x0
+            if not width * 0.12 <= box_w <= width * 0.25 or box_w / box_h < 3.0:
+                continue
+            if x0 < width * 0.50 or x1 > width * 0.90:
+                continue
+            excluded = {a[0], b[0]}
+            excluded.update(i for i, _, _, _ in left + right)
+            for i, seg in enumerate(segs):
+                sx0, sx1 = sorted((seg.x0, seg.x1))
+                sy0, sy1 = sorted((seg.y0, seg.y1))
+                if (sx0 >= x0 - 2.0 and sx1 <= x1 + 2.0
+                        and sy0 >= top - 2.0 and sy1 <= bottom + 2.0):
+                    excluded.add(i)
+            return excluded
+    return set()
+
+
 def exclude_sheet_metadata(segs, width, height, words=()):
     """Mutate metadata-only segments to non-electrical kinds; return audit counts."""
     frame = _frame_sides(segs, width, height)
     title = _title_block_segments(segs, words, width, height)
-    title -= frame
+    footer = _footer_table_segments(segs, width, height)
+    badge = _top_badge_geometry_segments(segs, width, height)
+    title -= frame | footer | badge
     for index in frame:
         segs[index].kind = "sheet_frame"
-    for index in title:
+    for index in title | footer:
         segs[index].kind = "title_block"
+    for index in badge:
+        segs[index].kind = "sheet_metadata_badge"
     return {
         "sheet_frame_segments_excluded": len(frame),
-        "title_block_segments_excluded": len(title),
+        "title_block_segments_excluded": len(title | footer),
+        "footer_table_segments_excluded": len(footer),
+        "confidential_badge_segments_excluded": len(badge),
         "edge_profile": _edge_profile(segs, width, height),
         "page_size_pt": [round(width, 3), round(height, 3)],
-        "excluded_segment_indices": sorted(frame | title),
+        "excluded_segment_indices": sorted(frame | title | footer | badge),
     }
