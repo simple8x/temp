@@ -222,10 +222,10 @@ class KnowledgeVault:
         return metadata
 
     def answer_evidence(self, question: str) -> list[AnswerEvidence]:
-        """Return high-overlap lexical candidates; record a gap for weak/no matches.
+        """Return exact-token lexical candidates, failing closed on altered sources.
 
-        The two-token floor and 75% best-score band are conservative heuristics,
-        not semantic understanding. Benchmark them before changing thresholds.
+        This is not semantic search: paraphrases/synonyms may produce a gap.
+        Token matching avoids substring collisions such as data/database.
         """
         terms = {t.lower() for t in re.findall(r"[A-Za-z0-9_]{3,}", question)}
         if not terms:
@@ -233,10 +233,18 @@ class KnowledgeVault:
         matches: list[tuple[int, AnswerEvidence]] = []
         for meta_path in sorted(self.notes_dir.glob("*.json")):
             metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+            source = self.root / metadata["source_path"]
+            if not source.is_file():
+                raise VaultError(f"{metadata['id']}: source missing; evidence unavailable")
+            if sha256(source.read_bytes()).hexdigest() != metadata["source_sha256"]:
+                raise VaultError(f"{metadata['id']}: source hash mismatch; evidence unavailable")
             note_path = self.notes_dir / f"{metadata['id']}.md"
+            if not note_path.is_file():
+                raise VaultError(f"{metadata['id']}: note body missing")
             content = note_path.read_text(encoding="utf-8")
             haystack = (metadata["title"] + " " + content).lower()
-            score = sum(term in haystack for term in terms)
+            note_terms = set(re.findall(r"[A-Za-z0-9_]{3,}", haystack))
+            score = len(terms.intersection(note_terms))
             if score >= 2:
                 matches.append((score, AnswerEvidence(
                     note_id=metadata["id"],
@@ -251,7 +259,7 @@ class KnowledgeVault:
             matches = [item for item in matches if item[0] >= cutoff]
         matches.sort(key=lambda item: (-item[0], item[1].note_id))
         if not matches:
-            self.record_gap(question, "No sufficiently strong lexical match; no answer inferred.")
+            self.record_gap(question, "No sufficiently strong exact-token match; no answer inferred.")
         return [item[1] for item in matches]
 
     def record_gap(self, question: str, reason: str) -> Path:
