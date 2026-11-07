@@ -7,7 +7,7 @@ on:
       - "tools/pdf2kicad/tests/test_planar_graph.py"
       - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
-      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[[]QI9-2604-A01[]] Module IO.pdf"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/**"
   push:
     branches:
       - "feat/pdf2kicad-planar-graph-v1"
@@ -16,7 +16,7 @@ on:
       - "tools/pdf2kicad/tests/test_planar_graph.py"
       - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
-      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[[]QI9-2604-A01[]] Module IO.pdf"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/**"
 
 jobs:
   planar-graph-tests:
