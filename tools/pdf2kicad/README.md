@@ -107,3 +107,25 @@ Whole project: `python tools/make_project.py OUT SRC` where SRC holds `pageNN/` 
 orientation are scored on a central window and the page is decoded once. Hot spots fixed: template matching uses squared
 distances on size-compatible templates only; glyph linking skips pairs whose boxes do not touch and drops duplicate strokes;
 orientation check reuses its decoded words; no scipy dependency (own Hungarian solver in `assign.py`).
+
+
+## Independent raw-PDF graph diagnostic (experimental)
+
+A second geometry reader is available in `pdf2kicad.pdf_reference_graph`. It reads
+PDF drawing paths directly and does not import the production topology, netlist,
+or connectivity-evidence modules. It applies conservative endpoint/junction
+rules and emits a page-level geometric candidate graph. Run:
+
+```sh
+python -m pdf2kicad.reference_graph_cli source.pdf 5 6 7 8 9 10 11 --outdir out/reference-graph
+```
+
+Optionally pass `--evidence-dir` containing `page-N.connectivity_evidence.json`
+to produce diagnostic coordinate matches. This comparison is deliberately
+**not** an electrical equivalence check: raw PDF strokes include symbol artwork,
+and the graph does not yet independently classify symbol pins, wire strokes,
+net labels, or symbol-library pin identities. Geometry matches therefore remain
+`GEOMETRY_MATCH_CANDIDATE`; independently verified electrical memberships
+remain zero and electrical signoff remains blocked. Unmarked crossings are not
+joined; explicit filled-dot candidates join. Review exceptions only after a
+separate symbol/wire classifier and terminal/net-label resolver have evidence.
