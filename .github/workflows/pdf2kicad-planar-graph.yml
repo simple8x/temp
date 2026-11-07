@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
+      - "tools/pdf2kicad/pdf2kicad/cli.py"
+      - "tools/pdf2kicad/pdf2kicad/netlist.py"
+      - "tools/pdf2kicad/pdf2kicad/topology.py"
+      - "tools/pdf2kicad/pdf2kicad/graph_netlist.py"
+      - "tools/pdf2kicad/tests/test_graph_netlist.py"
       - "tools/pdf2kicad/tests/test_planar_graph.py"
       - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
