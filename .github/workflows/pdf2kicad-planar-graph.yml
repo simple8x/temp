@@ -36,5 +36,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pdf2kicad-planar-graph-real-pdf-audit
-          path: planar_graph_real_pdf_audit.json
+          path: |\n            planar_graph_real_pdf_audit.json\n            graph_netlist_candidate.csv
           retention-days: 3
