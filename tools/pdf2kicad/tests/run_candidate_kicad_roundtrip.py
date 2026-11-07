@@ -48,7 +48,15 @@ def build_page(page_dir: Path, out_dir: Path):
         if kind == "coordinate_fallback" or COORD.fullmatch(pin):
             rejected["coordinate_fallback"] += 1
             continue
-        if kind != "parser_pin_token" or not (pin and ref and net):
+        # A small, explicit class of geometry-derived identities is safe for
+        # an UNVERIFIED draft: pin 1/2 on a two-terminal passive when the parser
+        # found the complementary endpoint from an explicit pin token or polarity.
+        # This is not accepted as independent electrical reference truth.
+        inferred_two_pin = kind == "geometry_inferred" and pin in ("1", "2")
+        if kind != "parser_pin_token" and not inferred_two_pin:
+            rejected["unknown_pin_identity"] += 1
+            continue
+        if not (pin and ref and net):
             rejected["unknown_pin_identity"] += 1
             continue
         key = (ref, pin)
@@ -139,6 +147,7 @@ def main():
         "policy": {
             "coordinate_fallbacks": "excluded, never serialized as pin numbers",
             "parser_candidates": "unverified candidates, not PDF reference truth",
+            "geometry_inferred_pin_1_2": "included only for conservative two-terminal passive convention inference; never promoted to verified reference",
             "KiCad_readback": "checks serialization round-trip only",
             "electrical_signoff": "requires independently reviewed PDF-derived reference connectivity",
         },
