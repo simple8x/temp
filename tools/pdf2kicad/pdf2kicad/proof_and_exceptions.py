@@ -37,6 +37,7 @@ def audit_reference_ledger(ledger):
             elif cls=="NC_STUB_BODY_END": code,action="NC_SEMANTICS_UNRESOLVED","Confirm component pin and explicit NC semantics."
             else: code,action="INDEPENDENT_REFERENCE_MISSING","Independently review source PDF and supply ref/pin/net or NC."
         elif not k: code,action="PIN_IDENTITY_MISSING","Verified reference requires exact ref and pin."
+        elif r.get("reference_pin") and str(r.get("reference_pin")).strip()!=key(r)[1]: code,action="REFERENCE_PIN_IDENTITY_MISMATCH","Resolve candidate pin versus independently reviewed reference pin identity."
         elif state=="VERIFIED" and not r.get("reference_net"): code,action="REFERENCE_NET_MISSING","Supply independently reviewed reference net."
         elif state=="VERIFIED" and not r.get("candidate_net_name_diagnostic_only"): code,action="PARSER_MEMBERSHIP_MISSING","Resolve missing parser net membership."
         elif state=="NC" and r.get("candidate_net_name_diagnostic_only"): code,action="NC_CONNECTED_IN_CANDIDATE","Explain/remove candidate membership on explicit NC pin."

@@ -22,3 +22,10 @@ def test_nc_must_not_have_candidate_net():
 def test_duplicate_terminal_blocks():
     x=audit_reference_ledger({"entries":[row("U1","1","VCC","N1"),row("U1","1","GND","N2")]})
     assert x["proof"]["status"]=="BLOCKED" and x["exception_summary"]["DUPLICATE_REFERENCE_TERMINAL"]==1
+
+def test_reference_pin_identity_mismatch_blocks():
+    item=row("U1","1","VCC","N1")
+    item["reference_pin"]="2"
+    x=audit_reference_ledger({"entries":[item]})
+    assert x["proof"]["status"]=="BLOCKED"
+    assert x["exception_summary"]["REFERENCE_PIN_IDENTITY_MISMATCH"]==1
