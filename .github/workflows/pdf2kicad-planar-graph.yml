@@ -5,21 +5,22 @@ on:
     paths:
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
       - "tools/pdf2kicad/tests/test_planar_graph.py"
+      - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
   push:
     branches:
       - "feat/pdf2kicad-planar-graph-v1"
     paths:
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
       - "tools/pdf2kicad/tests/test_planar_graph.py"
+      - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
 
 jobs:
   planar-graph-tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools/pdf2kicad
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,4 +28,13 @@ jobs:
           python-version: "3.11"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e . pytest
-      - run: python -m pytest -q tests/test_planar_graph.py
+        working-directory: tools/pdf2kicad
+      - run: python -m pytest -q tools/pdf2kicad/tests/test_planar_graph.py
+      - name: Run real QI9 PDF planar-graph diagnostic
+        run: python tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py
+      - name: Upload real-PDF audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf2kicad-planar-graph-real-pdf-audit
+          path: planar_graph_real_pdf_audit.json
+          retention-days: 3
