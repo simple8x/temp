@@ -7,6 +7,7 @@ on:
       - feat/pdf2kicad-planar-graph-v1
     paths:
       - "tools/pdf2kicad/tests/build_pdf_terminal_review_sheet.py"
+      - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-terminal-review.yml"
 
 permissions:
