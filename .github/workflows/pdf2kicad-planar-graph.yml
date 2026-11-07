@@ -49,4 +49,5 @@ jobs:
           path: |
             planar_graph_real_pdf_audit.json
             graph_netlist_candidate.csv
+            production_graph_net_memberships.csv
           retention-days: 3
