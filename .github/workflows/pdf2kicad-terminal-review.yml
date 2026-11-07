@@ -1,0 +1,47 @@
+name: pdf2kicad terminal reference review sheet
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/pdf2kicad-planar-graph-v1
+    paths:
+      - "tools/pdf2kicad/tests/build_pdf_terminal_review_sheet.py"
+      - ".github/workflows/pdf2kicad-terminal-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-terminal-review-sheet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pdf2kicad and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e tools/pdf2kicad
+      - name: Rebuild PDF-linked terminal evidence ledger from pinned source
+        run: |
+          python tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py
+      - name: Render human-review contact sheet and editable review CSV
+        run: |
+          python tools/pdf2kicad/tests/build_pdf_terminal_review_sheet.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --ledger reference_connectivity_review.json \
+            --out terminal-reference-review
+      - name: Upload terminal review package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf2kicad-terminal-reference-review
+          path: |
+            terminal-reference-review/terminal_reference_review_sheet.pdf
+            terminal-reference-review/terminal_reference_review.csv
+            terminal-reference-review/terminal_reference_review_manifest.json
+            reference_connectivity_review.json
+          if-no-files-found: error
+          retention-days: 3
