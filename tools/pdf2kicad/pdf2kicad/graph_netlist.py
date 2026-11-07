@@ -111,6 +111,33 @@ def graph_nets(topo, comps, legacy_nets, *, tolerance=0.4, dot_radius=1.0):
             terminal_rows.append((group.ref, terminal, component_id))
             physical_pin_components[(group.ref, round(terminal.x, 2), round(terminal.y, 2))].add(component_id)
 
+    # An UNKNOWN contact is not a harmless split when both sides contribute
+    # to referenced pin membership. Otherwise an unresolved T contact silently
+    # becomes two definite synthetic nets (a false split).
+    referenced_wire_ids = {
+        f"wire{k}"
+        for group in comps if group.ref
+        for terminal in group.terminals
+        if terminal.kind not in ("nc", "nc_stub_body_end", "nc_topology_conflict")
+        and 0 <= terminal.comp < len(topo.comps)
+        for k in topo.comps[terminal.comp]
+    }
+    ambiguous_contacts = [
+        contact for contact in graph.contacts
+        if contact.decision == "UNKNOWN"
+        and contact.primitive_a in referenced_wire_ids
+        and contact.primitive_b in referenced_wire_ids
+    ]
+    if ambiguous_contacts:
+        details = [
+            f"{c.kind}({c.primitive_a},{c.primitive_b})@({c.x:.3f},{c.y:.3f}):{c.reason}"
+            for c in ambiguous_contacts[:12]
+        ]
+        raise GraphConnectivityError(
+            "UNKNOWN electrical contact affects referenced terminal connectivity; "
+            "review PDF evidence before netlist export: " + "; ".join(details)
+        )
+
     for owners in physical_pin_components.values():
         owners = sorted(owners)
         for other in owners[1:]:

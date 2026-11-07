@@ -41,10 +41,27 @@ class GraphNetlistTests(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual({ref for ref, _ in next(iter(result.values()))}, {"R1", "R2"})
 
-    def test_unmarked_t_junction_stays_split(self):
+    def test_unmarked_t_junction_affecting_referenced_terminals_fails_closed(self):
         topo, groups, _ = fixture(
             [(0, 0, 10, 0), (5, 0, 5, 5)],
             [("R1", 0, 0, 0), ("R2", 5, 5, 1)],
+        )
+        with self.assertRaisesRegex(GraphConnectivityError, "UNKNOWN electrical contact"):
+            graph_nets(topo, groups, {})
+
+    def test_unmarked_t_junction_without_second_referenced_side_does_not_merge(self):
+        topo, groups, _ = fixture(
+            [(0, 0, 10, 0), (5, 0, 5, 5)],
+            [("R1", 5, 5, 1)],
+        )
+        result = graph_nets(topo, groups, {})
+        self.assertEqual(len(result), 1)
+        self.assertEqual({ref for ref, _ in next(iter(result.values()))}, {"R1"})
+
+    def test_unmarked_x_crossing_remains_disconnected(self):
+        topo, groups, _ = fixture(
+            [(0, 0, 10, 10), (0, 10, 10, 0)],
+            [("R1", 0, 0, 0), ("R2", 0, 10, 1)],
         )
         result = graph_nets(topo, groups, {})
         self.assertEqual(len(result), 2)
