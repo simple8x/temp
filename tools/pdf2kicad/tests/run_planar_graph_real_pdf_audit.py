@@ -15,12 +15,15 @@ from pdf2kicad.planar_graph import Primitive, build_planar_graph
 
 PDF = Path("QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf")
 PAGES = range(5, 12)
+EXPECTED_SHA256 = "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc"
 
 
 def main():
     if not PDF.is_file():
         raise FileNotFoundError(f"pinned source PDF missing: {PDF}")
     digest = hashlib.sha256(PDF.read_bytes()).hexdigest()
+    if digest != EXPECTED_SHA256:
+        raise RuntimeError(f"source PDF SHA256 mismatch: expected {EXPECTED_SHA256}, got {digest}")
     results = []
     for page_no in PAGES:
         _, nets, _, topo = extract(str(PDF), page_no, full=True)
@@ -68,6 +71,7 @@ def main():
         "source_repository": "simple8x/temp",
         "source_path": str(PDF),
         "source_sha256": digest,
+        "source_sha256_check": "PASS",
         "pages": list(PAGES),
         "results": results,
         "limitations": [
