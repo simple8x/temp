@@ -14,6 +14,7 @@ from pathlib import Path
 from pdf2kicad.cli import extract
 from pdf2kicad.netlist import pin_tokens
 from pdf2kicad.electrical_evidence import classify_page
+from pdf2kicad.connectivity_evidence import build_terminal_reference_map, resolve_terminal_ref
 from pdf2kicad.planar_graph import Primitive, build_planar_graph
 
 PDF = Path("QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf")
@@ -104,6 +105,9 @@ def main():
         })
         pin_map, _ = pin_tokens(topo, comps, words)
         group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
+        # Production net tuples carry a ref for terminals whose topology.group
+        # index has no direct symbol-group entry. Accept only a unique ref.
+        reference_by_terminal = build_terminal_reference_map(production_nets)
 
         # Legacy names are used only as a diagnostic comparator, never as graph connectivity input.
         production_net_by_terminal = {}
@@ -114,7 +118,7 @@ def main():
         terminal_rows, graph_memberships = [], {}
         unmapped = 0
         for terminal in topo.terminals:
-            ref = group_ref.get(terminal.group, "")
+            ref = resolve_terminal_ref(terminal, group_ref, reference_by_terminal) or ""
             pin = pin_map.get(id(terminal), "")
             mapped = _map_terminal(terminal, topo, graph, component_by_node)
             legacy_name = production_net_by_terminal.get(id(terminal), "")
