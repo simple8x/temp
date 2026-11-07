@@ -161,3 +161,26 @@ def test_rejects_reference_identity_that_rewrites_explicit_pin(tmp_path):
         assert "reviewed pin conflicts with explicit candidate pin" in str(exc)
     else:
         raise AssertionError("review silently rewrote an explicit printed pin token")
+
+
+def test_candidate_ledger_preserves_geometry_inferred_pin_as_unverified_candidate(tmp_path):
+    from roundtrip_pipeline import candidate_ledger
+
+    page_dir = tmp_path / "page"
+    page_dir.mkdir()
+    evidence = {
+        "terminal_inventory": [{
+            "terminal_index": 4, "ref": "D19", "pin_identity": "K",
+            "pin_identity_kind": "geometry_inferred", "status": "ATTACHED",
+            "x": 169.32, "y": 184.56, "wire_primitives": [{"primitive_index": 9}],
+            "candidate_net_names_diagnostic_only": ["N4"],
+            "candidate_net_status": "SINGLE_PARSER_CANDIDATE",
+        }]
+    }
+    (page_dir / "connectivity_evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+    ledger = candidate_ledger(Path("source.pdf"), 9, page_dir, "abc")
+    row = ledger["entries"][0]
+    assert row["pin"] == "K"
+    assert row["pin_candidate_source_kind"] == "geometry_inferred"
+    assert row["evidence"]["pin_candidate_is_independent_reference"] is False
+    assert row["status"] == "UNKNOWN"

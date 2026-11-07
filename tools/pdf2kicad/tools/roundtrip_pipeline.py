@@ -57,16 +57,24 @@ def candidate_ledger(pdf: Path, page: int, page_dir: Path, source_sha: str):
         candidate_nets = terminal.get("candidate_net_names_diagnostic_only", [])
         candidate_net = candidate_nets[0] if len(candidate_nets) == 1 else None
         pin = terminal.get("pin_identity")
+        pin_kind = terminal.get("pin_identity_kind")
+        # Geometry-inferred identities (for example diode K/A) are valid resolver
+        # candidates. Preserve them as candidates with provenance; never promote
+        # them to independently verified reference facts.
+        pin_candidate = pin if pin_kind in ("parser_pin_token", "geometry_inferred") else None
         add({
             "terminal_index": terminal.get("terminal_index"),
             "ref": terminal.get("ref"),
-            "pin": pin if terminal.get("pin_identity_kind") == "parser_pin_token" else None,
+            "pin": pin_candidate,
+            "pin_candidate_source_kind": pin_kind if pin_candidate else "UNKNOWN",
             "net": candidate_net,
             "status": "UNKNOWN",
             "evidence": {
                 "pdf_page": page,
                 "terminal_xy_pdf_pt": [terminal.get("x"), terminal.get("y")],
                 "terminal_status": terminal.get("status"),
+                "pin_candidate_source_kind": pin_kind if pin_candidate else "UNKNOWN",
+                "pin_candidate_is_independent_reference": False,
                 "anchor_kind": terminal.get("anchor_kind"),
                 "symbol_group": terminal.get("symbol_group"),
                 "wire_component": terminal.get("wire_component"),

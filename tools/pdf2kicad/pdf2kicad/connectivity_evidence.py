@@ -89,6 +89,10 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None, explicit_
     # production net exporter omitted. The reference builder must not silently
     # lose terminals just because they have no production net membership.
     group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
+    # Some topology terminals are not assigned to a symbol group even though
+    # production membership has one unique owning reference. Use that ref only
+    # as a candidate; conflicting owners remain unresolved (fail closed).
+    reference_by_terminal = build_terminal_reference_map(netmap)
     memberships_by_terminal = {}
     for row in memberships:
         memberships_by_terminal.setdefault(row.get("terminal_index"), []).append(row)
@@ -112,7 +116,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None, explicit_
         candidate_nets = sorted({row["net"] for row in terminal_memberships if row.get("net")})
         terminal_inventory.append({
             "terminal_index": index,
-            "ref": group_ref.get(terminal.group),
+            "ref": resolve_terminal_ref(terminal, group_ref, reference_by_terminal),
             "pin_identity": pin,
             "pin_identity_kind": identity_kind(terminal) if pin is not None else "UNKNOWN",
             "x": round(terminal.x, 4),
@@ -136,7 +140,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None, explicit_
     # Unattached terminals are not included in Group.terminals by Topology._groups().
     unresolved = [
         {
-            "ref": group_ref.get(terminal.group),
+            "ref": resolve_terminal_ref(terminal, group_ref, reference_by_terminal),
             "x": round(terminal.x, 4),
             "y": round(terminal.y, 4),
             "wire_component": terminal.comp,
@@ -148,7 +152,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None, explicit_
     ]
     no_connect_marks = [
         {
-            "ref": group_ref.get(terminal.group),
+            "ref": resolve_terminal_ref(terminal, group_ref, reference_by_terminal),
             "pin_identity": pin_numbers.get(id(terminal), "%.2f_%.2f" % (terminal.x, terminal.y)),
             "pin_identity_kind": identity_kind(terminal),
             "x": round(terminal.nc_mark_x, 4),
