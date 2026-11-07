@@ -3,6 +3,8 @@ name: pdf2kicad planar graph prototype
 on:
   pull_request:
     paths:
+      - "tools/pdf2kicad/pdf2kicad/evidence_ir.py"
+      - "tools/pdf2kicad/tests/test_evidence_ir.py"
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
       - "tools/pdf2kicad/pdf2kicad/cli.py"
       - "tools/pdf2kicad/pdf2kicad/netlist.py"
@@ -22,6 +24,7 @@ on:
   push:
     branches:
       - "feat/pdf2kicad-planar-graph-v1"
+      - "manus"
     paths:
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
       - "tools/pdf2kicad/pdf2kicad/cli.py"
