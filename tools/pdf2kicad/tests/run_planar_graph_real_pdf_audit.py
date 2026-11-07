@@ -1,7 +1,9 @@
-"""Run the planar graph as a diagnostic over the real QI9 PDF wire primitives.
+"""Run the planar graph as a conservative diagnostic over the real QI9 PDF.
 
-This is intentionally not an independent netlist oracle and does not replace
-the legacy parser. Confirmed junctions come only from electrical_evidence.py.
+The legacy extractor and electrical_evidence currently use different coordinate
+pipelines: extract() may rescale/reorient the page, while classify_page() reads
+raw PyMuPDF page coordinates. Until an explicit transform is measured and
+validated, junction centres MUST NOT be injected into the graph.
 """
 from __future__ import annotations
 
@@ -24,6 +26,7 @@ def main():
     digest = hashlib.sha256(PDF.read_bytes()).hexdigest()
     if digest != EXPECTED_SHA256:
         raise RuntimeError(f"source PDF SHA256 mismatch: expected {EXPECTED_SHA256}, got {digest}")
+
     results = []
     for page_no in PAGES:
         _, nets, _, topo = extract(str(PDF), page_no, full=True)
@@ -38,15 +41,20 @@ def main():
             )
             for wire_idx in topo.W
         ]
+
         junction_report = classify_page(PDF, page_no)
         confirmed = [
             tuple(mark["center_pt"])
             for mark in junction_report["junction_candidates"]
             if mark["status"] == "EXPLICIT_JUNCTION_CONFIRMED"
         ]
+
+        # FAIL-CLOSED: do not mix raw PyMuPDF coordinates with extract()'s
+        # potentially scaled/rotated topology coordinates. Confirmed marks are
+        # counted as evidence, but not used to join graph contacts.
         graph = build_planar_graph(
             primitives,
-            junction_dots=confirmed,
+            junction_dots=(),
             tolerance=0.4,
             dot_radius=0.2,
         )
@@ -56,7 +64,9 @@ def main():
         results.append({
             "page": page_no,
             "wire_primitives": len(primitives),
-            "confirmed_junction_marks": len(confirmed),
+            "confirmed_junction_marks_detected_raw_pdf_frame": len(confirmed),
+            "junction_marks_applied_to_graph": 0,
+            "junction_coordinate_frame_compatibility": "NOT_VERIFIED_FAIL_CLOSED",
             "graph_nodes": len(graph.nodes),
             "graph_edges": len(graph.edges),
             "graph_components": len(graph.connected_components()),
@@ -64,10 +74,11 @@ def main():
             "legacy_wire_components": len(topo.comps),
             "parser_derived_memberships": sum(len(members) for members in nets.values()),
             "independent_netlist_verification": "NOT_PERFORMED",
-            "status": "REAL_PDF_GEOMETRY_DIAGNOSTIC_ONLY",
+            "status": "REAL_PDF_WIRE_GEOMETRY_DIAGNOSTIC_ONLY",
         })
+
     report = {
-        "schema": "pdf2kicad-planar-graph-real-pdf-audit/v1",
+        "schema": "pdf2kicad-planar-graph-real-pdf-audit/v2",
         "source_repository": "simple8x/temp",
         "source_path": str(PDF),
         "source_sha256": digest,
@@ -75,8 +86,10 @@ def main():
         "pages": list(PAGES),
         "results": results,
         "limitations": [
+            "Junction centres are detected in raw PyMuPDF page coordinates.",
+            "Legacy extract() may scale or rotate topology coordinates; no transform is currently exposed or verified.",
+            "Confirmed junction marks are therefore not applied to graph contacts (fail-closed).",
             "Diagnostic graph is not wired into netlist assignment or KiCad export.",
-            "Only explicitly confirmed junction marks are supplied as connecting dots.",
             "This is not an independent electrical reference netlist or KiCad ERC.",
             "Legacy parser output is reported for comparison, not treated as ground truth.",
         ],
