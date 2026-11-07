@@ -240,6 +240,10 @@ def main():
 
         results.append({
             "page": page_no,
+            "sheet_metadata_filter": getattr(topo, "sheet_metadata_filter", {
+                "sheet_frame_segments_excluded": 0,
+                "title_block_segments_excluded": 0,
+            }),
             "wire_primitives": len(primitives),
             "topology_wire_components": len(topo.wire_comps),
             "body_or_inner_components_excluded": len(topo.comps) - len(topo.wire_comps),
