@@ -132,11 +132,7 @@ def _core(pg, use, pre=None):
     metadata_filter = exclude_sheet_metadata(segs, pg.width, pg.height, [
         (w.x0, w.y0, w.x1, w.y1, w.text) for w in text
     ])
-    segs = [
-        s for s in segs
-        if s.kind not in ("sheet_frame", "title_block")
-        and s.length <= 0.36 * max(pg.width, pg.height)
-    ]
+    segs = [s for s in segs if s.kind not in ("sheet_frame", "title_block")]
     topo = TP.Topology(segs, pg.dots, marks)
     topo.sheet_metadata_filter = metadata_filter
     comps = NL.assign(topo, text)
