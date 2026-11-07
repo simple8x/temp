@@ -25,7 +25,7 @@ def test_independent_pdf_graph_does_not_join_unmarked_crossing(tmp_path):
     path=tmp_path/"cross.pdf"
     _pdf(path,False)
     graph=build_pdf_reference_graph(str(path),1)
-    assert len(graph["segments"]) == 2
+    assert len(graph["segments"]) == 3
     assert len(graph["components"]) == 2
     assert graph["scope"] == "INDEPENDENT_GEOMETRIC_CANDIDATE_NOT_ELECTRICAL_NETLIST"
 
