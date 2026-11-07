@@ -135,6 +135,22 @@ def validate_reference(path: Path, page: int, source_sha: str, candidate: dict, 
             errors.append("entry " + str(i) + ": duplicate source_candidate_index " + str(source_index))
         else:
             covered.add(source_index)
+            # The review row may resolve an UNKNOWN candidate, but it may not
+            # silently rewrite a parser-explicit reference or printed pin token.
+            # Such disagreements belong in the resolver/evidence stage first.
+            candidate_row = candidate.get("entries", [])[source_index]
+            candidate_ref = candidate_row.get("ref")
+            candidate_pin = candidate_row.get("pin")
+            if candidate_ref and row.get("ref") != candidate_ref:
+                errors.append(
+                    "entry " + str(i) + ": reviewed ref conflicts with candidate ref "
+                    + repr(candidate_ref) + "; fix/resolve the candidate lineage first"
+                )
+            if candidate_pin and row.get("pin") != candidate_pin:
+                errors.append(
+                    "entry " + str(i) + ": reviewed pin conflicts with explicit candidate pin "
+                    + repr(candidate_pin) + "; fix/resolve the pin resolver first"
+                )
 
         status = row.get("status")
         ref, pin, net = row.get("ref"), row.get("pin"), row.get("net")
