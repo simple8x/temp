@@ -131,3 +131,46 @@ def test_pin_matching_uses_terminal_count_not_wire_component_count():
     pins, claimed = pin_tokens(topo, [group], tokens)
     assert pins == {id(terminals[i]): str(i + 1) for i in range(3)}
     assert claimed == {id(token) for token in tokens}
+
+
+def test_two_terminal_symbol_uses_explicit_nearby_pin_tokens():
+    from types import SimpleNamespace
+
+    terminals = [
+        SimpleNamespace(x=0.0, y=10.0, dx=0.0, dy=0.0, comp=1),
+        SimpleNamespace(x=20.0, y=10.0, dx=0.0, dy=0.0, comp=2),
+    ]
+    group = SimpleNamespace(
+        x0=0.0, y0=0.0, x1=20.0, y1=20.0,
+        terminals=terminals, no_connect_terminals=[],
+    )
+    topo = SimpleNamespace(used_words=set())
+    tokens = [
+        SimpleNamespace(x0=-0.5, y0=8.5, x1=0.5, y1=9.5, text="1"),
+        SimpleNamespace(x0=19.5, y0=8.5, x1=20.5, y1=9.5, text="2"),
+    ]
+
+    pins, claimed = pin_tokens(topo, [group], tokens)
+
+    assert pins == {id(terminals[0]): "1", id(terminals[1]): "2"}
+    assert claimed == {id(token) for token in tokens}
+
+
+def test_two_terminal_symbol_does_not_guess_shared_ambiguous_token():
+    from types import SimpleNamespace
+
+    terminals = [
+        SimpleNamespace(x=0.0, y=10.0, dx=0.0, dy=0.0, comp=1),
+        SimpleNamespace(x=20.0, y=10.0, dx=0.0, dy=0.0, comp=2),
+    ]
+    group = SimpleNamespace(
+        x0=0.0, y0=0.0, x1=20.0, y1=20.0,
+        terminals=terminals, no_connect_terminals=[],
+    )
+    topo = SimpleNamespace(used_words=set())
+    token = SimpleNamespace(x0=9.5, y0=8.5, x1=10.5, y1=9.5, text="1")
+
+    pins, claimed = pin_tokens(topo, [group], [token])
+
+    assert pins == {}
+    assert claimed == set()
