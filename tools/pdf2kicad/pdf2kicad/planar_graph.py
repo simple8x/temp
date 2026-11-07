@@ -1,16 +1,15 @@
 """Provenance-preserving planar graph prototype.
 
-This module is deliberately parallel to the legacy topology engine. It does not
-assign electrical nets or infer symbol bodies. Ambiguous endpoint-on-interior
-contacts remain UNKNOWN unless an explicit junction mark supports connection.
-Coordinates are PDF points in the page coordinate system.
+Diagnostic-only: deliberately separate from the legacy netlist pipeline.
+Coordinates are PDF points. Ambiguous T contacts stay UNKNOWN unless a
+confirmed explicit junction mark supports the connection.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import combinations
 import math
-from typing import Iterable, Optional
+from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -51,7 +50,7 @@ class Contact:
     primitive_a: str
     primitive_b: str
     kind: str
-    decision: str  # CONNECTED | DISCONNECTED | UNKNOWN
+    decision: str
     reason: str
 
 
@@ -63,37 +62,34 @@ class PlanarGraph:
     tolerance: float
 
     def connected_components(self) -> list[set[int]]:
-        """Components over explicitly connected graph nodes; UNKNOWN is not joined."""
         parent = list(range(len(self.nodes)))
 
-        def find(x: int) -> int:
+        def find(x):
             while parent[x] != x:
                 parent[x] = parent[parent[x]]
                 x = parent[x]
             return x
 
-        def union(a: int, b: int) -> None:
-            parent[find(a)] = find(b)
-
         for edge in self.edges:
-            union(edge.start, edge.end)
-        groups: dict[int, set[int]] = {}
+            parent[find(edge.start)] = find(edge.end)
+        groups = {}
         for node in self.nodes:
             groups.setdefault(find(node.node_id), set()).add(node.node_id)
         return list(groups.values())
 
 
-def _cross(ax: float, ay: float, bx: float, by: float) -> float:
+def _cross(ax, ay, bx, by):
     return ax * by - ay * bx
 
 
-def _point_on_segment(px: float, py: float, s: Primitive, tol: float):
+def _point_on_segment(px, py, s, tol):
     dx, dy = s.x1 - s.x0, s.y1 - s.y0
     ll = dx * dx + dy * dy
     if ll == 0:
         return None
     t = ((px - s.x0) * dx + (py - s.y0) * dy) / ll
-    if t < -tol / max(s.length, tol) or t > 1 + tol / max(s.length, tol):
+    eps = tol / max(s.length, tol)
+    if t < -eps or t > 1 + eps:
         return None
     qx, qy = s.x0 + t * dx, s.y0 + t * dy
     if math.hypot(px - qx, py - qy) <= tol:
@@ -101,8 +97,7 @@ def _point_on_segment(px: float, py: float, s: Primitive, tol: float):
     return None
 
 
-def _intersection(a: Primitive, b: Primitive, tol: float):
-    """Return (kind, point, ta, tb); parallel collinear overlaps are separate."""
+def _intersection(a, b, tol):
     ax, ay = a.x1 - a.x0, a.y1 - a.y0
     bx, by = b.x1 - b.x0, b.y1 - b.y0
     den = _cross(ax, ay, bx, by)
@@ -111,95 +106,84 @@ def _intersection(a: Primitive, b: Primitive, tol: float):
     if abs(den) > 1e-10 * scale:
         ta = _cross(qx, qy, bx, by) / den
         tb = _cross(qx, qy, ax, ay) / den
-        eps_a = tol / max(a.length, tol)
-        eps_b = tol / max(b.length, tol)
-        if -eps_a <= ta <= 1 + eps_a and -eps_b <= tb <= 1 + eps_b:
+        ea, eb = tol / max(a.length, tol), tol / max(b.length, tol)
+        if -ea <= ta <= 1 + ea and -eb <= tb <= 1 + eb:
             ta, tb = max(0.0, min(1.0, ta)), max(0.0, min(1.0, tb))
             pa = (a.x0 + ta * ax, a.y0 + ta * ay)
             pb = (b.x0 + tb * bx, b.y0 + tb * by)
             p = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
-            enda = ta <= eps_a or ta >= 1 - eps_a
-            endb = tb <= eps_b or tb >= 1 - eps_b
-            kind = "endpoint_endpoint" if enda and endb else (
-                "endpoint_on_segment" if enda or endb else "proper_crossing")
-            return kind, p, ta, tb
-        return None
-
-    # Parallel: reject non-collinear; report overlap endpoints for collinear geometry.
+            enda = ta <= ea or ta >= 1 - ea
+            endb = tb <= eb or tb >= 1 - eb
+            kind = ("endpoint_endpoint" if enda and endb else
+                    "endpoint_on_segment" if enda or endb else "proper_crossing")
+            return [(kind, p, ta, tb)]
+        return []
     if abs(_cross(qx, qy, ax, ay)) > tol * max(a.length, 1.0):
-        return None
+        return []
     ll = ax * ax + ay * ay
     if ll == 0:
-        return None
+        return []
     t0 = (qx * ax + qy * ay) / ll
     t1 = t0 + (bx * ax + by * ay) / ll
     lo, hi = max(0.0, min(t0, t1)), min(1.0, max(t0, t1))
     if hi < lo - tol / max(a.length, tol):
-        return None
-    points = []
-    for t in (lo, hi):
-        p = (a.x0 + t * ax, a.y0 + t * ay)
-        tb = _point_on_segment(p[0], p[1], b, tol)
+        return []
+    result = []
+    for ta in (lo, hi):
+        p = (a.x0 + ta * ax, a.y0 + ta * ay)
+        tb = _point_on_segment(*p, b, tol)
         if tb is not None:
-            points.append((p, t, tb))
-    if not points:
-        return None
-    return ("collinear_overlap", points)
+            result.append(("collinear_overlap", p, ta, tb))
+    return result
 
 
 def build_planar_graph(
     primitives: Iterable[Primitive],
     junction_dots: Iterable[tuple[float, float]] = (),
     tolerance: float = 0.05,
-    dot_radius: float = 1.0,
+    dot_radius: float = 0.2,
 ) -> PlanarGraph:
-    """Split linework at geometric contacts while preserving uncertain semantics.
+    """Split linework and join only contacts with explicit CONNECTED decisions.
 
-    Rules:
-    * endpoint/endpoint contact: CONNECTED within tolerance;
-    * endpoint/interior T contact: UNKNOWN without a dot, CONNECTED with a dot;
-    * proper X crossing: DISCONNECTED without a dot, CONNECTED with a dot;
-    * collinear overlap: split and CONNECTED, retaining every source primitive ID;
-    * no proximity-only joining of distinct contacts.
+    Endpoint/endpoint contacts connect within tolerance. T contacts are UNKNOWN
+    without a dot; X crossings are DISCONNECTED without a dot. Collinear overlap
+    is split and connected while preserving both source primitive identities.
+    Dot hits are projected onto each segment before node creation, so a slightly
+    offset mark does not fail a coordinate-hash lookup.
     """
-    segs = list(primitives)
-    dots = list(junction_dots)
+    if tolerance <= 0 or dot_radius < 0:
+        raise ValueError("tolerance must be > 0 and dot_radius must be >= 0")
+    segs, dots = list(primitives), list(junction_dots)
     cuts = [{0.0, 1.0} for _ in segs]
-    raw_contacts: list[Contact] = []
-
-    def has_dot(x: float, y: float) -> bool:
-        return any(math.hypot(x - dx, y - dy) <= dot_radius for dx, dy in dots)
+    contacts = []
+    # Internal contact records retain segment indices and parametric positions;
+    # no approximate midpoint/rounded-coordinate lookup is used for connectivity.
+    joins = []
 
     for i, j in combinations(range(len(segs)), 2):
         a, b = segs[i], segs[j]
-        hit = _intersection(a, b, tolerance)
-        if hit is None:
-            continue
-        if hit[0] == "collinear_overlap":
-            for (p, ta, tb) in hit[1]:
-                cuts[i].add(ta)
-                cuts[j].add(tb)
-                raw_contacts.append(Contact(p[0], p[1], a.primitive_id, b.primitive_id,
-                                            "collinear_overlap", "CONNECTED",
-                                            "shared_collinear_geometry"))
-            continue
-        kind, p, ta, tb = hit
-        cuts[i].add(ta)
-        cuts[j].add(tb)
-        dot = has_dot(*p)
-        if kind == "endpoint_endpoint":
-            decision, reason = "CONNECTED", "endpoint_contact"
-        elif kind == "endpoint_on_segment":
-            decision, reason = (("CONNECTED", "explicit_junction_dot") if dot else
-                                ("UNKNOWN", "endpoint_on_segment_without_dot"))
-        else:
-            decision, reason = (("CONNECTED", "explicit_junction_dot") if dot else
-                                ("DISCONNECTED", "proper_crossing_without_dot"))
-        raw_contacts.append(Contact(p[0], p[1], a.primitive_id, b.primitive_id,
+        for kind, p, ta, tb in _intersection(a, b, tolerance):
+            cuts[i].add(ta)
+            cuts[j].add(tb)
+            if kind == "collinear_overlap":
+                decision, reason = "CONNECTED", "shared_collinear_geometry"
+            elif kind == "endpoint_endpoint":
+                decision, reason = "CONNECTED", "endpoint_contact_within_tolerance"
+            elif kind == "endpoint_on_segment":
+                dot = any(math.hypot(p[0]-dx, p[1]-dy) <= dot_radius for dx, dy in dots)
+                decision, reason = (("CONNECTED", "explicit_junction_dot") if dot else
+                                    ("UNKNOWN", "endpoint_on_segment_without_dot"))
+            else:
+                dot = any(math.hypot(p[0]-dx, p[1]-dy) <= dot_radius for dx, dy in dots)
+                decision, reason = (("CONNECTED", "explicit_junction_dot") if dot else
+                                    ("DISCONNECTED", "proper_crossing_without_dot"))
+            contacts.append(Contact(p[0], p[1], a.primitive_id, b.primitive_id,
                                     kind, decision, reason))
+            if decision == "CONNECTED":
+                joins.append((i, ta, j, tb, len(contacts)-1))
 
-    # Explicit dots split every segment they geometrically touch. A dot alone is
-    # not enough to infer a connection unless at least two primitives meet it.
+    # A dot can be slightly offset from a wire. Project it, split there, then
+    # connect all distinct primitive pairs hit by the same explicit dot.
     for dx, dy in dots:
         hits = []
         for i, seg in enumerate(segs):
@@ -207,81 +191,69 @@ def build_planar_graph(
             if t is not None:
                 cuts[i].add(t)
                 hits.append((i, t))
-        if len(hits) >= 2:
-            ids = sorted({segs[i].primitive_id for i, _ in hits})
-            for aid, bid in combinations(ids, 2):
-                raw_contacts.append(Contact(dx, dy, aid, bid, "junction_dot",
-                                            "CONNECTED", "explicit_junction_dot"))
+        unique = {}
+        for i, t in hits:
+            unique.setdefault(segs[i].primitive_id, (i, t))
+        values = list(unique.values())
+        for (i, ti), (j, tj) in combinations(values, 2):
+            contacts.append(Contact(dx, dy, segs[i].primitive_id, segs[j].primitive_id,
+                                    "junction_dot", "CONNECTED", "explicit_junction_dot"))
+            joins.append((i, ti, j, tj, len(contacts)-1))
 
-    # Start with primitive-scoped nodes. A geometric crossing is NOT an
-    # electrical node unless an explicit CONNECTED decision joins its sources.
-    # This prevents UNKNOWN T contacts and unmarked X crossings from becoming
-    # connected merely because they share coordinates.
-    node_map: dict[tuple[int, int, str], int] = {}
-    nodes: list[Node] = []
-    edges: list[Edge] = []
-
-    def node_for(x: float, y: float, pid: str) -> int:
-        key = (round(x / tolerance), round(y / tolerance), pid)
-        if key not in node_map:
-            node_id = len(nodes)
-            node_map[key] = node_id
-            nodes.append(Node(node_id, x, y))
-        n = nodes[node_map[key]]
-        n.provenance.add(pid)
-        return n.node_id
-
+    # Build segment-scoped cut nodes first. A node reference is (segment, t),
+    # never a rounded x/y bucket; uncertain geometric coincidences stay separate.
+    nodes, edges, cut_nodes = [], [], []
     for i, seg in enumerate(segs):
         ts = sorted(cuts[i])
-        for t0, t1 in zip(ts, ts[1:]):
-            if (t1 - t0) * seg.length <= 1e-9:
-                continue
-            x0 = seg.x0 + t0 * (seg.x1 - seg.x0)
-            y0 = seg.y0 + t0 * (seg.y1 - seg.y0)
-            x1 = seg.x0 + t1 * (seg.x1 - seg.x0)
-            y1 = seg.y0 + t1 * (seg.y1 - seg.y0)
-            u = node_for(x0, y0, seg.primitive_id)
-            v = node_for(x1, y1, seg.primitive_id)
-            edges.append(Edge(len(edges), u, v, {seg.primitive_id}))
+        local = []
+        for t in ts:
+            nid = len(nodes)
+            nodes.append(Node(nid, seg.x0 + t*(seg.x1-seg.x0),
+                              seg.y0 + t*(seg.y1-seg.y0), {seg.primitive_id}))
+            local.append((t, nid))
+        cut_nodes.append(local)
+        for (t0, u), (t1, v) in zip(local, local[1:]):
+            if (t1-t0) * seg.length > 1e-9:
+                edges.append(Edge(len(edges), u, v, {seg.primitive_id}))
 
-    # Merge primitive-scoped nodes only for explicitly CONNECTED contacts.
+    def resolve(i, t):
+        return min(cut_nodes[i], key=lambda pair: abs(pair[0]-t))[1]
+
     parent = list(range(len(nodes)))
 
-    def find_node(x: int) -> int:
+    def find(x):
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
         return x
 
-    def merge_nodes(a: int, b: int) -> None:
-        ra, rb = find_node(a), find_node(b)
+    def union(a, b):
+        ra, rb = find(a), find(b)
         if ra != rb:
             parent[rb] = ra
 
-    for c in raw_contacts:
-        ka = (round(c.x / tolerance), round(c.y / tolerance), c.primitive_a)
-        kb = (round(c.x / tolerance), round(c.y / tolerance), c.primitive_b)
-        na, nb = node_map.get(ka), node_map.get(kb)
-        if na is None or nb is None:
-            continue
-        if c.decision == "CONNECTED":
-            merge_nodes(na, nb)
+    for i, ta, j, tb, ci in joins:
+        na, nb = resolve(i, ta), resolve(j, tb)
+        union(na, nb)
+        detail = contacts[ci]
         for nid in (na, nb):
             nodes[nid].decisions.append(
-                f"{c.decision}:{c.kind}:{c.primitive_a}:{c.primitive_b}:{c.reason}"
+                f"{detail.decision}:{detail.kind}:{detail.primitive_a}:{detail.primitive_b}:{detail.reason}"
             )
 
-    roots = sorted({find_node(i) for i in range(len(nodes))})
-    root_to_new = {root: i for i, root in enumerate(roots)}
-    merged_nodes: list[Node] = []
+    roots = sorted({find(i) for i in range(len(nodes))})
+    remap = {root: k for k, root in enumerate(roots)}
+    merged = []
+    members = {}
+    for i in range(len(nodes)):
+        members.setdefault(find(i), []).append(i)
     for root in roots:
-        members = [i for i in range(len(nodes)) if find_node(i) == root]
-        merged = Node(root_to_new[root], nodes[root].x, nodes[root].y)
-        for i in members:
-            merged.provenance.update(nodes[i].provenance)
-            merged.decisions.extend(nodes[i].decisions)
-        merged_nodes.append(merged)
+        group = members[root]
+        n = Node(remap[root], nodes[group[0]].x, nodes[group[0]].y)
+        for old in group:
+            n.provenance.update(nodes[old].provenance)
+            n.decisions.extend(nodes[old].decisions)
+        merged.append(n)
     for edge in edges:
-        edge.start = root_to_new[find_node(edge.start)]
-        edge.end = root_to_new[find_node(edge.end)]
-    return PlanarGraph(merged_nodes, edges, raw_contacts, tolerance)
+        edge.start, edge.end = remap[find(edge.start)], remap[find(edge.end)]
+    return PlanarGraph(merged, edges, contacts, tolerance)
