@@ -88,3 +88,19 @@ def test_top_edge_title_block_requires_closed_box_and_text():
     report = exclude_sheet_metadata(segs, 842, 595, words)
     assert report["title_block_segments_excluded"] == 5
     assert all(s.kind == "title_block" for s in segs)
+
+def test_large_sheet_enclosure_with_many_words_is_not_a_title_block():
+    segs = [
+        Seg(8, 8, 834, 8, "line"),
+        Seg(834, 8, 834, 587, "line"),
+        Seg(834, 587, 8, 587, "line"),
+        Seg(8, 587, 8, 8, "line"),
+    ]
+    words = [
+        (40, 40, 90, 50, "SHEET"),
+        (100, 40, 150, 50, "SCHEMATIC"),
+        (40, 100, 90, 110, "U1"),
+    ]
+    report = exclude_sheet_metadata(segs, 842, 595, words)
+    assert report["title_block_segments_excluded"] == 0
+    assert all(s.kind == "line" for s in segs)
