@@ -1,0 +1,94 @@
+name: claude-m1
+
+on:
+  push:
+    branches: [claude]
+    paths: ["claude/**", ".github/workflows/claude-*.yml"]
+  pull_request:
+    paths: ["claude/**", ".github/workflows/claude-*.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: claude-m1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Isolation gate (only claude/** and claude-*.yml may change)
+        run: |
+          set -o pipefail
+          mkdir -p out
+          bash claude/tools/check_isolation.sh 2>&1 | tee out/isolation.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: isolation-log
+          path: out/isolation.log
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: claude
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+          python -c "import pikepdf, pymupdf, hypothesis; print('pikepdf', pikepdf.__version__, 'pymupdf', pymupdf.__version__, 'hypothesis', hypothesis.__version__)" | tee env.log
+          python --version | tee -a env.log
+      - name: Tests
+        run: |
+          mkdir -p out
+          set -o pipefail
+          python -m pytest -rA --junitxml=out/junit.xml 2>&1 | tee out/pytest.log
+      - name: Summarize (SKIPPED counts as UNKNOWN and fails the job)
+        if: always()
+        run: python tools/summarize_junit.py out/junit.xml out | tee out/summary.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-evidence-py${{ matrix.python }}
+          path: |
+            claude/out/
+            claude/env.log
+
+  mutation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: claude
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+      - name: Mutation check (every injected bug must make the suite fail)
+        run: |
+          set -o pipefail
+          mkdir -p out
+          python tools/mutation_check.py 2>&1 | tee out/mutation.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-evidence
+          path: claude/out/
