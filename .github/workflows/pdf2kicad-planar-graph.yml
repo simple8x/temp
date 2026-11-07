@@ -1,0 +1,30 @@
+name: pdf2kicad planar graph prototype
+
+on:
+  pull_request:
+    paths:
+      - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
+      - "tools/pdf2kicad/tests/test_planar_graph.py"
+      - ".github/workflows/pdf2kicad-planar-graph.yml"
+  push:
+    branches:
+      - "feat/pdf2kicad-planar-graph-v1"
+    paths:
+      - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
+      - "tools/pdf2kicad/tests/test_planar_graph.py"
+      - ".github/workflows/pdf2kicad-planar-graph.yml"
+
+jobs:
+  planar-graph-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/pdf2kicad
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e . pytest
+      - run: python -m pytest -q tests/test_planar_graph.py
