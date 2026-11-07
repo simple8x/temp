@@ -7,7 +7,7 @@ on:
     paths:
       - "analysis/build_disagreement_crops.py"
       - "analysis/qi9-deepseek-manus-disagreement-register.csv"
-      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/artifacts/g0_intake/page-*.svg"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/-QI9-2604-A01- Module IO.pdf"
       - ".github/workflows/analysis-disagreement-crops.yml"
   workflow_dispatch:
 
@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install render dependencies
-        run: python -m pip install --disable-pip-version-check cairosvg pillow
+        run: python -m pip install --disable-pip-version-check pymupdf pillow
       - name: Build coordinate crops
         run: python analysis/build_disagreement_crops.py
       - name: Upload crop pack
