@@ -42,13 +42,15 @@ def _frame_sides(segs, width, height):
     for index, seg in enumerate(segs):
         if seg.kind not in ("line", "rect"):
             continue
-        if _is_h(seg) and seg.length >= width * 0.12:
+        # Frame borders are often emitted as many short vector fragments.
+        # Aggregate all edge-aligned fragments before applying a coverage test.
+        if _is_h(seg):
             side = "top" if abs(seg.y0) <= band_y else (
                 "bottom" if abs(height - seg.y0) <= band_y else None
             )
             if side:
                 candidates[side].append((index, (seg.x0, seg.x1)))
-        elif _is_v(seg) and seg.length >= height * 0.12:
+        elif _is_v(seg):
             side = "left" if abs(seg.x0) <= band_x else (
                 "right" if abs(width - seg.x0) <= band_x else None
             )
@@ -56,14 +58,16 @@ def _frame_sides(segs, width, height):
                 candidates[side].append((index, (seg.y0, seg.y1)))
 
     recognized = set()
-    horizontal = vertical = False
+    recognized_sides = set()
     for side, items in candidates.items():
         dimension = width if side in ("top", "bottom") else height
-        if _covered_length([interval for _, interval in items]) >= dimension * 0.45:
+        coverage = _covered_length([interval for _, interval in items])
+        if coverage >= dimension * 0.45:
             recognized.update(index for index, _ in items)
-            horizontal |= side in ("top", "bottom")
-            vertical |= side in ("left", "right")
-    return recognized if horizontal and vertical else set()
+            recognized_sides.add(side)
+    # Require a three-sided enclosure: a lone edge or a pair of unrelated
+    # edge-near wires cannot be discarded as a page frame.
+    return recognized if len(recognized_sides) >= 3 else set()
 
 
 def _title_block_segments(segs, words, width, height):
