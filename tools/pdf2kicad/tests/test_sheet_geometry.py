@@ -132,3 +132,20 @@ def test_confidential_word_without_four_sided_badge_does_not_remove_wire():
     report = exclude_sheet_metadata(segs, 841.92, 595.32, words)
     assert report["confidential_badge_segments_excluded"] == 0
     assert segs[0].kind == "line"
+
+
+def test_long_text_inside_rounded_page_edge_badge_is_filtered_without_keyword():
+    segs = [
+        Seg(533.40, 8.28, 679.32, 8.28, "line"),
+        Seg(533.64, 10.20, 678.48, 10.20, "line"),
+        Seg(678.60, 31.08, 533.52, 31.08, "line"),
+        Seg(533.52, 29.04, 678.36, 29.04, "line"),
+        Seg(683.28, 12.60, 683.28, 27.36, "line"),
+        Seg(681.12, 26.52, 681.12, 12.84, "line"),
+        Seg(528.72, 26.64, 528.72, 12.72, "line"),
+        Seg(530.88, 12.72, 530.88, 26.52, "line"),
+    ]
+    words = [(550.0, 13.0, 665.0, 27.0, "CLASSIFICATION")]
+    report = exclude_sheet_metadata(segs, 841.92, 595.32, words)
+    assert report["confidential_badge_segments_excluded"] == 8
+    assert all(s.kind == "sheet_metadata_badge" for s in segs)

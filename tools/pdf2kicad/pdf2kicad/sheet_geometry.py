@@ -186,7 +186,9 @@ def _confidential_badge_segments(segs, words, width, height):
     edge_limit = max(16.0, min(width, height) * 0.05)
 
     for word in words:
-        if len(word) < 5 or not metadata.search(str(word[4])):
+        label = str(word[4]).strip()
+        long_label = len(label) >= 9 and label.isalpha()
+        if not metadata.search(label) and not long_label:
             continue
         x0, y0, x1, y1 = (float(word[i]) for i in range(4))
         if min(x0, y0, width - x1, height - y1) > edge_limit:

@@ -129,9 +129,11 @@ def _core(pg, use, pre=None):
     # Exclude sheet metadata only when page-edge continuity or a closed,
     # text-bearing title-block enclosure provides geometric evidence. Do not
     # discard a whole y-band: real circuitry may extend into the lower sheet.
-    metadata_filter = exclude_sheet_metadata(segs, pg.width, pg.height, [
-        (w.x0, w.y0, w.x1, w.y1, w.text) for w in text
-    ])
+    metadata_words = [(w.x0, w.y0, w.x1, w.y1, w.text) for w in text]
+    # Also use PyMuPDF text-layer boxes: stroke-font decoding can omit a page-edge
+    # classification label even when the PDF retains its searchable text layer.
+    metadata_words.extend(getattr(pg, "words", []))
+    metadata_filter = exclude_sheet_metadata(segs, pg.width, pg.height, metadata_words)
     segs = [s for s in segs if s.kind not in ("sheet_frame", "title_block")]
     topo = TP.Topology(segs, pg.dots, marks)
     topo.sheet_metadata_filter = metadata_filter
