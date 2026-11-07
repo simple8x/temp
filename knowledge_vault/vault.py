@@ -127,7 +127,7 @@ class KnowledgeVault:
             raise VaultError("use verify_note() with an explicit verification receipt")
         source = (self.root / source_path).resolve()
         source_rel = self._inside(source)
-        if not source.is_file() or source.parent != source.parent.parent and self.raw_dir not in source.parents:
+        if not source.is_file() or self.raw_dir not in source.parents:
             raise VaultError("source_path must reference an ingested raw source")
         sidecar = source.with_suffix(".json")
         if not sidecar.is_file():
@@ -162,11 +162,7 @@ class KnowledgeVault:
         return metadata
 
     def verify_note(self, note_id: str, verifier: str, checked_excerpt: str) -> dict:
-        """Record an explicit verification action; excerpt must exist in raw source.
-
-        This records who checked the source and what exact text they inspected.
-        It does not claim to prove that the note's interpretation is correct.
-        """
+        """Record a source inspection receipt; it does not prove semantic truth."""
         note_id = _safe_id(note_id)
         verifier = verifier.strip()
         if not verifier or not checked_excerpt:
@@ -226,7 +222,11 @@ class KnowledgeVault:
         return metadata
 
     def answer_evidence(self, question: str) -> list[AnswerEvidence]:
-        """Return matching vault evidence only; record a gap if nothing matches."""
+        """Return high-overlap lexical candidates; record a gap for weak/no matches.
+
+        The two-token floor and 75% best-score band are conservative heuristics,
+        not semantic understanding. Benchmark them before changing thresholds.
+        """
         terms = {t.lower() for t in re.findall(r"[A-Za-z0-9_]{3,}", question)}
         if not terms:
             raise VaultError("question must contain searchable terms")
@@ -237,7 +237,7 @@ class KnowledgeVault:
             content = note_path.read_text(encoding="utf-8")
             haystack = (metadata["title"] + " " + content).lower()
             score = sum(term in haystack for term in terms)
-            if score:
+            if score >= 2:
                 matches.append((score, AnswerEvidence(
                     note_id=metadata["id"],
                     title=metadata["title"],
@@ -245,9 +245,13 @@ class KnowledgeVault:
                     path=self._inside(note_path),
                     status=metadata["status"],
                 )))
+        if matches:
+            best_score = max(score for score, _ in matches)
+            cutoff = max(2, best_score * 0.75)
+            matches = [item for item in matches if item[0] >= cutoff]
         matches.sort(key=lambda item: (-item[0], item[1].note_id))
         if not matches:
-            self.record_gap(question, "No matching note found; no answer inferred.")
+            self.record_gap(question, "No sufficiently strong lexical match; no answer inferred.")
         return [item[1] for item in matches]
 
     def record_gap(self, question: str, reason: str) -> Path:
