@@ -28,6 +28,7 @@ on:
       - "manus"
     paths:
       - "tools/pdf2kicad/tests/test_connectivity_evidence.py"
+      - "tools/pdf2kicad/tests/test_verify_kicad_sch.py"
       - "tools/pdf2kicad/tools/verify_kicad_sch.py"
       - "tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py"
       - "tools/pdf2kicad/pdf2kicad/connectivity_evidence.py"
