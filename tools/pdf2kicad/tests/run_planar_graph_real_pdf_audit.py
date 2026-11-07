@@ -155,27 +155,29 @@ def main():
                 **mapped,
             }
             terminal_rows.append(terminal_row)
-            # Every topology terminal needs a PDF review record. Parser-inferred ref/pin\n            # candidates are not independent reference truth and must not be omitted.\n            if True:\n                component_id = mapped.get("graph_component")
-                node_id = mapped.get("node_id")
-                source_ids = (
-                    sorted(graph.nodes[node_id].provenance)
-                    if node_id is not None else []
-                )
-                review_rows.append({
-                    "page": page_no, "ref_candidate": ref or None,
-                    "pin_candidate": pin or None, "candidate_net_name_diagnostic_only": legacy_name or None,
-                    "terminal_xy_pdf_pt": [round(terminal.x, 4), round(terminal.y, 4)],
-                    "terminal_status": terminal.kind, "classification": classification,
-                    "graph_component_candidate": component_id,
-                    "graph_node_candidate": mapped.get("node_id"),
-                    "mapping_decision": mapped["decision"],
-                    "mapping_distance_pt": mapped.get("distance"),
-                    "source_wire_primitive_ids": source_ids,
-                    "reference_pin": None, "reference_net": None,
-                    "reference_status": "UNKNOWN",
-                    "review_status": "REQUIRES_HUMAN_REVIEW_AGAINST_SOURCE_PDF",
-                    "promotion_policy": "NEVER_AUTO_PROMOTE_TO_VERIFIED",
-                })
+            # Every topology terminal needs a PDF review record. Parser-inferred ref/pin
+            # candidates are not independent reference truth and must not be omitted.
+            component_id = mapped.get("graph_component")
+            node_id = mapped.get("node_id")
+            source_ids = (
+                sorted(graph.nodes[node_id].provenance)
+                if node_id is not None else []
+            )
+            review_rows.append({
+                "page": page_no, "ref_candidate": ref or None,
+                "pin_candidate": pin or None, "candidate_net_name_diagnostic_only": legacy_name or None,
+                "terminal_xy_pdf_pt": [round(terminal.x, 4), round(terminal.y, 4)],
+                "terminal_status": terminal.kind, "classification": classification,
+                "graph_component_candidate": component_id,
+                "graph_node_candidate": mapped.get("node_id"),
+                "mapping_decision": mapped["decision"],
+                "mapping_distance_pt": mapped.get("distance"),
+                "source_wire_primitive_ids": source_ids,
+                "reference_pin": None, "reference_net": None,
+                "reference_status": "UNKNOWN",
+                "review_status": "REQUIRES_HUMAN_REVIEW_AGAINST_SOURCE_PDF",
+                "promotion_policy": "NEVER_AUTO_PROMOTE_TO_VERIFIED",
+            })
 
         # If one graph component contains multiple legacy net names, graph and legacy
         # disagree on separation. Keep this as a hard audit finding, not a silent merge.
