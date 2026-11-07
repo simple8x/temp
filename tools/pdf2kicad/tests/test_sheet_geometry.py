@@ -149,3 +149,43 @@ def test_long_text_inside_rounded_page_edge_badge_is_filtered_without_keyword():
     report = exclude_sheet_metadata(segs, 841.92, 595.32, words)
     assert report["confidential_badge_segments_excluded"] == 8
     assert all(s.kind == "sheet_metadata_badge" for s in segs)
+
+
+
+def test_open_bottom_right_revision_table_is_excluded_from_electrical_topology():
+    segs = [
+        Seg(271.44, 515.76, 826.44, 515.76, "line"),
+        Seg(271.44, 532.20, 826.44, 532.20, "line"),
+        Seg(271.44, 515.76, 271.44, 575.0, "line"),
+        Seg(575.0, 515.76, 575.0, 532.20, "line"),
+        Seg(700.0, 515.76, 700.0, 532.20, "line"),
+        Seg(826.44, 455.0, 826.44, 575.0, "line"),
+        Seg(30.0, 300.0, 500.0, 300.0, "line"),
+    ]
+    words = [
+        (300.0, 518.0, 360.0, 526.0, "2nd Approved"),
+        (600.0, 518.0, 635.0, 526.0, "Rev."),
+        (660.0, 518.0, 710.0, 526.0, "Page"),
+    ]
+    report = exclude_sheet_metadata(segs, 841.92, 595.32, words)
+    assert report["footer_table_segments_excluded"] >= 6
+    assert all(segs[i].kind == "title_block" for i in range(6))
+    assert segs[6].kind == "line"
+
+
+def test_top_edge_badge_outline_is_excluded_even_without_searchable_label():
+    segs = [
+        Seg(533.40, 8.28, 679.32, 8.28, "line"),
+        Seg(533.64, 10.20, 678.48, 10.20, "line"),
+        Seg(678.60, 31.08, 533.52, 31.08, "line"),
+        Seg(533.52, 29.04, 678.36, 29.04, "line"),
+        Seg(683.28, 12.60, 683.28, 27.36, "line"),
+        Seg(681.12, 26.52, 681.12, 12.84, "line"),
+        Seg(528.72, 26.64, 528.72, 12.72, "line"),
+        Seg(530.88, 12.72, 530.88, 26.52, "line"),
+        Seg(40.0, 200.0, 300.0, 200.0, "line"),
+    ]
+    report = exclude_sheet_metadata(segs, 841.92, 595.32, ())
+    assert report["confidential_badge_segments_excluded"] == 8
+    assert all(segs[i].kind == "sheet_metadata_badge" for i in range(8))
+    assert segs[8].kind == "line"
