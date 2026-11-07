@@ -8,6 +8,29 @@ from __future__ import annotations
 from .topology import terminal_status
 
 
+
+def build_terminal_reference_map(netmap):
+    """Return terminal-id -> unique parser ref; ambiguous multi-ref assignments stay unresolved."""
+    candidates = {}
+    for entries in netmap.values():
+        for ref, terminal in entries:
+            if ref:
+                candidates.setdefault(id(terminal), set()).add(ref)
+    return {
+        terminal_id: next(iter(refs))
+        for terminal_id, refs in candidates.items()
+        if len(refs) == 1
+    }
+
+
+def resolve_terminal_ref(terminal, group_ref, reference_by_terminal):
+    """Prefer topology group ownership; use production membership only as a unique fallback."""
+    assigned = group_ref.get(terminal.group)
+    if assigned:
+        return assigned
+    return reference_by_terminal.get(id(terminal))
+
+
 def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None, explicit_pin_numbers=None):
     pin_numbers = pin_numbers or {}
     explicit_pin_numbers = explicit_pin_numbers or {}
