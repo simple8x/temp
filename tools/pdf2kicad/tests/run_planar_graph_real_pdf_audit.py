@@ -49,7 +49,7 @@ def main():
     if digest != EXPECTED_SHA256:
         raise RuntimeError(f"source PDF SHA256 mismatch: expected {EXPECTED_SHA256}, got {digest}")
 
-    results, candidate_rows, production_rows, review_rows = [], [], [], []
+    results, candidate_rows, production_rows, review_rows, review_page_evidence = [], [], [], [], []
     any_empty_graph = False
     any_component_legacy_conflict = False
     for page_no in PAGES:
@@ -86,6 +86,22 @@ def main():
             })
             for component_id, members in enumerate(graph_components)
         }
+        review_page_evidence.append({
+            "page": page_no,
+            "coordinate_system": "source PDF points",
+            "primitive_catalog": {
+                primitive.primitive_id: {
+                    "a": [round(primitive.x0, 4), round(primitive.y0, 4)],
+                    "b": [round(primitive.x1, 4), round(primitive.y1, 4)],
+                    "kind": primitive.kind,
+                }
+                for primitive in primitives
+            },
+            "graph_component_primitive_ids": {
+                str(component_id): primitive_ids
+                for component_id, primitive_ids in primitive_ids_by_component.items()
+            },
+        })
         pin_map, _ = pin_tokens(topo, comps, words)
         group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
 
@@ -141,21 +157,11 @@ def main():
             terminal_rows.append(terminal_row)
             if classification != "INFERRED":
                 component_id = mapped.get("graph_component")
+                node_id = mapped.get("node_id")
                 source_ids = (
-                    primitive_ids_by_component.get(component_id, [])
-                    if component_id is not None else []
+                    sorted(graph.nodes[node_id].provenance)
+                    if node_id is not None else []
                 )
-                source_primitives = [
-                    {
-                        "primitive_id": primitive_id,
-                        "a": [round(primitive_by_id[primitive_id].x0, 4),
-                              round(primitive_by_id[primitive_id].y0, 4)],
-                        "b": [round(primitive_by_id[primitive_id].x1, 4),
-                              round(primitive_by_id[primitive_id].y1, 4)],
-                        "kind": primitive_by_id[primitive_id].kind,
-                    }
-                    for primitive_id in source_ids if primitive_id in primitive_by_id
-                ]
                 review_rows.append({
                     "page": page_no, "ref_candidate": ref or None,
                     "pin_candidate": pin or None, "candidate_net_name_diagnostic_only": legacy_name or None,
@@ -166,7 +172,6 @@ def main():
                     "mapping_decision": mapped["decision"],
                     "mapping_distance_pt": mapped.get("distance"),
                     "source_wire_primitive_ids": source_ids,
-                    "source_wire_primitives": source_primitives,
                     "reference_pin": None, "reference_net": None,
                     "reference_status": "UNKNOWN",
                     "review_status": "REQUIRES_HUMAN_REVIEW_AGAINST_SOURCE_PDF",
@@ -283,6 +288,7 @@ def main():
             "nc_stub_body_end_is_not_a_verified_nc_pin": True,
             "no_automatic_promotion_to_verified": True,
         },
+        "page_evidence": review_page_evidence,
         "entries": review_rows,
     }
     review_json_path.write_text(json.dumps(review_doc, indent=2) + "\\n", encoding="utf-8")
