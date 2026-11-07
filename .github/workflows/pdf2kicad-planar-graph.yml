@@ -74,6 +74,7 @@ jobs:
           python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
           --input production_cli_real_pdf --outdir pdf2kicad_candidate_schematics --pages 5-11
       - name: Upload real-PDF audit report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pdf2kicad-planar-graph-real-pdf-audit
