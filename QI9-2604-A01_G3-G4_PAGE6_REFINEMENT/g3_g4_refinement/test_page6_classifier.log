@@ -1,0 +1,11 @@
+test_candidates_are_not_promoted_to_wires (g3_g4_refinement.test_page6_classifier.Page6ClassifierEvidenceTests.test_candidates_are_not_promoted_to_wires) ... ok
+test_filled_marks_are_not_promoted_to_junctions (g3_g4_refinement.test_page6_classifier.Page6ClassifierEvidenceTests.test_filled_marks_are_not_promoted_to_junctions) ... ok
+test_gate_remains_blocked (g3_g4_refinement.test_page6_classifier.Page6ClassifierEvidenceTests.test_gate_remains_blocked) ... ok
+test_no_net_membership_claims (g3_g4_refinement.test_page6_classifier.Page6ClassifierEvidenceTests.test_no_net_membership_claims) ... ok
+test_page_scope_is_rs232_page6 (g3_g4_refinement.test_page6_classifier.Page6ClassifierEvidenceTests.test_page_scope_is_rs232_page6) ... ok
+test_source_hash_matches_authoritative_pdf (g3_g4_refinement.test_page6_classifier.Page6ClassifierEvidenceTests.test_source_hash_matches_authoritative_pdf) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.004s
+
+OK
