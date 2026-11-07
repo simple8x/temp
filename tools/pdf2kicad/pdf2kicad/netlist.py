@@ -341,7 +341,14 @@ def pin_tokens(topo, comps, words):
     used = getattr(topo, "used_words", ())
     candidates = [w for w in words
                   if PINTOK.fullmatch(w.text) and id(w) not in used]
-    multi = [g for g in comps if len(g.terminals + getattr(g, "no_connect_terminals", [])) >= 3]
+    # Printed pin identifiers can exist on two-terminal symbols too. The old
+    # >=3 gate silently skipped those symbols, leaving every endpoint as a
+    # coordinate fallback. Small groups use stricter mutual-unique matching;
+    # dense multi-pin groups retain the global assignment with unmatched slots.
+    multi = [
+        g for g in comps
+        if len(g.terminals + getattr(g, "no_connect_terminals", [])) >= 2
+    ]
     out, claimed = {}, set()
     BIG, UNMATCHED, MAX_DISTANCE = 1e6, 12.0, 12.0
 
@@ -366,6 +373,25 @@ def pin_tokens(topo, comps, words):
         if not local:
             continue
 
+        if len(terminals) <= 2:
+            # Two-pin symbols are particularly easy to mislabel by visual
+            # ordering. Accept only mutual nearest matches separated by a
+            # margin on both the terminal and token sides.
+            distances = [
+                [dist(word, terminal) for word in local]
+                for terminal in terminals
+            ]
+            matched = _unambiguous_pin_assignment(
+                distances, max_distance=MAX_DISTANCE, margin=1.5
+            )
+            for ti, wi in matched.items():
+                word = local[wi]
+                if id(word) in claimed:
+                    continue
+                out[id(terminals[ti])] = word.text
+                claimed.add(id(word))
+            continue
+
         # One private dummy column per terminal means a terminal may remain UNKNOWN
         # instead of being forced onto a distant or already claimed caption.
         matrix = np.full((len(terminals), len(local) + len(terminals)), BIG, dtype=float)
@@ -381,6 +407,8 @@ def pin_tokens(topo, comps, words):
             if wi >= len(local) or matrix[ti, wi] >= UNMATCHED:
                 continue
             word = local[wi]
+            if id(word) in claimed:
+                continue
             out[id(terminals[ti])] = word.text
             claimed.add(id(word))
 
