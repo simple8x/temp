@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pdf2kicad.connectivity_evidence import build_connectivity_evidence
+from pdf2kicad.connectivity_evidence import (\n    build_connectivity_evidence, build_terminal_reference_map, resolve_terminal_ref,\n)
 from pdf2kicad.primitives import Seg
 from pdf2kicad.topology import Terminal
 
@@ -89,3 +89,20 @@ def test_geometry_inferred_pin_is_not_mislabeled_as_printed_text():
     )
     assert printed["memberships"][0]["pin_identity_kind"] == "parser_pin_token"
     assert printed["terminal_inventory"][0]["pin_identity_kind"] == "parser_pin_token"
+
+
+def test_terminal_ref_falls_back_to_unique_production_membership_ref():
+    terminal = Terminal(629.52, 330.96, 0, kind="attach", group=99)
+    group_ref = {1: "R1"}
+    production_nets = {"N48": [("Y1", terminal)]}
+    reference_by_terminal = build_terminal_reference_map(production_nets)
+
+    assert resolve_terminal_ref(terminal, group_ref, reference_by_terminal) == "Y1"
+
+
+def test_terminal_ref_does_not_guess_when_production_refs_conflict():
+    terminal = Terminal(629.52, 330.96, 0, kind="attach", group=99)
+    production_nets = {"N48": [("Y1", terminal)], "N49": [("U2", terminal)]}
+    reference_by_terminal = build_terminal_reference_map(production_nets)
+
+    assert resolve_terminal_ref(terminal, {}, reference_by_terminal) is None
