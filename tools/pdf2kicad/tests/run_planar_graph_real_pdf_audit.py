@@ -155,8 +155,7 @@ def main():
                 **mapped,
             }
             terminal_rows.append(terminal_row)
-            if classification != "INFERRED":
-                component_id = mapped.get("graph_component")
+            # Every topology terminal needs a PDF review record. Parser-inferred ref/pin\n            # candidates are not independent reference truth and must not be omitted.\n            if True:\n                component_id = mapped.get("graph_component")
                 node_id = mapped.get("node_id")
                 source_ids = (
                     sorted(graph.nodes[node_id].provenance)
@@ -262,6 +261,12 @@ def main():
             "status": "GRAPH_DERIVED_PRODUCTION_EXTRACT_NOT_ELECTRICALLY_VERIFIED",
         })
 
+    expected_review_count = sum(x["terminal_count"] for x in results)
+    if len(review_rows) != expected_review_count:
+        raise RuntimeError(f"reference review coverage incomplete: {len(review_rows)} / {expected_review_count} topology terminals")
+    if any(row["reference_status"] != "UNKNOWN" for row in review_rows):
+        raise RuntimeError("parser output must never be promoted to reference truth")
+
     production_path = Path("production_graph_net_memberships.csv")
     with production_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -343,7 +348,10 @@ def main():
                     "OPEN_WIRE_ENDPOINT", "NC_STUB_BODY_END", "CONFLICT",
                 )
             },
+            "topology_terminal_count": sum(x["terminal_count"] for x in results),
             "reference_connectivity_review_entries": len(review_rows),
+            "reference_review_coverage_complete": len(review_rows) == sum(x["terminal_count"] for x in results),
+            "reference_review_status_all_unknown": all(row["reference_status"] == "UNKNOWN" for row in review_rows),
             "reference_connectivity_auto_verified": 0,
             "candidate_netlist_rows": len(candidate_rows),
             "production_graph_membership_rows": len(production_rows),
