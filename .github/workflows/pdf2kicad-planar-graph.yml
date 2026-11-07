@@ -18,6 +18,11 @@ on:
       - "feat/pdf2kicad-planar-graph-v1"
     paths:
       - "tools/pdf2kicad/pdf2kicad/planar_graph.py"
+      - "tools/pdf2kicad/pdf2kicad/cli.py"
+      - "tools/pdf2kicad/pdf2kicad/netlist.py"
+      - "tools/pdf2kicad/pdf2kicad/topology.py"
+      - "tools/pdf2kicad/pdf2kicad/graph_netlist.py"
+      - "tools/pdf2kicad/tests/test_graph_netlist.py"
       - "tools/pdf2kicad/tests/test_planar_graph.py"
       - "tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py"
       - ".github/workflows/pdf2kicad-planar-graph.yml"
@@ -41,5 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pdf2kicad-planar-graph-real-pdf-audit
-          path: |\n            planar_graph_real_pdf_audit.json\n            graph_netlist_candidate.csv
+          path: |
+            planar_graph_real_pdf_audit.json
+            graph_netlist_candidate.csv
           retention-days: 3
