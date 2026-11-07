@@ -297,8 +297,10 @@ def main():
         ])
         writer.writeheader()
         for row in review_rows:
-            writer.writerow({**row, "source_wire_primitive_ids": ";".join(row["source_wire_primitive_ids"]),
-                             "terminal_xy_pdf_pt": json.dumps(row["terminal_xy_pdf_pt"])})
+            csv_row = {key: row.get(key) for key in writer.fieldnames}
+            csv_row["source_wire_primitive_ids"] = ";".join(row["source_wire_primitive_ids"])
+            csv_row["terminal_xy_pdf_pt"] = json.dumps(row["terminal_xy_pdf_pt"])
+            writer.writerow(csv_row)
 
     candidate_path = Path("graph_netlist_candidate.csv")
     with candidate_path.open("w", newline="", encoding="utf-8") as f:
