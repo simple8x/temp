@@ -60,3 +60,15 @@ def test_long_internal_wire_is_not_removed_by_length_heuristic():
     assert report["sheet_frame_segments_excluded"] == 0
     assert report["title_block_segments_excluded"] == 0
     assert segs[0].kind == "line"
+
+def test_fragmented_page_frame_is_detected_by_aggregated_edge_coverage():
+    segs = []
+    for x in range(8, 592, 58):
+        segs.append(Seg(x, 8, min(x + 50, 592), 8, "line"))
+        segs.append(Seg(x, 792, min(x + 50, 592), 792, "line"))
+    for y in range(8, 792, 78):
+        segs.append(Seg(8, y, 8, min(y + 70, 792), "line"))
+        segs.append(Seg(592, y, 592, min(y + 70, 792), "line"))
+    report = exclude_sheet_metadata(segs, 600, 800)
+    assert report["sheet_frame_segments_excluded"] == len(segs)
+    assert all(s.kind == "sheet_frame" for s in segs)
