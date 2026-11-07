@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 
 from pdf2kicad.cli import extract
-from pdf2kicad.netlist import pin_tokens
+from pdf2kicad.netlist import pin_tokens, values as extract_values, infer_semantic_pin_identities, pin_identity_provenance
 from pdf2kicad.electrical_evidence import classify_page
 from pdf2kicad.connectivity_evidence import build_terminal_reference_map, resolve_terminal_ref
 from pdf2kicad.planar_graph import Primitive, build_planar_graph
@@ -103,7 +103,11 @@ def main():
                 for component_id, primitive_ids in primitive_ids_by_component.items()
             },
         })
-        pin_map, _ = pin_tokens(topo, comps, words)
+        pin_map, claimed_pin_words = pin_tokens(topo, comps, words)
+        value_map = extract_values(topo, comps, words, claimed_pin_words)
+        pin_map, explicit_pin_map, inferred_pin_ids, symbol_map = infer_semantic_pin_identities(
+            topo, comps, words, pin_map, value_map
+        )
         group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
         # Production net tuples carry a ref for terminals whose topology.group
         # index has no direct symbol-group entry. Accept only a unique ref.
@@ -120,6 +124,9 @@ def main():
         for terminal in topo.terminals:
             ref = resolve_terminal_ref(terminal, group_ref, reference_by_terminal) or ""
             pin = pin_map.get(id(terminal), "")
+            pin_provenance = pin_identity_provenance(
+                terminal, pin if pin else None, explicit_pin_map, inferred_pin_ids
+            )
             mapped = _map_terminal(terminal, topo, graph, component_by_node)
             legacy_name = production_net_by_terminal.get(id(terminal), "")
             if mapped["decision"] != "MAPPED":
@@ -130,6 +137,7 @@ def main():
                     "ref": ref, "pin": pin, "legacy_net_name": legacy_name,
                     "terminal_xy": [round(terminal.x, 4), round(terminal.y, 4)],
                     "pin_identity_status": "KNOWN" if pin else "UNKNOWN",
+                    "pin_identity_provenance": pin_provenance,
                     "evidence_classification": "INFERRED" if pin else "UNKNOWN",
                 }
                 graph_memberships.setdefault(key, []).append(item)
@@ -152,7 +160,8 @@ def main():
             else:
                 classification = "INFERRED"
             terminal_row = {
-                "ref": ref, "pin": pin, "legacy_net_name": legacy_name,
+                "ref": ref, "pin": pin, "pin_identity_provenance": pin_provenance,
+                "legacy_net_name": legacy_name,
                 "terminal_xy": [round(terminal.x, 4), round(terminal.y, 4)],
                 "terminal_status": terminal.kind,
                 "evidence_classification": classification,
@@ -169,7 +178,8 @@ def main():
             )
             review_rows.append({
                 "page": page_no, "ref_candidate": ref or None,
-                "pin_candidate": pin or None, "candidate_net_name_diagnostic_only": legacy_name or None,
+                "pin_candidate": pin or None, "pin_candidate_source_kind": pin_provenance,
+                "candidate_net_name_diagnostic_only": legacy_name or None,
                 "terminal_xy_pdf_pt": [round(terminal.x, 4), round(terminal.y, 4)],
                 "terminal_status": terminal.kind, "classification": classification,
                 "graph_component_candidate": component_id,

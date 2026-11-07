@@ -155,3 +155,47 @@ def test_two_terminal_pin_ids_are_recovered_without_order_guessing():
 
     assert pins == {id(terminals[0]): "1", id(terminals[1]): "2"}
     assert claimed == {id(token) for token in tokens}
+
+
+
+def test_shared_semantic_resolver_recovers_diode_polarity_as_inferred():
+    from types import SimpleNamespace
+    from pdf2kicad.netlist import infer_semantic_pin_identities, pin_identity_provenance
+
+    cathode = SimpleNamespace(x=0.0, y=0.0, comp=0)
+    anode = SimpleNamespace(x=10.0, y=0.0, comp=1)
+    group = SimpleNamespace(
+        ref="D1", terminals=[cathode, anode], no_connect_terminals=[],
+        segs=[
+            SimpleNamespace(x0=0.0, y0=0.0, x1=3.0, y1=3.0),
+            SimpleNamespace(x0=0.0, y0=0.0, x1=3.0, y1=-3.0),
+        ],
+    )
+    pins, explicit, inferred, symbols = infer_semantic_pin_identities(
+        SimpleNamespace(), [group], [], {}, {}
+    )
+    assert pins[id(cathode)] == "K"
+    assert pins[id(anode)] == "A"
+    assert explicit == {}
+    assert inferred == set()
+    assert symbols["D1"] == "D"
+    assert pin_identity_provenance(cathode, "K", explicit, inferred) == "geometry_inferred"
+
+
+def test_shared_semantic_resolver_infers_only_complementary_passive_pin():
+    from types import SimpleNamespace
+    from pdf2kicad.netlist import infer_semantic_pin_identities, pin_identity_provenance
+
+    first = SimpleNamespace(x=0.0, y=0.0, comp=0)
+    second = SimpleNamespace(x=10.0, y=0.0, comp=1)
+    group = SimpleNamespace(ref="R1", terminals=[first, second], no_connect_terminals=[], segs=[])
+    pins, explicit, inferred, symbols = infer_semantic_pin_identities(
+        SimpleNamespace(), [group], [], {id(first): "1"}, {}
+    )
+    assert pins[id(first)] == "1"
+    assert pins[id(second)] == "2"
+    assert explicit[id(first)] == "1"
+    assert id(second) in inferred
+    assert symbols["R1"] == "R"
+    assert pin_identity_provenance(first, "1", explicit, inferred) == "printed_text"
+    assert pin_identity_provenance(second, "2", explicit, inferred) == "geometry_inferred"

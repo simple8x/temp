@@ -184,61 +184,10 @@ def main(argv):
         raise SystemExit(3)
     pins, claimed = NL.pin_tokens(topo, comps, text)
     vals = NL.values(topo, comps, text, claimed)
-    by = {}
-    for g in comps:
-        by.setdefault(g.ref, []).extend(g.terminals)
-    # A two-terminal symbol's visual order does not prove its library pin numbers.
-    # Keep its terminals unresolved unless the PDF prints an explicit pin token or
-    # symbol geometry establishes a semantic polarity (handled below for diode/capacitor).
-    explicit_pin_values = {terminal_id: value for terminal_id, value in pins.items()}
-    inferred_pin_values = set()
-    symbol = {}
-    LEDV = re.compile(r"red|green|yellow|blue|white|orange|led", re.I)
-    for g in comps:
-        ts = list({t.comp: t for t in by.get(g.ref, [])}.values())   # one pin per net wire
-        if len(ts) != 2 or g.ref in symbol:
-            continue
-        pre = re.match(r"[A-Z]+", g.ref).group()
-        if pre == "D":
-            diag = [sg for sg in g.segs if sg.x0 != sg.x1 and sg.y0 != sg.y1]
-            ends = {}
-            for sg in diag:
-                for q in ((round(sg.x0, 1), round(sg.y0, 1)), (round(sg.x1, 1), round(sg.y1, 1))):
-                    ends[q] = ends.get(q, 0) + 1
-            apex = [q for q, n in ends.items() if n >= 2]
-            if apex:                                   # triangle apex points at the cathode bar
-                ax, ay = apex[0]
-                k = min(ts, key=lambda t: (t.x - ax) ** 2 + (t.y - ay) ** 2)
-                a = [t for t in ts if t is not k][0]
-                pins[id(k)], pins[id(a)] = "K", "A"
-                symbol[g.ref] = "LED" if LEDV.search(vals.get(g.ref, "")) else "D"
-        elif pre == "C":
-            plus = [w for w in text if w.text == "+" and NL._near(w, g, 0) < 8]
-            for t in ts:                       # a '+' already taken as pin token counts too
-                if pins.get(id(t)) == "+":
-                    pins.pop(id(t)); plus = [type("W", (), dict(x0=t.x, x1=t.x, y0=t.y, y1=t.y))()]
-            if plus:
-                k = min(ts, key=lambda t: (t.x - (plus[0].x0 + plus[0].x1) / 2) ** 2 + (t.y - (plus[0].y0 + plus[0].y1) / 2) ** 2)
-                o = [t for t in ts if t is not k][0]
-                # KiCad's polarized-capacitor convention is pin 1 (+), pin 2 (-).
-                # Preserve that as geometry-inferred identity, not printed evidence.
-                pins[id(k)], pins[id(o)] = "1", "2"
-                inferred_pin_values.update((id(k), id(o)))
-                symbol[g.ref] = "CP"
-            else:
-                symbol[g.ref] = "C"
-        elif pre in ("R", "L", "F"):
-            symbol[g.ref] = {"R": "R", "L": "L", "F": "FUSE"}[pre]
-            # For a two-terminal passive, infer only the complementary pin when
-            # exactly one endpoint has an explicit printed numeric pin 1 or 2.
-            # Never infer from drawing order or coordinates alone.
-            explicit = [(t, pins.get(id(t))) for t in ts if pins.get(id(t)) in ("1", "2")]
-            if len(explicit) == 1:
-                known_term, known_pin = explicit[0]
-                other_terms = [t for t in ts if t is not known_term]
-                if len(other_terms) == 1 and id(other_terms[0]) not in pins:
-                    pins[id(other_terms[0])] = "2" if known_pin == "1" else "1"
-                    inferred_pin_values.add(id(other_terms[0]))
+    # Shared semantic pin resolver: parser candidates only, never independent verification.
+    pins, explicit_pin_values, inferred_pin_values, symbol = NL.infer_semantic_pin_identities(
+        topo, comps, text, pins, vals
+    )
     # Preserve the extractor's actual pin identity. Never mint a new pin number
     # merely because the same (ref, pin) appears on multiple nets: that hides a
     # topology conflict and fabricates a second physical pin.
