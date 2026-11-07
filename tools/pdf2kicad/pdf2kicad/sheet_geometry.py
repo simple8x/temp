@@ -123,11 +123,14 @@ def _title_block_segments(segs, words, width, height):
     boxes = []
     for (qx0, qx1), top_edges in hs.items():
         x0, x1 = qx0 * tol, qx1 * tol
-        if x1 - x0 < width * 0.10:
+        box_width = x1 - x0
+        if not (width * 0.10 <= box_width <= width * 0.40):
             continue
         for top_i, top_y in top_edges:
             for bottom_i, bottom_y in top_edges:
-                if bottom_y <= top_y or bottom_y - top_y < height * 0.025:
+                box_height = bottom_y - top_y
+                if (box_height < height * 0.025 or box_height > height * 0.20
+                        or box_width / max(box_height, tol) < 1.5):
                     continue
                 edge_band_x, edge_band_y = max(4.0, width * 0.018), max(4.0, height * 0.018)
                 touches_sheet_edge = (
