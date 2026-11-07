@@ -49,7 +49,7 @@ def main():
     if digest != EXPECTED_SHA256:
         raise RuntimeError(f"source PDF SHA256 mismatch: expected {EXPECTED_SHA256}, got {digest}")
 
-    results, candidate_rows = [], []
+    results, candidate_rows, production_rows = [], [], []
     any_empty_graph = False
     any_component_legacy_conflict = False
     for page_no in PAGES:
@@ -139,6 +139,14 @@ def main():
             if len(components_for_name) > 1
         }
 
+        for net_name, members in production_nets.items():
+            for ref, terminal in members:
+                pin = pin_map.get(id(terminal), "")
+                production_rows.append([
+                    page_no, net_name, ref, pin, "KNOWN" if pin else "UNKNOWN",
+                    f"{terminal.x:.4f}", f"{terminal.y:.4f}",
+                ])
+
         junction_report = classify_page(PDF, page_no)
         raw_confirmed = sum(
             1 for mark in junction_report["junction_candidates"]
@@ -174,6 +182,12 @@ def main():
             "status": "GRAPH_DERIVED_PRODUCTION_EXTRACT_NOT_ELECTRICALLY_VERIFIED",
         })
 
+    production_path = Path("production_graph_net_memberships.csv")
+    with production_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["page", "net", "ref", "pin_identity", "pin_identity_status", "terminal_x", "terminal_y"])
+        writer.writerows(production_rows)
+
     candidate_path = Path("graph_netlist_candidate.csv")
     with candidate_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -198,6 +212,9 @@ def main():
             "terminals_mapped": sum(x["terminal_graph_mapped"] for x in results),
             "terminals_unmapped": sum(x["terminal_graph_unmapped_or_ambiguous"] for x in results),
             "candidate_netlist_rows": len(candidate_rows),
+            "production_graph_membership_rows": len(production_rows),
+            "production_graph_pin_identity_known": sum(1 for row in production_rows if row[4] == "KNOWN"),
+            "production_graph_pin_identity_unknown": sum(1 for row in production_rows if row[4] == "UNKNOWN"),
             "graph_component_legacy_conflict_present": any_component_legacy_conflict,
         },
         "overall_status": "GRAPH_DERIVED_PRODUCTION_EXTRACT_EXECUTED_INDEPENDENT_ELECTRICAL_VERIFICATION_NOT_PERFORMED",
