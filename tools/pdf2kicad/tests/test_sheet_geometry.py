@@ -53,3 +53,10 @@ def test_open_box_or_box_without_text_is_not_excluded():
     report = exclude_sheet_metadata(segs, 600, 800, ())
     assert report["title_block_segments_excluded"] == 0
     assert all(s.kind == "line" for s in segs)
+
+def test_long_internal_wire_is_not_removed_by_length_heuristic():
+    segs = [Seg(35, 300, 565, 300, "line")]
+    report = exclude_sheet_metadata(segs, 600, 800)
+    assert report["sheet_frame_segments_excluded"] == 0
+    assert report["title_block_segments_excluded"] == 0
+    assert segs[0].kind == "line"
