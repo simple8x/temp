@@ -137,7 +137,10 @@ def _core(pg, use, pre=None):
                                                  topo._comp_box(t.comp)[3] - topo._comp_box(t.comp)[1]) >= 6]
             if len({t.comp for t in big}) >= 2:
                 g.terminals = big
-    n = NL.nets(topo, comps, text)
+    # Legacy extraction supplies label names only; graph geometry now owns wire membership.
+    legacy_nets = NL.nets(topo, comps, text)
+    from .graph_netlist import graph_nets
+    n = graph_nets(topo, comps, legacy_nets)
     netnames = set(n)
     topo.used_words |= {id(w) for w in text if w.text in netnames}
     return comps, n, text, topo
