@@ -21,7 +21,13 @@ def main(argv=None):
         target.write_text(json.dumps(graph,indent=2),encoding="utf-8")
         print(f"page={page} segments={len(graph['segments'])} components={len(graph['components'])} intersections={len(graph['intersections'])} scope={graph['scope']}")
         if args.evidence_dir:
-            evidence_path=Path(args.evidence_dir)/f"page-{page}.connectivity_evidence.json"
+            evidence_root = Path(args.evidence_dir)
+            evidence_candidates = [
+                evidence_root / f"page-{page}.connectivity_evidence.json",
+                evidence_root / f"page-{page}" / "connectivity_evidence.json",
+                evidence_root / f"page{page:02d}" / "connectivity_evidence.json",
+            ]
+            evidence_path = next((candidate for candidate in evidence_candidates if candidate.exists()), evidence_candidates[0])
             if evidence_path.exists():
                 evidence=json.loads(evidence_path.read_text(encoding="utf-8"))
                 comparison=compare_parser_memberships(graph,evidence)

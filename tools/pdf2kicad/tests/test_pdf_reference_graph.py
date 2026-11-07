@@ -46,3 +46,23 @@ def test_comparison_never_promotes_geometry_to_electrical_verification():
     assert result["geometry_candidates"] == 1
     assert result["independently_verified_electrical_memberships"] == 0
     assert result["status"] == "DIAGNOSTIC_ONLY_ELECTRICAL_SIGNOFF_BLOCKED"
+
+
+
+def test_filtered_oblique_rectangle_edges_do_not_break_union_find(tmp_path):
+    path = tmp_path / "rectangle-and-wire.pdf"
+    doc = pymupdf.open()
+    page = doc.new_page(width=120, height=120)
+    shape = page.new_shape()
+    # A rectangle is emitted as four edges; the additional diagonal line is
+    # deliberately excluded from the H/V graph and must not leave sparse IDs.
+    shape.draw_rect(pymupdf.Rect(10, 10, 30, 30))
+    shape.draw_line((40, 40), (80, 40))
+    shape.finish(color=(0, 0, 0), width=0.5)
+    shape.commit()
+    doc.save(path)
+    doc.close()
+    graph = build_pdf_reference_graph(str(path), 1)
+    ids = [segment["id"] for segment in graph["segments"]]
+    assert ids == list(range(len(ids)))
+    assert len(graph["components"]) >= 1

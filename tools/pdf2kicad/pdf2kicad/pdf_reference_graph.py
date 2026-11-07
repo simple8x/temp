@@ -81,6 +81,10 @@ def build_pdf_reference_graph(pdf_path: str, page_number: int, *, rotate: int = 
                                      if abs(a[0]-b[0])<=tolerance else "other"})
     # Candidate electrical strokes are only axis-aligned raw path segments.
     segments = [s for s in segments if s["axis"] in ("h","v")]
+    # Filtering can remove oblique rectangle edges whose pre-filter IDs leave gaps.
+    # Re-index the retained segments before using IDs as union-find array offsets.
+    for segment_id, segment in enumerate(segments):
+        segment["id"] = segment_id
     uf = _UF(len(segments))
     endpoints = [(i, p) for i,s in enumerate(segments) for p in (s["a"],s["b"])]
     def dot_near(p):

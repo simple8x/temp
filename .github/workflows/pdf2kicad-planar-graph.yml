@@ -42,6 +42,12 @@ jobs:
           python tools/pdf2kicad/tools/roundtrip_pipeline.py
           "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
           --pages 5-11 --outdir pdf2kicad_roundtrip
+      - name: Build independent raw-PDF reference graph and compare parser terminals (pages 5-11)
+        run: >-
+          python -m pdf2kicad.reference_graph_cli
+          "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          5 6 7 8 9 10 11 --outdir pdf_reference_graph
+          --evidence-dir production_cli_real_pdf
       - name: Generate candidate KiCad sheets and independent read-back (pages 5-11)
         run: >-
           python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
@@ -61,4 +67,5 @@ jobs:
             production_cli_real_pdf/**
             pdf2kicad_roundtrip/**
             pdf2kicad_candidate_schematics/**
+            pdf_reference_graph/**
           retention-days: 3
