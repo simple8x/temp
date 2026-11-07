@@ -49,7 +49,7 @@ def main():
     if digest != EXPECTED_SHA256:
         raise RuntimeError(f"source PDF SHA256 mismatch: expected {EXPECTED_SHA256}, got {digest}")
 
-    results, candidate_rows, production_rows = [], [], []
+    results, candidate_rows, production_rows, review_rows = [], [], [], []
     any_empty_graph = False
     any_component_legacy_conflict = False
     for page_no in PAGES:
@@ -76,6 +76,15 @@ def main():
             node_id: component_id
             for component_id, members in enumerate(graph_components)
             for node_id in members
+        }
+        primitive_by_id = {primitive.primitive_id: primitive for primitive in primitives}
+        primitive_ids_by_component = {
+            component_id: sorted({
+                primitive_id
+                for node_id in members
+                for primitive_id in graph.nodes[node_id].provenance
+            })
+            for component_id, members in enumerate(graph_components)
         }
         pin_map, _ = pin_tokens(topo, comps, words)
         group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
@@ -110,15 +119,59 @@ def main():
                     f"{terminal.x:.4f}", f"{terminal.y:.4f}",
                     mapped["node_id"], mapped["distance"],
                 ])
-            terminal_rows.append({
+            if mapped["decision"] != "MAPPED":
+                classification = "UNKNOWN_GRAPH_MAPPING"
+            elif not ref and terminal.kind == "open":
+                classification = "OPEN_WIRE_ENDPOINT"
+            elif not ref and terminal.kind == "nc_stub_body_end":
+                classification = "NC_STUB_BODY_END"
+            elif not ref:
+                classification = "UNREFERENCED_SYMBOL_OR_WIRE_TERMINAL"
+            elif not pin:
+                classification = "PIN_IDENTITY_UNKNOWN"
+            else:
+                classification = "INFERRED"
+            terminal_row = {
                 "ref": ref, "pin": pin, "legacy_net_name": legacy_name,
                 "terminal_xy": [round(terminal.x, 4), round(terminal.y, 4)],
                 "terminal_status": terminal.kind,
-                "evidence_classification": (
-                    "UNKNOWN" if mapped["decision"] != "MAPPED" or not pin else "INFERRED"
-                ),
+                "evidence_classification": classification,
                 **mapped,
-            })
+            }
+            terminal_rows.append(terminal_row)
+            if classification != "INFERRED":
+                component_id = mapped.get("graph_component")
+                source_ids = (
+                    primitive_ids_by_component.get(component_id, [])
+                    if component_id is not None else []
+                )
+                source_primitives = [
+                    {
+                        "primitive_id": primitive_id,
+                        "a": [round(primitive_by_id[primitive_id].x0, 4),
+                              round(primitive_by_id[primitive_id].y0, 4)],
+                        "b": [round(primitive_by_id[primitive_id].x1, 4),
+                              round(primitive_by_id[primitive_id].y1, 4)],
+                        "kind": primitive_by_id[primitive_id].kind,
+                    }
+                    for primitive_id in source_ids if primitive_id in primitive_by_id
+                ]
+                review_rows.append({
+                    "page": page_no, "ref_candidate": ref or None,
+                    "pin_candidate": pin or None, "candidate_net_name_diagnostic_only": legacy_name or None,
+                    "terminal_xy_pdf_pt": [round(terminal.x, 4), round(terminal.y, 4)],
+                    "terminal_status": terminal.kind, "classification": classification,
+                    "graph_component_candidate": component_id,
+                    "graph_node_candidate": mapped.get("node_id"),
+                    "mapping_decision": mapped["decision"],
+                    "mapping_distance_pt": mapped.get("distance"),
+                    "source_wire_primitive_ids": source_ids,
+                    "source_wire_primitives": source_primitives,
+                    "reference_pin": None, "reference_net": None,
+                    "reference_status": "UNKNOWN",
+                    "review_status": "REQUIRES_HUMAN_REVIEW_AGAINST_SOURCE_PDF",
+                    "promotion_policy": "NEVER_AUTO_PROMOTE_TO_VERIFIED",
+                })
 
         # If one graph component contains multiple legacy net names, graph and legacy
         # disagree on separation. Keep this as a hard audit finding, not a silent merge.
@@ -141,6 +194,9 @@ def main():
             component = row.get("graph_component")
             if component is not None and component in conflict_ids:
                 row["evidence_classification"] = "CONFLICT"
+        for row in review_rows:
+            if row["page"] == page_no and row["graph_component_candidate"] in conflict_ids:
+                row["classification"] = "CONFLICT"
         for component, members in graph_memberships.items():
             if int(component) in conflict_ids:
                 for member in members:
@@ -207,6 +263,43 @@ def main():
         writer.writerow(["page", "net", "ref", "pin_identity", "pin_identity_status", "terminal_x", "terminal_y"])
         writer.writerows(production_rows)
 
+    review_json_path = Path("reference_connectivity_review.json")
+    review_doc = {
+        "schema": "pdf2kicad-pdf-reference-connectivity-review/v1",
+        "source_pdf": str(PDF),
+        "source_pdf_sha256": digest,
+        "pages": list(PAGES),
+        "summary": {
+            "review_entries": len(review_rows),
+            "reference_status": "UNKNOWN_FOR_ALL_ENTRIES",
+            "auto_verified": 0,
+            "human_pdf_review_required": len(review_rows),
+        },
+        "policy": {
+            "graph_membership_is_candidate_evidence_not_reference_truth": True,
+            "coordinate_fallback_is_not_a_pin_number": True,
+            "unreferenced_graph_terminals_are_not_assumed_component_pins": True,
+            "open_wire_end_is_not_no_connect": True,
+            "nc_stub_body_end_is_not_a_verified_nc_pin": True,
+            "no_automatic_promotion_to_verified": True,
+        },
+        "entries": review_rows,
+    }
+    review_json_path.write_text(json.dumps(review_doc, indent=2) + "\\n", encoding="utf-8")
+    review_csv_path = Path("reference_connectivity_review.csv")
+    with review_csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            "page", "ref_candidate", "pin_candidate", "candidate_net_name_diagnostic_only",
+            "terminal_xy_pdf_pt", "terminal_status", "classification",
+            "graph_component_candidate", "graph_node_candidate", "mapping_decision",
+            "mapping_distance_pt", "source_wire_primitive_ids", "reference_pin",
+            "reference_net", "reference_status", "review_status", "promotion_policy",
+        ])
+        writer.writeheader()
+        for row in review_rows:
+            writer.writerow({**row, "source_wire_primitive_ids": ";".join(row["source_wire_primitive_ids"]),
+                             "terminal_xy_pdf_pt": json.dumps(row["terminal_xy_pdf_pt"])})
+
     candidate_path = Path("graph_netlist_candidate.csv")
     with candidate_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -236,15 +329,21 @@ def main():
                     for row in page_result["terminal_mapping_evidence"]
                     if row["evidence_classification"] == status
                 )
-                for status in ("VERIFIED", "CORROBORATED", "INFERRED", "UNKNOWN", "CONFLICT")
+                for status in (
+                    "VERIFIED", "CORROBORATED", "INFERRED", "UNKNOWN_GRAPH_MAPPING",
+                    "PIN_IDENTITY_UNKNOWN", "UNREFERENCED_SYMBOL_OR_WIRE_TERMINAL",
+                    "OPEN_WIRE_ENDPOINT", "NC_STUB_BODY_END", "CONFLICT",
+                )
             },
+            "reference_connectivity_review_entries": len(review_rows),
+            "reference_connectivity_auto_verified": 0,
             "candidate_netlist_rows": len(candidate_rows),
             "production_graph_membership_rows": len(production_rows),
             "production_graph_pin_identity_known": sum(1 for row in production_rows if row[4] == "KNOWN"),
             "production_graph_pin_identity_unknown": sum(1 for row in production_rows if row[4] == "UNKNOWN"),
             "graph_component_legacy_conflict_present": any_component_legacy_conflict,
         },
-        "overall_status": "GRAPH_DERIVED_PRODUCTION_EXTRACT_EXECUTED_INDEPENDENT_ELECTRICAL_VERIFICATION_NOT_PERFORMED",
+        "overall_status": "GRAPH_DERIVED_CANDIDATES_EXTRACTED_REFERENCE_REVIEW_REQUIRED_NO_AUTO_VERIFICATION",
         "limitations": [
             "Graph uses only Topology-classified electrical wire components; symbol-body and inner-artwork components are excluded. Normalized junction dots are applied.",
             "Terminal mapping is constrained by exact source-wire-component primitive provenance and 0.4 coordinate tolerance.",
@@ -253,6 +352,7 @@ def main():
             "Global/local label and power-symbol equivalence still depend on the existing label detector and are not independently parsed by the graph engine.",
             "This audit exercises cli.extract() graph connectivity but does not invoke the CLI file writer or KiCad ERC.",
             "No independent reference netlist or KiCad ERC result is available in this audit.",
+            "reference_connectivity_review.json contains PDF-coordinate and source-wire-primitive evidence for every non-INFERRED terminal; it is a review ledger, not an approved reference netlist.",
         ],
     }
     Path("planar_graph_real_pdf_audit.json").write_text(
