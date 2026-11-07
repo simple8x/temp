@@ -65,3 +65,26 @@ def test_conflicting_parser_pin_ownership_is_reported_not_hidden():
     assert evidence["pin_conflicts"] == [{
         "ref": "U1", "pin_identity": "A1", "nets": ["NET_A", "NET_B"]
     }]
+
+
+def test_geometry_inferred_pin_is_not_mislabeled_as_printed_text():
+    terminal = Terminal(10.0, 5.0, 0, kind="attach", group=2)
+    topo = SimpleNamespace(
+        W=[0], comps=[[0]], segs=[Seg(0.0, 5.0, 10.0, 5.0, "line")],
+        terminals=[terminal],
+        groups=[SimpleNamespace(ref=""), SimpleNamespace(ref=""), SimpleNamespace(ref="D1")],
+    )
+    component = SimpleNamespace(ref="D1", terminals=[terminal])
+    inferred = build_connectivity_evidence(
+        topo, [component], {"NET": [("D1", terminal)]},
+        {id(terminal): "A"},
+    )
+    assert inferred["memberships"][0]["pin_identity_kind"] == "geometry_inferred"
+    assert inferred["terminal_inventory"][0]["pin_identity_kind"] == "geometry_inferred"
+
+    printed = build_connectivity_evidence(
+        topo, [component], {"NET": [("D1", terminal)]},
+        {id(terminal): "A"}, explicit_pin_numbers={id(terminal): "A"},
+    )
+    assert printed["memberships"][0]["pin_identity_kind"] == "parser_pin_token"
+    assert printed["terminal_inventory"][0]["pin_identity_kind"] == "parser_pin_token"
