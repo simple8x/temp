@@ -45,6 +45,25 @@ MUTATIONS = [
      "                        gs = stack.pop()", "                        stack.pop()"),
     ("M13-provenance-op-off-by-one", "ecci/ingest_vector.py",
      "chain = prefix + ((label, paint_idx),)", "chain = prefix + ((label, paint_idx + 1),)"),
+    # ---- M2
+    ("M14-no-template-sampling", "ecci/template.py", "COVER_SAMPLES = 5", "COVER_SAMPLES = 0"),
+    ("M15-no-cluster-midpoint-check", "ecci/template.py",
+     "                r3 = max(r3, min(point_segment_distance(q, a, b) for a, b in segs_t))", "                pass"),
+    ("M16-s2-lineage-includes-body", "ecci/pins.py",
+     "frozenset({f\"geom:{pid}\"}))\n                            reg.add(s2)",
+     "frozenset({f\"geom:{pid}\"} | {f\"geom:{i}\" for i in cl.prim_ids}))\n                            reg.add(s2)"),
+    ("M17-ambiguity-ignored", "ecci/template.py",
+     "if not all(_same_set(first, s, tau) for s in sets[1:]):", "if False:"),
+    ("M18-id-agreement-ignored", "ecci/template.py",
+     "        if nums != {num0}:\n            agree = False", "        pass"),
+    ("M19-style-difference-ignored", "ecci/classify.py",
+     "differs = mode is not None and sk != mode", "differs = False"),
+    ("M20-unexpected-contact-ignored", "ecci/pins.py",
+     "cr.conflicts.append(PinConflict(cl.id, \"UNEXPECTED_CONTACT\", end, pid))", "pass"),
+    ("M21-border-threshold-removed", "ecci/classify.py",
+     "bw >= params.border_frac * W and bh >= params.border_frac * H", "bw >= 0 and bh >= 0"),
+    ("M22-clusters-need-touching-only", "ecci/symbols.py",
+     "            if b[1] - merge_gap <= box[3] and box[1] - merge_gap <= b[3]:", "            if False:"),
 ]
 
 

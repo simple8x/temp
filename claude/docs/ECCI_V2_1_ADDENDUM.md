@@ -53,3 +53,9 @@ scheduled for M3 with test TC-C9 (below).
 |---|---|
 | TC-C9 | Resolve a site so that it merges two nets with different confirmed names; solver must detect after re-run and roll the site back |
 | TC-C10 | Result after Phase 3 equals result of running the solver from scratch with the resolved site fixed (idempotence) |
+
+## Note added in M2: TC-H3 revision and independence granularity
+- Lineage granularity (ASSUMPTION): geometry of a primitive (`geom:<id>`), its painting attributes
+  (`style:<id>`) and page-wide statistics (`pagestat:<page>`) are treated as distinct information inputs.
+  A producer that encodes the same fact in both would make that assumption wrong.
+- TC-H3 is revised by condition 2, see `M2_STATUS.md`.
