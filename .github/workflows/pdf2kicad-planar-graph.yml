@@ -29,6 +29,11 @@ jobs:
       - run: python -m pytest -q tools/pdf2kicad/tests
       - name: Run real QI9 PDF planar-graph diagnostic
         run: python tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py
+      - name: Produce strict electrical proof and exception ledger
+        run: >-
+          python -m pdf2kicad.proof_and_exceptions
+          --ledger reference_connectivity_review.json
+          --out electrical_proof_and_exceptions.json
       - name: Render one PDF crop for every reference-review terminal
         run: |
           python tools/pdf2kicad/tests/build_pdf_terminal_review_sheet.py \
@@ -61,6 +66,7 @@ jobs:
             planar_graph_real_pdf_audit.json
             reference_connectivity_review.json
             reference_connectivity_review.csv
+            electrical_proof_and_exceptions.json
             terminal-reference-review/**
             graph_netlist_candidate.csv
             production_graph_net_memberships.csv
