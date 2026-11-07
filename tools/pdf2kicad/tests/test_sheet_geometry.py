@@ -110,9 +110,9 @@ def test_large_sheet_enclosure_with_many_words_is_not_a_title_block():
 def test_rounded_confidentiality_badge_at_page_edge_is_metadata_not_electrical():
     segs = [
         Seg(533.40, 8.28, 679.32, 8.28, "line"),
-        Seg(678.48, 8.28, 679.32, 8.28, "line"),
-        Seg(678.48, 8.28, 533.64, 10.20, "line"),
+        Seg(533.64, 10.20, 678.48, 10.20, "line"),
         Seg(678.60, 31.08, 533.52, 31.08, "line"),
+        Seg(533.52, 29.04, 678.36, 29.04, "line"),
         Seg(683.28, 12.60, 683.28, 27.36, "line"),
         Seg(681.12, 26.52, 681.12, 12.84, "line"),
         Seg(528.72, 26.64, 528.72, 12.72, "line"),

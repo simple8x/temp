@@ -181,7 +181,7 @@ def _confidential_badge_segments(segs, words, width, height):
     the box. Require both an explicit metadata word and a four-sided outline;
     page position alone is never sufficient.
     """
-    metadata = re.compile(r"\\b(?:CONFIDENTIAL|PROPRIETARY|DO NOT DISTRIBUTE)\\b", re.I)
+    metadata = re.compile(r"\b(?:CONFIDENTIAL|PROPRIETARY|DO NOT DISTRIBUTE)\b", re.I)
     excluded = set()
     edge_limit = max(16.0, min(width, height) * 0.05)
 
