@@ -27,7 +27,6 @@ class PlanarGraphTests(unittest.TestCase):
         self.assertTrue(any(c.decision == "CONNECTED" and c.reason == "explicit_junction_dot"
                             for c in g.contacts))
         self.assertEqual(len(g.connected_components()), 1)
-        self.assertEqual(len(g.connected_components()), 1)
 
     def test_x_crossing_without_dot_is_disconnected(self):
         g = self.graph([(0, 0, 10, 10), (0, 10, 10, 0)])
@@ -39,6 +38,7 @@ class PlanarGraphTests(unittest.TestCase):
         g = self.graph([(0, 0, 10, 10), (0, 10, 10, 0)], [(5, 5)])
         self.assertTrue(any(c.decision == "CONNECTED" and c.reason == "explicit_junction_dot"
                             for c in g.contacts))
+        self.assertEqual(len(g.connected_components()), 1)
 
     def test_collinear_overlap_splits_and_keeps_both_sources(self):
         g = self.graph([(0, 0, 10, 0), (4, 0, 8, 0)])
