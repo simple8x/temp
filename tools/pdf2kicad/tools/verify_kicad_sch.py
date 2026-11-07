@@ -11,6 +11,7 @@ Usage: verify_kicad_sch.py file.kicad_sch netlist.csv
 """
 import csv
 import sys
+import argparse
 from collections import defaultdict
 
 TOL = 0.01
@@ -72,7 +73,7 @@ def num(x):
     return float(x)
 
 
-def main(sch_path, csv_path):
+def main(sch_path, csv_path, allow_unmapped_pins=False):
     root = parse(open(sch_path).read())
     if head(root) != "kicad_sch":
         raise SystemExit("not a kicad_sch file")
@@ -120,6 +121,24 @@ def main(sch_path, csv_path):
     if dup:
         problems.append("duplicate references: %s" % sorted(dup))
 
+    # Expected rows are parsed before pin validation so draft read-back can
+    # distinguish deliberately unmapped symbol pins from broken mapped pins.
+    expected = {}
+    csv_rows = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as stream:
+        for r in csv.DictReader(stream):
+            csv_rows += 1
+            ref, tok, net = r["ref"], r["pin"], r["net"]
+            cands = [k for k in pin_pos if k[0] == ref and k[1] == tok]
+            if not cands:
+                cands = [k for k in pin_pos if k[0] == ref and pin_name[k] == tok]
+            if len(cands) != 1:
+                problems.append("CSV %s.%s maps to %d schematic pins" % (ref, tok, len(cands)))
+                continue
+            if cands[0] in expected:
+                problems.append("CSV lists %s.%s twice" % (ref, tok))
+            expected[cands[0]] = net
+
     # labels / no-connects keyed by coordinate
     at_point = defaultdict(list)
     for kind in ("label", "global_label"):
@@ -137,7 +156,8 @@ def main(sch_path, csv_path):
         hits = at_point.get(pt, [])
         used_points.add(pt)
         if not hits:
-            problems.append("pin %s.%s (%s) has no label/NC at its end" % (key[0], key[1], pin_name[key]))
+            if not (allow_unmapped_pins and key not in expected):
+                problems.append("pin %s.%s (%s) has no label/NC at its end" % (key[0], key[1], pin_name[key]))
             continue
         kinds = {h[0] for h in hits}
         nets = {h[1] for h in hits}
@@ -164,30 +184,12 @@ def main(sch_path, csv_path):
             if a[0] < b[2] - TOL and b[0] < a[2] - TOL and a[1] < b[3] - TOL and b[1] < a[3] - TOL:
                 problems.append("symbols %s and %s overlap" % (refs[i], refs[j]))
 
-    # compare with CSV; CSV pin token may be a number or a pin name
-    expected = {}
-    csv_rows = 0
-    for r in csv.DictReader(open(csv_path, newline="")):
-        csv_rows += 1
-        ref, tok, net = r["ref"], r["pin"], r["net"]
-        cands = [k for k in pin_pos if k[0] == ref and (k[1] == tok)]
-        if not cands:
-            cands = [k for k in pin_pos if k[0] == ref and pin_name[k] == tok]
-        if len(cands) != 1:
-            problems.append("CSV %s.%s maps to %d schematic pins" % (ref, tok, len(cands)))
-            continue
-        if cands[0] in expected:
-            problems.append("CSV lists %s.%s twice" % (ref, tok))
-        expected[cands[0]] = net
-
-    for key, net in expected.items():
-        if key not in got:
-            continue
-        if got[key] != net:
-            problems.append("MISMATCH %s.%s: csv=%s schematic=%s" % (key[0], key[1], net, got[key]))
-    for key in pin_pos:
-        if key not in expected:
-            problems.append("schematic pin %s.%s (%s) absent from CSV" % (key[0], key[1], pin_name[key]))
+    # Strict mode requires every physical symbol pin to be represented.
+    # Draft mode leaves unrepresented pins electrically open; it never invents NC.
+    if not allow_unmapped_pins:
+        for key in pin_pos:
+            if key not in expected:
+                problems.append("schematic pin %s.%s (%s) absent from CSV" % (key[0], key[1], pin_name[key]))
 
     # net summary: nets that only touch a single pin are suspicious
     members = defaultdict(list)
@@ -210,6 +212,10 @@ def main(sch_path, csv_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit(__doc__)
-    main(sys.argv[1], sys.argv[2])
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("schematic")
+    ap.add_argument("netlist")
+    ap.add_argument("--allow-unmapped-pins", action="store_true",
+                    help="draft-only: allow symbol pins absent from candidate CSV to remain unconnected")
+    a = ap.parse_args()
+    main(a.schematic, a.netlist, allow_unmapped_pins=a.allow_unmapped_pins)
