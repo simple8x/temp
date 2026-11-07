@@ -101,6 +101,7 @@ def main():
                     "ref": ref, "pin": pin, "legacy_net_name": legacy_name,
                     "terminal_xy": [round(terminal.x, 4), round(terminal.y, 4)],
                     "pin_identity_status": "KNOWN" if pin else "UNKNOWN",
+                    "evidence_classification": "INFERRED" if pin else "UNKNOWN",
                 }
                 graph_memberships.setdefault(key, []).append(item)
                 candidate_rows.append([
@@ -112,7 +113,11 @@ def main():
             terminal_rows.append({
                 "ref": ref, "pin": pin, "legacy_net_name": legacy_name,
                 "terminal_xy": [round(terminal.x, 4), round(terminal.y, 4)],
-                "terminal_status": terminal.kind, **mapped,
+                "terminal_status": terminal.kind,
+                "evidence_classification": (
+                    "UNKNOWN" if mapped["decision"] != "MAPPED" or not pin else "INFERRED"
+                ),
+                **mapped,
             })
 
         # If one graph component contains multiple legacy net names, graph and legacy
@@ -126,6 +131,20 @@ def main():
             if len(names) > 1
         }
         any_component_legacy_conflict |= bool(conflicting_components)
+
+        # A graph/legacy disagreement is a CONFLICT, not a reason to pick one.
+        # Matching legacy output is not CORROBORATION: both paths share parser
+        # topology/label evidence. Only an external reviewed reference can promote
+        # a terminal to CORROBORATED or VERIFIED.
+        conflict_ids = {int(component) for component in conflicting_components}
+        for row in terminal_rows:
+            component = row.get("graph_component")
+            if component is not None and component in conflict_ids:
+                row["evidence_classification"] = "CONFLICT"
+        for component, members in graph_memberships.items():
+            if int(component) in conflict_ids:
+                for member in members:
+                    member["evidence_classification"] = "CONFLICT"
 
         # A legacy net split across graph components can be a global/local label
         # propagation requirement; record it separately instead of guessing a wire join.
@@ -211,6 +230,14 @@ def main():
             "terminals": sum(x["terminal_count"] for x in results),
             "terminals_mapped": sum(x["terminal_graph_mapped"] for x in results),
             "terminals_unmapped": sum(x["terminal_graph_unmapped_or_ambiguous"] for x in results),
+            "evidence_classification_counts": {
+                status: sum(
+                    1 for page_result in results
+                    for row in page_result["terminal_mapping_evidence"]
+                    if row["evidence_classification"] == status
+                )
+                for status in ("VERIFIED", "CORROBORATED", "INFERRED", "UNKNOWN", "CONFLICT")
+            },
             "candidate_netlist_rows": len(candidate_rows),
             "production_graph_membership_rows": len(production_rows),
             "production_graph_pin_identity_known": sum(1 for row in production_rows if row[4] == "KNOWN"),
