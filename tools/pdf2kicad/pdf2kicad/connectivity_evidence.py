@@ -8,8 +8,17 @@ from __future__ import annotations
 from .topology import terminal_status
 
 
-def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
+def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None, explicit_pin_numbers=None):
     pin_numbers = pin_numbers or {}
+    explicit_pin_numbers = explicit_pin_numbers or {}
+
+    def identity_kind(terminal):
+        pin = pin_numbers.get(id(terminal))
+        if pin is None:
+            return "coordinate_fallback"
+        if explicit_pin_numbers.get(id(terminal)) == pin:
+            return "parser_pin_token"
+        return "geometry_inferred"
     component_by_ref = {}
     for group in comps:
         component_by_ref.setdefault(group.ref, []).append(group)
@@ -32,7 +41,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
                     "b": [round(segment.x1, 4), round(segment.y1, 4)],
                 })
             pin = pin_numbers.get(id(terminal))
-            pin_identity_kind = "parser_pin_token" if pin is not None else "coordinate_fallback"
+            pin_identity_kind = identity_kind(terminal)
             pin_identity = pin if pin is not None else "%.2f_%.2f" % (terminal.x, terminal.y)
             memberships.append({
                 "terminal_index": terminal_index.get(id(terminal)),
@@ -82,7 +91,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
             "terminal_index": index,
             "ref": group_ref.get(terminal.group),
             "pin_identity": pin,
-            "pin_identity_kind": "parser_pin_token" if pin is not None else "UNKNOWN",
+            "pin_identity_kind": identity_kind(terminal) if pin is not None else "UNKNOWN",
             "x": round(terminal.x, 4),
             "y": round(terminal.y, 4),
             "status": terminal_status(terminal),
@@ -118,7 +127,7 @@ def build_connectivity_evidence(topo, comps, netmap, pin_numbers=None):
         {
             "ref": group_ref.get(terminal.group),
             "pin_identity": pin_numbers.get(id(terminal), "%.2f_%.2f" % (terminal.x, terminal.y)),
-            "pin_identity_kind": "parser_pin_token" if id(terminal) in pin_numbers else "coordinate_fallback",
+            "pin_identity_kind": identity_kind(terminal),
             "x": round(terminal.nc_mark_x, 4),
             "y": round(terminal.nc_mark_y, 4),
             "terminal_x": round(terminal.x, 4),
