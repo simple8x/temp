@@ -29,6 +29,38 @@ def _covered_length(intervals):
     return sum(hi - lo for lo, hi in merged)
 
 
+def _edge_profile(segs, width, height):
+    band_x, band_y = max(4.0, width * 0.018), max(4.0, height * 0.018)
+    groups = {"top": [], "bottom": [], "left": [], "right": []}
+    counts = {key: 0 for key in groups}
+    for seg in segs:
+        if seg.kind not in ("line", "rect"):
+            continue
+        if _is_h(seg):
+            side = "top" if abs(seg.y0) <= band_y else (
+                "bottom" if abs(height - seg.y0) <= band_y else None
+            )
+            if side:
+                groups[side].append((seg.x0, seg.x1))
+                counts[side] += 1
+        elif _is_v(seg):
+            side = "left" if abs(seg.x0) <= band_x else (
+                "right" if abs(width - seg.x0) <= band_x else None
+            )
+            if side:
+                groups[side].append((seg.y0, seg.y1))
+                counts[side] += 1
+    dimensions = {"top": width, "bottom": width, "left": height, "right": height}
+    return {
+        side: {
+            "segments": counts[side],
+            "coverage_pt": round(_covered_length(groups[side]), 3),
+            "coverage_ratio": round(_covered_length(groups[side]) / dimensions[side], 4),
+        }
+        for side in groups
+    }
+
+
 def _frame_sides(segs, width, height):
     """Return segments belonging to a continuous page-edge frame.
 
@@ -137,5 +169,7 @@ def exclude_sheet_metadata(segs, width, height, words=()):
     return {
         "sheet_frame_segments_excluded": len(frame),
         "title_block_segments_excluded": len(title),
+        "edge_profile": _edge_profile(segs, width, height),
+        "page_size_pt": [round(width, 3), round(height, 3)],
         "excluded_segment_indices": sorted(frame | title),
     }
