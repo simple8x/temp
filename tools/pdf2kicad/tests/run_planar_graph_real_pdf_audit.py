@@ -1,7 +1,7 @@
-"""Evidence audit of graph-derived terminal memberships on the pinned QI9 vector PDF.
+"""Audit production graph extraction and rebuild a diagnostic graph on the pinned QI9 PDF.
 
-This is a diagnostic candidate netlist, not yet the production exporter or an
-independent electrical oracle. It deliberately preserves unresolved pin IDs.
+The diagnostic graph pass checks geometry/mapping; it is not an independent
+electrical oracle or KiCad ERC.
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def main():
     any_empty_graph = False
     any_component_legacy_conflict = False
     for page_no in PAGES:
-        comps, legacy_nets, words, topo = extract(str(PDF), page_no, full=True)
+        comps, production_nets, words, topo = extract(str(PDF), page_no, full=True)
         topo.page_no = page_no
         # Exclude symbol-body and inner-artwork components. The legacy Topology
         # classifier already separates these from electrical wire components.
@@ -81,10 +81,10 @@ def main():
         group_ref = {index: group.ref for index, group in enumerate(topo.groups) if group.ref}
 
         # Legacy names are used only as a diagnostic comparator, never as graph connectivity input.
-        legacy_name_by_terminal = {}
-        for legacy_name, members in legacy_nets.items():
+        production_net_by_terminal = {}
+        for net_name, members in production_nets.items():
             for ref, terminal in members:
-                legacy_name_by_terminal[id(terminal)] = legacy_name
+                production_net_by_terminal[id(terminal)] = net_name
 
         terminal_rows, graph_memberships = [], {}
         unmapped = 0
@@ -92,7 +92,7 @@ def main():
             ref = group_ref.get(terminal.group, "")
             pin = pin_map.get(id(terminal), "")
             mapped = _map_terminal(terminal, topo, graph, component_by_node)
-            legacy_name = legacy_name_by_terminal.get(id(terminal), "")
+            legacy_name = production_net_by_terminal.get(id(terminal), "")
             if mapped["decision"] != "MAPPED":
                 unmapped += 1
             else:
@@ -166,12 +166,12 @@ def main():
             "graph_components_conflicting_with_legacy_net_names": conflicting_components,
             "legacy_nets_split_across_graph_components": split_legacy_nets,
             "terminal_mapping_evidence": terminal_rows,
-            "legacy_net_count": len(legacy_nets),
-            "legacy_membership_count": sum(len(members) for members in legacy_nets.values()),
-            "graph_vs_legacy_comparison": "DIAGNOSTIC_ONLY_NOT_INDEPENDENT",
+            "production_graph_net_count": len(production_nets),
+            "production_graph_membership_count": sum(len(members) for members in production_nets.values()),
+            "graph_vs_production_comparison": "SAME_BACKEND_DIAGNOSTIC_PARITY_ONLY",
             "independent_reference_netlist": "NOT_AVAILABLE",
             "kicad_erc": "NOT_RUN",
-            "status": "GRAPH_DERIVED_CANDIDATE_NETLIST_NOT_PRODUCTION",
+            "status": "GRAPH_DERIVED_PRODUCTION_EXTRACT_NOT_ELECTRICALLY_VERIFIED",
         })
 
     candidate_path = Path("graph_netlist_candidate.csv")
@@ -185,7 +185,7 @@ def main():
         writer.writerows(candidate_rows)
 
     report = {
-        "schema": "pdf2kicad-real-pdf-graph-membership-audit/v4",
+        "schema": "pdf2kicad-real-pdf-graph-membership-audit/v5",
         "source_repository": "simple8x/temp", "source_path": str(PDF),
         "source_sha256": digest, "source_sha256_check": "PASS",
         "pages": list(PAGES), "results": results,
@@ -200,14 +200,14 @@ def main():
             "candidate_netlist_rows": len(candidate_rows),
             "graph_component_legacy_conflict_present": any_component_legacy_conflict,
         },
-        "overall_status": "BLOCKED_PRODUCTION_EXPORT_AND_INDEPENDENT_VERIFICATION_NOT_PERFORMED",
+        "overall_status": "GRAPH_DERIVED_PRODUCTION_EXTRACT_EXECUTED_INDEPENDENT_ELECTRICAL_VERIFICATION_NOT_PERFORMED",
         "limitations": [
             "Graph uses only Topology-classified electrical wire components; symbol-body and inner-artwork components are excluded. Normalized junction dots are applied.",
             "Terminal mapping is constrained by exact source-wire-component primitive provenance and 0.4 coordinate tolerance.",
             "Graph candidate CSV preserves UNKNOWN pin identities; graph_component is not a KiCad net name.",
-            "Legacy net names are diagnostic-only and are not used to construct graph connectivity.",
-            "Global/local label propagation and power-symbol equivalence are not yet implemented in the graph engine.",
-            "Production netlist exporter still uses the legacy Topology/NL.nets pipeline.",
+            "Graph geometry determines wire membership in the production extract path; the existing label detector supplies net names/equivalence hints only.",
+            "Global/local label and power-symbol equivalence still depend on the existing label detector and are not independently parsed by the graph engine.",
+            "This audit exercises cli.extract() graph connectivity but does not invoke the CLI file writer or KiCad ERC.",
             "No independent reference netlist or KiCad ERC result is available in this audit.",
         ],
     }
