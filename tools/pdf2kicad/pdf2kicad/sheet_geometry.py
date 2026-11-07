@@ -34,7 +34,7 @@ def _edge_profile(segs, width, height):
     groups = {"top": [], "bottom": [], "left": [], "right": []}
     samples = {key: [] for key in groups}
     counts = {key: 0 for key in groups}
-    for seg in segs:
+    for index, seg in enumerate(segs):
         if seg.kind not in ("line", "rect"):
             continue
         if _is_h(seg):
