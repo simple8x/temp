@@ -213,15 +213,16 @@ def build_planar_graph(
                 raw_contacts.append(Contact(dx, dy, aid, bid, "junction_dot",
                                             "CONNECTED", "explicit_junction_dot"))
 
-    # Node identity is exact after tolerance-based coordinate normalization.
-    # We avoid broad radius clustering: only points created by the same
-    # geometric contact are canonicalized together.
-    node_map: dict[tuple[int, int], int] = {}
+    # Start with primitive-scoped nodes. A geometric crossing is NOT an
+    # electrical node unless an explicit CONNECTED decision joins its sources.
+    # This prevents UNKNOWN T contacts and unmarked X crossings from becoming
+    # connected merely because they share coordinates.
+    node_map: dict[tuple[int, int, str], int] = {}
     nodes: list[Node] = []
     edges: list[Edge] = []
 
     def node_for(x: float, y: float, pid: str) -> int:
-        key = (round(x / tolerance), round(y / tolerance))
+        key = (round(x / tolerance), round(y / tolerance), pid)
         if key not in node_map:
             node_id = len(nodes)
             node_map[key] = node_id
@@ -243,12 +244,44 @@ def build_planar_graph(
             v = node_for(x1, y1, seg.primitive_id)
             edges.append(Edge(len(edges), u, v, {seg.primitive_id}))
 
-    # Attach contact decisions to involved nodes for auditability.
+    # Merge primitive-scoped nodes only for explicitly CONNECTED contacts.
+    parent = list(range(len(nodes)))
+
+    def find_node(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def merge_nodes(a: int, b: int) -> None:
+        ra, rb = find_node(a), find_node(b)
+        if ra != rb:
+            parent[rb] = ra
+
     for c in raw_contacts:
-        key = (round(c.x / tolerance), round(c.y / tolerance))
-        nid = node_map.get(key)
-        if nid is not None:
+        ka = (round(c.x / tolerance), round(c.y / tolerance), c.primitive_a)
+        kb = (round(c.x / tolerance), round(c.y / tolerance), c.primitive_b)
+        na, nb = node_map.get(ka), node_map.get(kb)
+        if na is None or nb is None:
+            continue
+        if c.decision == "CONNECTED":
+            merge_nodes(na, nb)
+        for nid in (na, nb):
             nodes[nid].decisions.append(
                 f"{c.decision}:{c.kind}:{c.primitive_a}:{c.primitive_b}:{c.reason}"
             )
-    return PlanarGraph(nodes, edges, raw_contacts, tolerance)
+
+    roots = sorted({find_node(i) for i in range(len(nodes))})
+    root_to_new = {root: i for i, root in enumerate(roots)}
+    merged_nodes: list[Node] = []
+    for root in roots:
+        members = [i for i in range(len(nodes)) if find_node(i) == root]
+        merged = Node(root_to_new[root], nodes[root].x, nodes[root].y)
+        for i in members:
+            merged.provenance.update(nodes[i].provenance)
+            merged.decisions.extend(nodes[i].decisions)
+        merged_nodes.append(merged)
+    for edge in edges:
+        edge.start = root_to_new[find_node(edge.start)]
+        edge.end = root_to_new[find_node(edge.end)]
+    return PlanarGraph(merged_nodes, edges, raw_contacts, tolerance)
