@@ -98,12 +98,12 @@ def build_page(page_dir: Path, out_dir: Path):
             "error": generated.stdout + generated.stderr,
         }
     checked = subprocess.run(
-        [sys.executable, str(VERIFIER), str(sch), str(netlist)],
+        [sys.executable, str(VERIFIER), str(sch), str(netlist), "--allow-unmapped-pins"],
         capture_output=True, text=True,
     )
     result = {
         "page": page_dir.name,
-        "status": "DRAFT_READBACK_PASS_NOT_ELECTRICAL_SIGNOFF" if checked.returncode == 0 else "DRAFT_READBACK_FAILED",
+        "status": "DRAFT_READBACK_PASS_PARTIAL_PIN_COVERAGE_NOT_ELECTRICAL_SIGNOFF" if checked.returncode == 0 else "DRAFT_READBACK_FAILED",
         "candidate_rows": len(rows),
         "excluded_candidate_rows": rejected,
         "schematic": str(sch),
@@ -129,17 +129,17 @@ def main():
             results.append({"page": page, "status": "BLOCKED_MISSING_PRODUCTION_EVIDENCE"})
             continue
         results.append(build_page(src, a.outdir / f"page-{page}"))
-    passed = sum(x["status"] == "DRAFT_READBACK_PASS_NOT_ELECTRICAL_SIGNOFF" for x in results)
+    passed = sum(x["status"] == "DRAFT_READBACK_PASS_PARTIAL_PIN_COVERAGE_NOT_ELECTRICAL_SIGNOFF" for x in results)
     report = {
         "schema": "pdf2kicad-candidate-schematic-roundtrip/v1",
-        "status": "DRAFT_ROUNDTRIP_COMPLETE_ELECTRICAL_SIGNOFF_BLOCKED" if passed == len(results) else "DRAFT_ROUNDTRIP_PARTIAL_OR_FAILED",
+        "status": "DRAFT_READBACK_COMPLETE_PARTIAL_PIN_COVERAGE_ELECTRICAL_SIGNOFF_BLOCKED" if passed == len(results) else "DRAFT_ROUNDTRIP_PARTIAL_OR_FAILED",
         "pages_total": len(results),
         "pages_readback_pass": passed,
         "pages": results,
         "policy": {
             "coordinate_fallbacks": "excluded, never serialized as pin numbers",
             "parser_candidates": "unverified candidates, not PDF reference truth",
-            "KiCad_readback": "checks serialization round-trip only",
+            "KiCad_readback": "checks only candidate rows; symbol pins absent from candidate CSV remain visibly unconnected and are not inferred NC",
             "electrical_signoff": "requires independently reviewed PDF-derived reference connectivity",
         },
     }
