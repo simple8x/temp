@@ -26,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="QI9-2604-A01_G3-G4_PAGE6_REFINEMENT"
-          PDF="$ROOT/-QI9-2604-A01- Module IO.pdf"
+          PDF="$ROOT/source/[QI9-2604-A01] Module IO.pdf"
           EXPECTED="a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc"
           mkdir -p "$ROOT/independent_retest"
           ACTUAL="$(sha256sum "$PDF" | awk '{print $1}')"
