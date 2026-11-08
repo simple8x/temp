@@ -23,9 +23,13 @@ jobs:
       - name: Install KiCad CLI
         run: |
           sudo apt-get update
+          sudo apt-get install -y --no-install-recommends software-properties-common
+          sudo add-apt-repository --yes ppa:kicad/kicad-10.0-releases
+          sudo apt-get update
           sudo apt-get install -y --no-install-recommends kicad
           command -v kicad-cli
           kicad-cli version || kicad-cli --version
+          apt-cache policy kicad
 
       - name: Set up Python
         uses: actions/setup-python@v5
