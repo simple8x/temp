@@ -127,3 +127,26 @@ def resolve_document(ir: dict, *, endpoint_radius_pt: float = 4.0,
             "no_auto_promotion": True,
         },
     }
+
+def main(argv=None):
+    import argparse
+    import json
+    from pathlib import Path
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--ir", required=True)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--endpoint-radius-pt", type=float, default=4.0)
+    ap.add_argument("--unique-margin-pt", type=float, default=1.0)
+    args = ap.parse_args(argv)
+    ir = json.loads(Path(args.ir).read_text(encoding="utf-8"))
+    result = resolve_document(ir, endpoint_radius_pt=args.endpoint_radius_pt,
+                              unique_margin_pt=args.unique_margin_pt)
+    output = Path(args.out)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2) + "\\n", encoding="utf-8")
+    print(json.dumps({"summary": result["summary"],
+                      "electrical_signoff": result["electrical_signoff"]}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
