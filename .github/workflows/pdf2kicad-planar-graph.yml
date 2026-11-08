@@ -66,6 +66,13 @@ jobs:
           --graph-dir pdf_reference_graph
           --outdir independent_reference_audit
           --pages 5 6 7 8 9 10 11
+      - name: Decode raw vector-stroke text and audit pin-token candidates (pages 5-11)
+        run: >-
+          python -m pdf2kicad.vector_text_audit
+          --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --ledger reference_connectivity_review.json
+          --out independent_reference_audit/independent_vector_text_audit.json
+          --pages 5 6 7 8 9 10 11
       - name: Generate candidate KiCad sheets and independent read-back (pages 5-11)
         run: >-
           python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
