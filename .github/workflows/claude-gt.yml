@@ -30,6 +30,8 @@ jobs:
         run: |
           python claude/tools/gt_probe.py gt_out royer1 619.2 306 626.4 288 2>&1 | tee gt_probe.log
           python claude/tools/gt_probe.py gt_out smps-com 396 214 2>&1 | tee -a gt_probe.log
+      - name: Style diagnostics
+        run: python claude/tools/gt_styles.py gt_out ibis a-multi mult_vca810 up-down-c royer1 Class-D amplifier-ac 2>&1 | tee gt_styles.log
       - name: Format discovery (first lines of one sheet and one netlist)
         run: |
           f=$(find gt_out -name '*.kicad_sch' | sort | head -1); echo "== $f"; head -60 "$f"
@@ -44,3 +46,4 @@ jobs:
             gt_summary.log
             gt_eval.log
             gt_probe.log
+            gt_styles.log
