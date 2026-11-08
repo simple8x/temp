@@ -3,7 +3,7 @@ name: claude-gt
 on:
   workflow_dispatch:
   push:
-    branches: [claude]
+    branches: [claude, m4/gt-dataset-hardening]
     paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*']
 jobs:
   export:
@@ -17,6 +17,8 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends kicad
           kicad-cli version
+          CLI_VERSION=$(kicad-cli version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          test "$CLI_VERSION" = "9.0.9"
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install pikepdf
