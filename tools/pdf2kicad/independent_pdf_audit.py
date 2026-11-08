@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pdf2kicad.independent_pdf_reconstruction import extract_independent_pdf_reconstruction
 from pdf2kicad.electrical_evidence import classify_pages
+from independent_electrical_core import solve as solve_candidate_topology
 
 EXPECTED="a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc"
 
@@ -91,7 +92,25 @@ def main():
     junctions=classify_pages(pdf,range(5,12),out/"junction_evidence")
     stroke_roles=classify_strokes_independently(inv["page_results"])
     (out/"independent_stroke_role_candidates.json").write_text(json.dumps(stroke_roles,indent=2)+"\\n")
+    role_by_page={row["page"]:row for row in stroke_roles["pages"]}
+    candidate_topology=[]
+    for page_ir, junction_page in zip(inv["page_results"], junctions):
+        wire_ids={row["primitive_id"] for row in role_by_page[page_ir["page"]]["primitive_role_candidates"]
+                  if row["role_candidate"]=="WIRE_CANDIDATE"}
+        segments=[{"id":str(p["id"]),"role":"wire","a":p["a"],"b":p["b"]}
+                  for p in page_ir["primitive_inventory"] if p["id"] in wire_ids]
+        confirmed=[m["center_pt"] for m in junction_page["junction_candidates"]
+                   if m["status"]=="EXPLICIT_JUNCTION_CONFIRMED"]
+        solved=solve_candidate_topology({"segments":segments,"junctions":confirmed},tolerance=0.35)
+        candidate_topology.append({"page":page_ir["page"],"wire_candidate_count":len(segments),
+          "junction_confirmed_count":len(confirmed),"candidate_partition_count":len(solved["partitions"]),
+          "contact_relation_count":len(solved["evidence"]),"partitions":solved["partitions"],
+          "authority":"CANDIDATE_ONLY","electrical_membership":"UNKNOWN"})
+    (out/"independent_candidate_topology.json").write_text(json.dumps(candidate_topology,indent=2)+"\\n")
     summary={"source_sha256":digest,"pages":7,
+      "independent_candidate_topology_pages":len(candidate_topology),
+      "independent_candidate_topology_wire_inputs":sum(x["wire_candidate_count"] for x in candidate_topology),
+      "independent_candidate_topology_partitions":sum(x["candidate_partition_count"] for x in candidate_topology),
       "independent_stroke_role_candidates":stroke_roles["summary"],
       "reference_candidates":inv["summary"].get("reference_candidates",0),
       "stroke_font_text_words":inv["summary"].get("stroke_font_text_words",0),
