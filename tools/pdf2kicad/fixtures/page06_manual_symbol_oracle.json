@@ -4,11 +4,84 @@
   "page": 6,
   "annotation_method": "Manual review of rendered original PDF page 6; boundary path IDs cross-checked against native PDF drawing-object inventory.",
   "labels": [
-    {"reference":"U5","path_id":4419,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
-    {"reference":"U6","path_id":5355,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
-    {"reference":"U7","path_id":812,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
-    {"reference":"U8","path_id":344,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
-    {"reference":"J3","path_id":3637,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"}
+    {
+      "reference": "U5",
+      "path_id": 4419,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "U6",
+      "path_id": 5355,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "U7",
+      "path_id": 812,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "U8",
+      "path_id": 344,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "J3",
+      "path_id": 3637,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R20",
+      "path_id": 1765,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R17",
+      "path_id": 3127,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R21",
+      "path_id": 3327,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R16",
+      "path_id": 2634,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R14",
+      "path_id": 157,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R15",
+      "path_id": 2069,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R18",
+      "path_id": 4973,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    },
+    {
+      "reference": "R19",
+      "path_id": 4913,
+      "role": "SYMBOL_BODY_BOUNDARY",
+      "confidence": "MANUAL_CONFIRMED"
+    }
   ],
   "limitations": [
     "This oracle covers five visible symbol boundaries on page 6 only.",
