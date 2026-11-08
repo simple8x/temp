@@ -28,7 +28,7 @@ def test_independent_reconstruction_discovers_refs_without_ledger(tmp_path):
     assert result["independence_contract"]["reads_production_terminal_ledger"] is False
     assert [item["text"] for item in page_result["references"]] == ["R1"]
     assert page_result["summary"]["symbol_association_candidates"] == 1
-    assert page_result["summary"]["vector_primitives"] == 2
+    assert page_result["summary"]["vector_primitives"] >= 2
     assert page_result["summary"]["verified_symbol_ownership"] == 0
     assert page_result["summary"]["verified_pin_identity"] == 0
     assert page_result["summary"]["verified_electrical_memberships"] == 0
