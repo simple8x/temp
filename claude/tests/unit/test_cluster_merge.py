@@ -92,9 +92,11 @@ def test_m4_tiny_part_near_big_body_is_not_swallowed():
 
 
 def test_glyph_sized_parts_do_not_chain_into_one_cluster():
-    strokes = b"".join(b"0.45 w %.1f 100 m %.1f 100 l S\n" % (20 + 1.2 * i, 21 + 1.2 * i) for i in range(30))
+    # page diag 360 -> parts under ~1.08 pt are glyph-sized; 0.9 pt strokes 0.2 pt apart used to chain
+    strokes = b"".join(b"0.45 w %.1f 100 m %.1f 100 l S\n" % (20 + 1.1 * i, 20.9 + 1.1 * i) for i in range(30))
     pi, cls = page(strokes)
-    assert len(body_clusters(pi, cls)) == 30               # 1 pt strokes 0.2 pt apart stay separate
+    assert len(body_clusters(pi, cls)) == 30
+    assert len(body_clusters(pi, cls, min_gap_part_frac=0.0)) == 1
 
 
 @settings(max_examples=60, deadline=None, suppress_health_check=[HealthCheck.too_slow])

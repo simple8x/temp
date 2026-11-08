@@ -31,3 +31,29 @@ for proj in sys.argv[2:]:
               [round(v) for v in b], cr.resolution.status, "pins", len(cr.pins))
     small = collections.Counter(len(cr.cluster.prim_ids) for cr in clusters)
     print("DIAG  size hist", sorted(small.items())[:12])
+
+    # ground-truth view: which cluster holds each placed symbol, and why it did not resolve
+    from ecci.gt_kicad import gt_pins  # noqa: E402
+    xml = sorted(d.glob("*.xml"))[0]
+    pins, _ = gt_pins(str(sch), str(xml))
+    by_ref = collections.defaultdict(list)
+    for gp in pins:
+        by_ref[(gp.ref, gp.lib_id)].append(gp)
+    tally = collections.Counter()
+    shown = 0
+    for (ref, lib_id), gps in sorted(by_ref.items()):
+        cx, cy = sum(g.x for g in gps) / len(gps), sum(g.y for g in gps) / len(gps)
+        cand = [cr for cr in clusters if cr.cluster.bbox[0] - 1 <= cx <= cr.cluster.bbox[2] + 1
+                and cr.cluster.bbox[1] - 1 <= cy <= cr.cluster.bbox[3] + 1]
+        if not cand:
+            tally["no_cluster"] += 1
+            continue
+        cr = min(cand, key=lambda c: (c.cluster.bbox[2] - c.cluster.bbox[0]) * (c.cluster.bbox[3] - c.cluster.bbox[1]))
+        tally[cr.resolution.status] += 1
+        if cr.resolution.status != "UNIQUE" and shown < 8:
+            shown += 1
+            tb = (min(g.x for g in gps), min(g.y for g in gps), max(g.x for g in gps), max(g.y for g in gps))
+            print("DIAG  GT", ref, lib_id, "pins", len(gps), "tips bbox", [round(v, 1) for v in tb],
+                  "cluster prims", len(cr.cluster.prim_ids), "bbox", [round(v, 1) for v in cr.cluster.bbox],
+                  cr.resolution.status, "hits", len(cr.resolution.hits))
+    print("DIAG  GT tally", dict(tally))
