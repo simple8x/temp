@@ -1,0 +1,18 @@
+{
+  "schema": "qi9-page6-manual-symbol-boundary-oracle/v1",
+  "source_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+  "page": 6,
+  "annotation_method": "Manual review of rendered original PDF page 6; boundary path IDs cross-checked against native PDF drawing-object inventory.",
+  "labels": [
+    {"reference":"U5","path_id":4419,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
+    {"reference":"U6","path_id":5355,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
+    {"reference":"U7","path_id":812,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
+    {"reference":"U8","path_id":344,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"},
+    {"reference":"J3","path_id":3637,"role":"SYMBOL_BODY_BOUNDARY","confidence":"MANUAL_CONFIRMED"}
+  ],
+  "limitations": [
+    "This oracle covers five visible symbol boundaries on page 6 only.",
+    "It does not label wire, pin, junction, or net membership.",
+    "A matching boundary does not prove pin identity or electrical connectivity."
+  ]
+}
