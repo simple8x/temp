@@ -238,7 +238,7 @@ def run(source,out,tolerance,radius):
         pages.append({"page":page["page"],"segment_count":len(segs),
                       "geometric_components":len(comps),"topology_counts":topo_counts,
                       "assignment_counts":assign_counts,"references":resolved,
-                      "components":comps,"intersection_evidence":intersections})
+                      "components":comps,"intersection_evidence":intersections,"segments":segs,"tokens":page.get("tokens",[])})
     summary={"pages":len(pages),"reference_tokens":sum(len(p["references"]) for p in pages),
              "geometric_components":sum(p["geometric_components"] for p in pages),
              **dict(totals)}
