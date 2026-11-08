@@ -1,0 +1,38 @@
+name: claude-gt
+# M4.0: independent ground truth. KiCad renders PDFs and computes netlists from open-source schematics.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude]
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*']
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install KiCad CLI
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends kicad
+          kicad-cli version
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pikepdf
+      - name: Export PDFs and netlists
+        run: bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
+      - name: Summary
+        run: python claude/tools/gt_summary.py gt_out | tee gt_summary.log
+      - name: Format discovery (first lines of one sheet and one netlist)
+        run: |
+          f=$(find gt_out -name '*.kicad_sch' | sort | head -1); echo "== $f"; head -60 "$f"
+          x=$(find gt_out -name '*.xml' | sort | head -1); echo "== $x"; head -80 "$x"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gt-export
+          path: |
+            gt_out
+            gt_export.log
+            gt_summary.log
