@@ -29,6 +29,11 @@ jobs:
           python -m pip install "git+https://github.com/sphrd/SchematicNetlist.git@22c51c3f31493c7fb510262d7eec29f3fd66a5ad"
           python -m pip install "PyMuPDF==1.26.7"
 
+      - name: Install OCR engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr
+
       - name: Verify source identity
         run: |
           PDF="QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
@@ -96,6 +101,13 @@ jobs:
           (out / "benchmark_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
           print(json.dumps(summary, indent=2, ensure_ascii=False))
           PY
+
+      - name: Build independent OCR and vector forensic candidate inventory
+        run: |
+          python tools/pdf2kicad/forensics/visio_outline_ocr_probe.py \
+            "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --out schematicnetlist-qi9-output/visio_outline_ocr_probe.json \
+            --first-page 5 --last-page 11 --scale 2.5
 
       - name: Upload benchmark artifacts
         if: always()
