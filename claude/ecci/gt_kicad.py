@@ -141,12 +141,28 @@ def calibrate(sch: dict) -> dict[str, int]:
     return out
 
 
+def _order_for_instance(sp: dict, pins_def: list, ends: set, default: str) -> tuple[str | None, int]:
+    """Placement order for ONE instance. Where mirror+rotation make the two orders disagree, the order whose
+    pin tips land on more wire ends wins; a tie means the instance is ambiguous (None). Returns (order, n_diff)."""
+    def tips(order):
+        return [tuple(round(v, 2) for v in _place(p["x"], p["y"], sp["at"], sp["mirror"], order)) for p in pins_def]
+    a, b = tips("MR"), tips("RM")
+    if a == b:
+        return default, 0
+    ha, hb = sum(t in ends for t in a), sum(t in ends for t in b)
+    if ha == hb:
+        return None, 1
+    return ("MR" if ha > hb else "RM"), 1
+
+
 def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[list[GtPin], dict]:
     sch = read_sch(sch_path)
     cal = calibrate(sch)
     order = order or ("MR" if cal["MR"] >= cal["RM"] else "RM")
     nets = parse_netlist_xml(xml_path)
+    ends = {(round(x, 2), round(y, 2)) for w in sch["wires"] for x, y in w}
     pins: list[GtPin] = []
+    n_amb_inst = 0
     for sp in sch["placed"]:
         ref = sp["ref"] or ""
         if ref.startswith("#") or sp["lib_id"].startswith("power:"):
@@ -154,10 +170,14 @@ def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[lis
         sym = sch["libs"].get(sp["lib_name"] or sp["lib_id"])
         if sym is None:
             continue
-        for p in _lib_pins(sym, sp["unit"], sp["convert"]):
-            x, y = _place(p["x"], p["y"], sp["at"], sp["mirror"], order)
-            pins.append(GtPin(ref, p["number"], x * MM_TO_PT, y * MM_TO_PT, nets.get((ref, p["number"])),
-                              p["hide"], sp["lib_id"]))
+        pdefs = list(_lib_pins(sym, sp["unit"], sp["convert"]))
+        inst_order, nd = _order_for_instance(sp, pdefs, ends, order)
+        if inst_order is None:           # orientation cannot be decided from the schematic itself
+            n_amb_inst += 1
+        for p in pdefs:
+            x, y = _place(p["x"], p["y"], sp["at"], sp["mirror"], inst_order or order)
+            net = nets.get((ref, p["number"])) if inst_order else None
+            pins.append(GtPin(ref, p["number"], x * MM_TO_PT, y * MM_TO_PT, net, p["hide"], sp["lib_id"]))
     # (ref, pin) must identify ONE pin; duplicated references (unannotated copies, repeated pin numbers)
     # make the netlist lookup ambiguous, so those pins carry no net and are excluded from scoring.
     seen: dict[tuple[str, str], int] = {}
@@ -167,7 +187,7 @@ def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[lis
     pins = [GtPin(p.ref, p.number, p.x, p.y, None if (p.ref, p.number) in dup else p.net, p.hidden, p.lib_id)
             for p in pins]
     return pins, {"calibration": cal, "order": order, "placed": len(sch["placed"]), "wires": len(sch["wires"]),
-                  "ambiguous_pins": len(dup)}
+                  "ambiguous_pins": len(dup), "ambiguous_instances": n_amb_inst}
 
 
 def embedded_library_text(sch_path: str) -> str:

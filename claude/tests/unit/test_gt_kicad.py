@@ -23,9 +23,11 @@ XML = """<export><nets>
  <net code="2" name="/B"><node ref="R1" pin="2"/></net></nets></export>"""
 
 
-def files(tmp_path):
+def files(tmp_path, order="MR", wire=True):
     s, x = tmp_path / "a.kicad_sch", tmp_path / "a.xml"
-    s.write_text(SCH)
+    wx, wy = _place(1.0, 3.81, (50.0, 50.0, 90.0), "x", order)
+    s.write_text(SCH.replace("(wire (pts (xy 1 1) (xy 2 2))))",
+                             f"(wire (pts (xy {wx} {wy}) (xy {wx + 5} {wy}))))" if wire else ")"))
     x.write_text(XML)
     return str(s), str(x)
 
@@ -43,6 +45,21 @@ def test_pins_hidden_flag_power_skipped_and_net_attached(tmp_path):
     assert by["1"].net == "/A" and by["2"].net == "/B"
     assert by["2"].hidden and not by["1"].hidden
     assert info["placed"] == 2 and info["order"] in ("MR", "RM")
+
+
+def test_instance_order_follows_the_wire_that_decides_it(tmp_path):
+    for order in ("MR", "RM"):
+        s, x = files(tmp_path, order)
+        pins, _ = gt_pins(s, x)
+        p1 = next(p for p in pins if p.number == "1")
+        ex, ey = _place(1.0, 3.81, (50.0, 50.0, 90.0), "x", order)
+        assert math.isclose(p1.x, ex * MM_TO_PT) and p1.net == "/A"
+
+
+def test_instance_with_undecidable_order_carries_no_net(tmp_path):
+    s, x = files(tmp_path, wire=False)
+    pins, info = gt_pins(s, x)
+    assert all(p.net is None for p in pins) and info["ambiguous_instances"] == 1
 
 
 def test_place_rotation_without_mirror_is_ccw_in_y_up_then_flipped():
