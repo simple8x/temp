@@ -158,7 +158,16 @@ def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[lis
             x, y = _place(p["x"], p["y"], sp["at"], sp["mirror"], order)
             pins.append(GtPin(ref, p["number"], x * MM_TO_PT, y * MM_TO_PT, nets.get((ref, p["number"])),
                               p["hide"], sp["lib_id"]))
-    return pins, {"calibration": cal, "order": order, "placed": len(sch["placed"]), "wires": len(sch["wires"])}
+    # (ref, pin) must identify ONE pin; duplicated references (unannotated copies, repeated pin numbers)
+    # make the netlist lookup ambiguous, so those pins carry no net and are excluded from scoring.
+    seen: dict[tuple[str, str], int] = {}
+    for p in pins:
+        seen[(p.ref, p.number)] = seen.get((p.ref, p.number), 0) + 1
+    dup = {k for k, n in seen.items() if n > 1}
+    pins = [GtPin(p.ref, p.number, p.x, p.y, None if (p.ref, p.number) in dup else p.net, p.hidden, p.lib_id)
+            for p in pins]
+    return pins, {"calibration": cal, "order": order, "placed": len(sch["placed"]), "wires": len(sch["wires"]),
+                  "ambiguous_pins": len(dup)}
 
 
 def embedded_library_text(sch_path: str) -> str:

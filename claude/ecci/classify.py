@@ -229,15 +229,17 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
     if len(big) >= 2:
         # several populated styles (e.g. wires, pin lines, bus lines in different colours):
         # choose by structure, not by count, and only if one style clearly dominates
-        score = {k: _connected_ends(v, EPS_DEFAULT) for k, v in big.items()}
-        ranked = sorted(score.items(), key=lambda kv: (-kv[1], str(kv[0])))
-        best_k, best = ranked[0]
-        second = ranked[1][1]
-        if best >= params.style_min_connected and best >= params.style_dominance * max(second, 1):
-            notes.append(f"wire style chosen by structure: {best} connected ends vs {second} for the runner-up")
+        conn = {k: _connected_ends(v, EPS_DEFAULT) for k, v in big.items()}
+        ratio = {k: conn[k] / (2.0 * len(big[k])) for k in big}
+        ranked = sorted(big, key=lambda k: (-ratio[k], str(k)))
+        best_k = ranked[0]
+        second = max((ratio[k] for k in ranked[1:]), default=0.0)
+        if conn[best_k] >= params.style_min_connected and ratio[best_k] >= params.style_dominance * max(second, 0.02):
+            notes.append(f"wire style chosen by structure: {ratio[best_k]:.2f} of ends touch same-style lines, "
+                         f"runner-up {second:.2f}")
             return best_k, len(groups[best_k]) / len(pop)
-        if best > 0:
-            notes.append(f"wire style undetermined: structure ambiguous ({best} vs {second} connected ends)")
+        if conn[best_k] > 0:
+            notes.append(f"wire style undetermined: structure ambiguous ({ratio[best_k]:.2f} vs {second:.2f})")
             return None, len(groups[best_k]) / len(pop)
     key, cnt = Counter(style_key(p, params.width_round) for p in pop).most_common(1)[0]
     share = cnt / len(pop)
