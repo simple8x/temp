@@ -65,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="QI9-2604-A01_G3-G4_PAGE6_REFINEMENT"
-          python "$ROOT/g3_g4_refinement/classify_page6.py" "$ROOT/-QI9-2604-A01- Module IO.pdf" --out "$ROOT/g3_g4_refinement/page6_wire_classification_candidates.json" | tee "$ROOT/independent_retest/page6_classifier.log"
+          python "$ROOT/g3_g4_refinement/classify_page6.py" "$ROOT/source/[QI9-2604-A01] Module IO.pdf" --out "$ROOT/g3_g4_refinement/page6_wire_classification_candidates.json" | tee "$ROOT/independent_retest/page6_classifier.log"
       - name: Run explicit G3-G4 and Page 6 regression tests
         run: |
           set -euo pipefail
