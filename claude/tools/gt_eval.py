@@ -105,12 +105,35 @@ def evaluate(pdir: pathlib.Path) -> dict:
             ends = [p.pts[0], p.pts[-1]] if not p.line_closed else []
             wire_ends.append((o.id, ends))
     # oracle attachment
-    attached = []
+    attached_records = []
     for gp in vis:
         ws = sorted({oid for oid, ends in wire_ends
                      if any(math.hypot(e[0] - gp.x, e[1] - gp.y) <= TOL_WIRE for e in ends)})
         if ws:
-            attached.append((tuple(ws), gp.net))
+            attached_records.append({"wire_ids": tuple(ws), "net": gp.net, "pin": gp})
+    attached = [(r["wire_ids"], r["net"]) for r in attached_records]
+
+    def wire_diagnostic(wire_ids):
+        rows = []
+        for wid in wire_ids:
+            pid = int(wid[2:])
+            p = prim[pid]
+            rec = cls.records[pid]
+            rows.append({
+                "id": wid, "prim_id": pid, "class": rec.cls, "role_status": rec.role_status,
+                "reasons": list(rec.reasons), "points": [[round(x, 3), round(y, 3)] for x, y in p.pts],
+                "stroke_w": p.stroke_w, "stroke_color": list(p.stroke_color) if p.stroke_color else None,
+                "origin": p.origin, "provenance": p.prov.content_ref,
+            })
+        return rows
+
+    def pin_attachment_diagnostic(record):
+        gp = record["pin"]
+        return {
+            "pin": f"{gp.ref}.{gp.number}@{gp.x:.3f},{gp.y:.3f}:{gp.net}",
+            "wire_ids": list(record["wire_ids"]),
+            "wires": wire_diagnostic(record["wire_ids"]),
+        }
     rank = {"VERIFIED": 3, "INFERRED": 2, "UNKNOWN": 1, "CONFLICT": 0}
 
     def oracle_status(a, b):
@@ -159,7 +182,9 @@ def evaluate(pdir: pathlib.Path) -> dict:
                     "path": [{"edge": e, "rule": emap[e].rule if e in emap else "?",
                               "coord": emap[e].coord if e in emap else "", "n_prims": emap[e].n_prims if e in emap else -1,
                               "prov": list(emap[e].prov) if e in emap else []} for e in best[2]],
-                    "same_prim": best[0] == best[1]})
+                    "same_prim": best[0] == best[1],
+                    "wire_sets": [pin_attachment_diagnostic(attached_records[i]),
+                                  pin_attachment_diagnostic(attached_records[j])]})
     # detected-pin matching (greedy nearest, one-to-one)
     tips = sorted(built.pin_tips.items())
     cand = sorted(((math.hypot(t[0] - gp.x, t[1] - gp.y), pi_, oid) for pi_, gp in enumerate(vis) for oid, t in tips
