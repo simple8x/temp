@@ -29,6 +29,10 @@ def test_independent_reconstruction_discovers_refs_without_ledger(tmp_path):
     assert [item["text"] for item in page_result["references"]] == ["R1"]
     assert page_result["summary"]["symbol_association_candidates"] == 1
     assert page_result["summary"]["vector_primitives"] >= 2
+    assert page_result["summary"]["raw_pdf_text_words"] >= 1
+    assert page_result["summary"]["vector_stroke_text_words"] >= 0
+    assert page_result["summary"]["printed_pin_text_candidates"] >= 0
+    assert result["independence_contract"]["discovers_reference_text_from_raw_pdf_vector_strokes"] is True
     assert page_result["summary"]["verified_symbol_ownership"] == 0
     assert page_result["summary"]["verified_pin_identity"] == 0
     assert page_result["summary"]["verified_electrical_memberships"] == 0
