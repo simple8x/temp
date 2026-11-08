@@ -183,6 +183,20 @@ def test_c4_wire_crossing_body_is_cannot_link():
     got = {(a, b) for a, b, _ in built.graph.constraints.cannot_link}
     assert {(w, p) for p in pins} <= got
 
+def test_c4_wire_like_symbol_stroke_between_two_body_boundary_points_is_blocked():
+    # A symbol-owned line with the same style as wires can be misclassified as WIRE.
+    # It runs from one side of the resistor body to the other, touching the outline only
+    # at its endpoints. Strict proper-crossing logic misses both endpoint contacts.
+    body_half_width = 1.016 * 3
+    bridge = line(150 - body_half_width, 100, 150 + body_half_width, 100)
+    pi, cls, clusters, built, res = run(r_content() + bridge)
+    pins = [o.id for o in built.graph.objects if o.kind == "PIN"]
+    bridge_wire = wid(pi, 150 - body_half_width, 100)
+    got = {(a, b) for a, b, _ in built.graph.constraints.cannot_link}
+    assert pins
+    assert {(bridge_wire, p) for p in pins} <= got
+    assert all(res.pair_status(bridge_wire, p) != VERIFIED for p in pins)
+
 
 def test_tr5_gap_bridged_at_inferred_only_within_gmax_and_unblocked():
     pi, cls, cl, built, res = run(line(100, 100, 140, 100) + line(141.5, 100, 180, 100))
