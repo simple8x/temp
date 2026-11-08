@@ -42,8 +42,7 @@ def components(segments, tolerance=0.8):
         xs=[v for s in items for v in (s["a"][0],s["b"][0])]
         ys=[v for s in items for v in (s["a"][1],s["b"][1])]
         out.append({"component_id":cid,"segment_count":len(items),
-                    "bbox_pdf_pt":[min(xs),min(ys),max(xs),max(ys)],
-                    "segment_count":len(items)})
+                    "bbox_pdf_pt":[min(xs),min(ys),max(xs),max(ys)]})
     return out
 
 def rect_distance(p,b):
