@@ -184,8 +184,11 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                 "pin_identity": "UNKNOWN",
                 "source": "independent_pdf_reference_and_geometry_discovery",
             })
-            # These are geometric endpoints in a context window, not asserted pins.
-            for endpoint in endpoint_rows:
+            # Keep a bounded shortlist; all raw geometry remains in the
+            # primitive inventory, so candidates can be recomputed without
+            # duplicating thousands of endpoints for every reference label.
+            endpoint_rows.sort(key=lambda row: row["distance_to_reference_text_center_pt"])
+            for endpoint in endpoint_rows[:32]:
                 terminals.append({
                     "page": page_no, "reference_candidate": ref["text"],
                     **endpoint, "terminal_identity": "UNKNOWN",
@@ -231,7 +234,8 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                 "wire_or_graphic_candidates": sum(
                     p["classification"] == "WIRE_OR_GRAPHIC_CANDIDATE" for p in primitives),
                 "junction_mark_candidates": len(dots),
-                "geometric_terminal_candidates": len(terminals),
+                "geometric_terminal_candidates": len(endpoint_rows),
+                "geometric_terminal_candidates_retained_for_review": min(32, len(endpoint_rows)),
                 "verified_symbol_ownership": 0,
                 "verified_pin_identity": 0,
                 "verified_wire_primitives": 0,
