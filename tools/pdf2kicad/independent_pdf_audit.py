@@ -18,6 +18,10 @@ def main():
     junctions=classify_pages(pdf,range(5,12),out/"junction_evidence")
     summary={"source_sha256":digest,"pages":7,
       "reference_candidates":inv["summary"].get("reference_candidates",0),
+      "stroke_font_text_words":inv["summary"].get("stroke_font_text_words",0),
+      "stroke_font_reference_candidates":inv["summary"].get("stroke_font_reference_candidates",0),
+      "stroke_font_pin_token_candidates":inv["summary"].get("stroke_font_pin_token_candidates",0),
+      "raw_text_layer_words":inv["summary"].get("raw_text_layer_words",0),
       "vector_primitives":inv["summary"].get("vector_primitives",0),
       "junction_marks_confirmed":sum(x["summary"]["explicit_junctions_confirmed"] for x in junctions),
       "verified_symbol_ownership":0,"verified_pin_identity":0,
