@@ -10,6 +10,11 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import sys
+
+# Make the repository-local standalone topology core importable when this file
+# is invoked by path from the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pdf2kicad.cli import extract
 from pdf2kicad.netlist import pin_tokens, values as extract_values, infer_semantic_pin_identities, pin_identity_provenance
