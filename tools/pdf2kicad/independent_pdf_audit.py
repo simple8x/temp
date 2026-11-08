@@ -91,7 +91,7 @@ def main():
     (out/"independent_pdf_forensic_ir.json").write_text(json.dumps(inv,indent=2)+"\n")
     junctions=classify_pages(pdf,range(5,12),out/"junction_evidence")
     stroke_roles=classify_strokes_independently(inv["page_results"])
-    (out/"independent_stroke_role_candidates.json").write_text(json.dumps(stroke_roles,indent=2)+"\\n")
+    (out/"independent_stroke_role_candidates.json").write_text(json.dumps(stroke_roles,indent=2)+"\n")
     role_by_page={row["page"]:row for row in stroke_roles["pages"]}
     candidate_topology=[]
     for page_ir, junction_page in zip(inv["page_results"], junctions):
@@ -106,7 +106,7 @@ def main():
           "junction_confirmed_count":len(confirmed),"candidate_partition_count":len(solved["partitions"]),
           "contact_relation_count":len(solved["evidence"]),"partitions":solved["partitions"],
           "authority":"CANDIDATE_ONLY","electrical_membership":"UNKNOWN"})
-    (out/"independent_candidate_topology.json").write_text(json.dumps(candidate_topology,indent=2)+"\\n")
+    (out/"independent_candidate_topology.json").write_text(json.dumps(candidate_topology,indent=2)+"\n")
     summary={"source_sha256":digest,"pages":7,
       "independent_candidate_topology_pages":len(candidate_topology),
       "independent_candidate_topology_wire_inputs":sum(x["wire_candidate_count"] for x in candidate_topology),
