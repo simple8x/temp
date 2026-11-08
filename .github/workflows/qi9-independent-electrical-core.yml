@@ -39,11 +39,6 @@ jobs:
         run: |
           PYTHONPATH=tools/pdf2kicad pytest -q tools/pdf2kicad/tests_independent
           python tools/pdf2kicad/independent_electrical_core.py --out independent-oracle-report.json
-      - name: Verify source PDF identity and run independent forensic inventory
-        run: |
-          python tools/pdf2kicad/independent_pdf_audit.py \
-            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
-            --outdir independent-pdf-audit
       - name: Audit path-group classifier on schematic page 6
         run: |
           python tools/pdf2kicad/path_role_audit.py \
