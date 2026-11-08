@@ -52,6 +52,7 @@ class BuildResult:
     unsupported: list = field(default_factory=list)
     dots: dict = field(default_factory=dict)          # dot object id -> (centre, radius, attached node or None)
     obj_prims: dict = field(default_factory=dict)     # object id -> tuple of prim ids (traceability, I8)
+    pin_tips: dict = field(default_factory=dict)      # pin object id -> tip (normalized page space)
 
 
 def _role(obj: str, kind: str, status: str, items, weak: bool) -> RoleRef:
@@ -141,6 +142,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
     sites: list[Site] = []
     cannot: list[tuple[str, str, str]] = []
     obj_prims: dict[str, tuple] = {}
+    pin_tips: dict[str, tuple] = {}
 
     def prov_of(pids) -> tuple[str, ...]:
         return tuple(by_id[i].prov.content_ref for i in sorted(set(pids)) if i in by_id)
@@ -267,6 +269,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
             objects.append(Obj(pobj, "PIN"))
             obj_prims[pobj] = tuple(cr.cluster.prim_ids)
             pin_objs_of[cid].append(pobj)
+            pin_tips[pobj] = (pin.tip[0], pin.tip[1])
             st = {POS_CONFIRMED: ROLE_CONFIRMED, POS_CANDIDATE: ROLE_CANDIDATE}.get(pin.pos_state, ROLE_UNKNOWN)
             weak = any(reg.items[i].source in WEAK_SOURCES for i in pin.evidence if i in reg.items)
             prole = _role(pobj, "PIN", st, pin.independent_items, weak)
@@ -369,7 +372,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                    "no-connect markers not detected: C5 inactive on PDFs",
                    "sheet-scope, power symbols and hierarchical labels not modelled"]
     return BuildResult(ConnGraph(objects, edges, sites, Constraints(cannot_link=tuple(cannot))),
-                       notes, unsupported, dot_info, obj_prims)
+                       notes, unsupported, dot_info, obj_prims, pin_tips)
 
 
 def _is_end(p, pt, tol: float) -> bool:

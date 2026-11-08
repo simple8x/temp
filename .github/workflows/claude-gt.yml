@@ -24,6 +24,8 @@ jobs:
         run: bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
       - name: Summary
         run: python claude/tools/gt_summary.py gt_out | tee gt_summary.log
+      - name: Evaluate ECCI against KiCad ground truth
+        run: python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
       - name: Format discovery (first lines of one sheet and one netlist)
         run: |
           f=$(find gt_out -name '*.kicad_sch' | sort | head -1); echo "== $f"; head -60 "$f"
@@ -36,3 +38,4 @@ jobs:
             gt_out
             gt_export.log
             gt_summary.log
+            gt_eval.log
