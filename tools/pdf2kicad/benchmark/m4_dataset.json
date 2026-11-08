@@ -1,0 +1,134 @@
+{
+  "schema": "pdf2kicad-ground-truth-dataset/v1",
+  "policy": "Pinned public repositories and immutable commits. PDF and reference netlist are exported from the same .kicad_sch revision using the recorded KiCad CLI. Parser receives PDF only.",
+  "projects": [
+    {
+      "id": "learning-led-button",
+      "repository": "nitu2126/kicad-learning-path",
+      "commit": "856b0daf1d358504cd035724f5ec9d1e6bfe3ad7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "schematic": "01-led-button/01_led_button.kicad_sch"
+    },
+    {
+      "id": "learning-555-blinker",
+      "repository": "nitu2126/kicad-learning-path",
+      "commit": "856b0daf1d358504cd035724f5ec9d1e6bfe3ad7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "schematic": "02-555-blinker/02_555_blinker.kicad_sch"
+    },
+    {
+      "id": "learning-voltage-divider",
+      "repository": "nitu2126/kicad-learning-path",
+      "commit": "856b0daf1d358504cd035724f5ec9d1e6bfe3ad7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "schematic": "03-voltage-divider/03-voltage-divider.kicad_sch"
+    },
+    {
+      "id": "learning-npn-switch",
+      "repository": "nitu2126/kicad-learning-path",
+      "commit": "856b0daf1d358504cd035724f5ec9d1e6bfe3ad7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "schematic": "04-npn-transistor-switch/04_npn_transistor_switch.kicad_sch"
+    },
+    {
+      "id": "learning-linear-regulator",
+      "repository": "nitu2126/kicad-learning-path",
+      "commit": "856b0daf1d358504cd035724f5ec9d1e6bfe3ad7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "schematic": "05-linear-regulator/05_linear_regulator.kicad_sch"
+    },
+    {
+      "id": "feast-npn-switch",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/actuator-npn-switch-led/Actuator-NPN-switch-LED.kicad_sch"
+    },
+    {
+      "id": "feast-pnp-switch",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/actuator-pnp-switch-led/Actuator-PNP-switch-LED.kicad_sch"
+    },
+    {
+      "id": "feast-lc-parallel",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/lc-parallell-resonance/LC-Parallell-resonance.kicad_sch"
+    },
+    {
+      "id": "feast-lc-series",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/lc-series-resonance/LC-Series-resonance.kicad_sch"
+    },
+    {
+      "id": "feast-nmos-amplifier",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/nmos-amplifier-cs/NMOS-Amplifier-CS.kicad_sch"
+    },
+    {
+      "id": "feast-npn-amplifier",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/npn-amplifier-ce/NPN-Amplifier-CE.kicad_sch"
+    },
+    {
+      "id": "feast-opamp-inverting",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/opamp-inverting/OPamp-inverting.kicad_sch"
+    },
+    {
+      "id": "feast-opamp-noninverting",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/opamp-noninverting/OPamp-noninverting.kicad_sch"
+    },
+    {
+      "id": "feast-rc-lowpass",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/rc-lowpass/RC-Lowpass.kicad_sch"
+    },
+    {
+      "id": "feast-rectifier",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/rectifier-1d/Rectifier-1D.kicad_sch"
+    },
+    {
+      "id": "feast-transformer",
+      "repository": "FEASTorg/KiCad-Simulation-Examples",
+      "commit": "22e85f8efb1088bb7ad1f72ed23c0f52af409abf",
+      "license": "CC0-1.0",
+      "license_file": "LICENSE.md",
+      "schematic": "simulations/transformer-1p-1s/Transformer-1P-1S.kicad_sch"
+    }
+  ]
+}

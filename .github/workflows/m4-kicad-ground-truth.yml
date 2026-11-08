@@ -1,0 +1,72 @@
+name: M4.0 KiCad ground-truth benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - benchmark/m4-kicad-ground-truth
+    paths:
+      - "tools/pdf2kicad/benchmark/**"
+      - ".github/workflows/m4-kicad-ground-truth.yml"
+
+concurrency:
+  group: m4-kicad-ground-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate-and-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout benchmark code
+        uses: actions/checkout@v4
+
+      - name: Install KiCad CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends software-properties-common
+          sudo add-apt-repository --yes ppa:kicad/kicad-10.0-releases
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kicad
+          command -v kicad-cli
+          kicad-cli version || kicad-cli --version
+          apt-cache policy kicad
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install parser dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "pymupdf>=1.23" "numpy>=1.24" "pytest>=7"
+
+      - name: Validate benchmark code
+        run: |
+          python -m compileall -q tools/pdf2kicad/benchmark tools/pdf2kicad/pdf2kicad
+          python -m pytest -q tools/pdf2kicad/benchmark
+
+      - name: Export pinned PDFs and independent KiCad XML netlists; compare PDF-only parser
+        run: |
+          KICAD_VERSION="$(kicad-cli version 2>&1 || kicad-cli --version 2>&1)"
+          python tools/pdf2kicad/benchmark/run_benchmark.py \
+            --manifest tools/pdf2kicad/benchmark/m4_dataset.json \
+            --outdir benchmark-artifacts \
+            --workspace benchmark-workspace \
+            --kicad-version "$KICAD_VERSION"
+
+      - name: Upload paired PDF, reference netlist, and audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-kicad-ground-truth-benchmark
+          path: |
+            benchmark-artifacts/**
+            tools/pdf2kicad/benchmark/m4_dataset.json
+          if-no-files-found: error
+          retention-days: 14
