@@ -100,8 +100,14 @@ def resolve_ledger_candidates(ledger: dict, inventory: dict, *, radius_pt: float
                 status = "PRINTED_PIN_TEXT_CANDIDATE"
             else:
                 status = "UNKNOWN_AMBIGUOUS_PRINTED_PIN_TEXT"
+        existing_status = entry.get("reference_status", "UNKNOWN")
+        reviewed_evidence = entry.get("reference_evidence") or {}
+        symbol_verified = existing_status == "VERIFIED" and bool(reviewed_evidence.get("symbol_identity"))
+        if symbol_verified:
+            status = "VERIFIED_BY_INDEPENDENT_REVIEW"
         rows.append({
-            "existing_reference_status": entry.get("reference_status", "UNKNOWN"),
+            "existing_reference_status": existing_status,
+            "symbol_identity_status": "VERIFIED_BY_INDEPENDENT_REVIEW" if symbol_verified else "UNKNOWN",
             "page": entry.get("page"),
             "ref_candidate": entry.get("ref_candidate"),
             "parser_pin_candidate": entry.get("pin_candidate"),
@@ -116,7 +122,7 @@ def resolve_ledger_candidates(ledger: dict, inventory: dict, *, radius_pt: float
                 {"text": w["text"], "distance_pt": round(d, 4)} for d, w in ref_matches[:3]
                 if d <= radius_pt * 4
             ],
-            "symbol_identity": "UNKNOWN_NO_INDEPENDENT_SYMBOL_BODY_OWNERSHIP",
+            "symbol_identity": reviewed_evidence.get("symbol_identity") if symbol_verified else None,
             "pin_identity_status": status,
             "electrical_status": "NOT_VERIFIED",
             "promotion_policy": "NEVER_AUTO_PROMOTE",
@@ -136,7 +142,7 @@ def resolve_ledger_candidates(ledger: dict, inventory: dict, *, radius_pt: float
                                     and r.get("pin_identity_status") != "PRINTED_PIN_TEXT_CANDIDATE"
                                     for r in rows),
         "status_counts": dict(counts),
-        "symbol_identity_resolved": 0,
+        "symbol_identity_resolved": sum(r.get("symbol_identity_status") == "VERIFIED_BY_INDEPENDENT_REVIEW" for r in rows),
         "electrical_memberships_verified_by_text_extraction": 0,
         "policy": "Text proximity yields candidates only. It does not establish symbol ownership, pin number, or electrical connectivity.",
         "rows": rows,
@@ -157,7 +163,7 @@ def build_exception_ledger(ledger: dict, text_resolution: dict, graph_comparison
                 "reason": row.get("pin_identity_status", "UNKNOWN"),
                 "electrical_status": "BLOCKED",
             })
-        elif row.get("symbol_identity") != "RESOLVED":
+        elif row.get("symbol_identity_status") != "VERIFIED_BY_INDEPENDENT_REVIEW":
             exceptions.append({
                 "page": row.get("page"), "ref_candidate": row.get("ref_candidate"),
                 "reason": "PIN_TEXT_FOUND_SYMBOL_OWNERSHIP_UNKNOWN",
@@ -170,7 +176,11 @@ def build_exception_ledger(ledger: dict, text_resolution: dict, graph_comparison
         "pin_identity": {
             "verified": verified, "candidate_only": candidate, "unknown": unknown,
         },
-        "symbol_identity": {"verified": 0, "candidate_only": 0, "unknown": text_resolution["terminal_count"]},
+        "symbol_identity": {
+            "verified": sum(r.get("symbol_identity_status") == "VERIFIED_BY_INDEPENDENT_REVIEW" for r in text_resolution["rows"]),
+            "candidate_only": 0,
+            "unknown": sum(r.get("symbol_identity_status") != "VERIFIED_BY_INDEPENDENT_REVIEW" for r in text_resolution["rows"]),
+        },
         "electrical_connectivity": {
             "verified_memberships": int((ledger.get("summary") or {}).get("independently_reviewed_facts_applied", 0)),
             "candidate_partition_comparisons": sum(x.get("parser_rows", 0) for x in graph_comparisons),
