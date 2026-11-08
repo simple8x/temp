@@ -92,6 +92,7 @@ def resolve_page(page_result: dict, *, endpoint_radius_pt: float = 4.0,
             "token_source": word.get("source"),
             "nearest_endpoint": (None if best is None else {
                 "primitive_ids": best[1]["primitive_ids"],
+                "primitive_id": (best[1]["primitive_ids"][0] if len(best[1]["primitive_ids"]) == 1 else None),
                 "source_sides": best[1]["source_sides"],
                 "xy": best[1]["xy"],
                 "distance_pt": round(best[0], 4),
