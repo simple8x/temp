@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [claude]
-    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*']
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/ecci/**']
 jobs:
   export:
     runs-on: ubuntu-24.04
