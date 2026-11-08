@@ -1,26 +1,29 @@
 import pytest
 
-from pdf2kicad.vector_text_audit import PIN_TOKEN, REF_TOKEN, box_distance
+from pdf2kicad.vector_text_audit import (
+    PIN_TOKEN, REF_TOKEN, box_distance, is_pin_token_candidate,
+)
 
 
-@pytest.mark.parametrize("token", ["1", "12", "123", "A", "A1", "AB12", "A+", "B-"])
-def test_pin_token_regex_accepts_expected_forms(token):
+@pytest.mark.parametrize("token", ["1", "2", "12", "A", "K", "A+", "B-"])
+def test_pin_token_regex_accepts_conservative_pin_forms(token):
     assert PIN_TOKEN.fullmatch(token)
+    assert is_pin_token_candidate(token)
 
 
-@pytest.mark.parametrize("token", ["", "1234", "ABC", "R-1", r"\d", "A++"])
-def test_pin_token_regex_rejects_non_tokens(token):
+@pytest.mark.parametrize("token", [
+    "", "123", "1234", "ABC", "R-1", r"\\d", "A++",
+    "A1", "AB12", "B12", "C5", "U3", "SS34", "360",
+])
+def test_pin_token_regex_rejects_ambiguous_or_non_pin_forms(token):
     assert not PIN_TOKEN.fullmatch(token)
+    assert not is_pin_token_candidate(token)
 
 
-@pytest.mark.parametrize("token", ["R1", "C12", "RN3", "SW2", "U10A"])
-def test_reference_token_regex_accepts_expected_forms(token):
+@pytest.mark.parametrize("token", ["R1", "C12", "RN3", "SW2", "U10A", "J1"])
+def test_reference_tokens_are_not_pin_candidates(token):
     assert REF_TOKEN.fullmatch(token)
-
-
-@pytest.mark.parametrize("token", ["R", "ABC", "R-1", r"\d", "RN", "SW"])
-def test_reference_token_regex_rejects_non_references(token):
-    assert not REF_TOKEN.fullmatch(token)
+    assert not is_pin_token_candidate(token)
 
 
 def test_box_distance_is_zero_inside_bbox():
