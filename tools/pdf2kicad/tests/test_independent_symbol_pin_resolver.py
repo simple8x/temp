@@ -56,7 +56,7 @@ def test_coincident_segment_endpoints_are_one_physical_candidate():
     page = result["pages"][0]
     row = page["candidates"][0]
     assert page["raw_endpoint_record_count"] == 6
-    assert page["distinct_physical_endpoint_count"] == 5
+    assert page["distinct_physical_endpoint_count"] == 4
     assert row["decision"] == "UNIQUE_ENDPOINT_ATTACHMENT_CANDIDATE"
     assert row["nearest_endpoint"]["primitive_ids"] == [1, 2, 3]
     assert row["symbol_ownership"] == "UNKNOWN"
