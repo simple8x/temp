@@ -183,7 +183,8 @@ def build_exception_ledger(ledger: dict, text_resolution: dict, graph_comparison
         },
         "electrical_connectivity": {
             "verified_memberships": int((ledger.get("summary") or {}).get("independently_reviewed_facts_applied", 0)),
-            "candidate_partition_comparisons": sum(x.get("parser_rows", 0) for x in graph_comparisons),
+            "candidate_partition_comparisons": sum((x.get("partition_comparison") or {}).get("pair_comparisons", 0) for x in graph_comparisons),
+            "partition_mismatch_pairs": sum((x.get("partition_comparison") or {}).get("mismatch_pairs", 0) for x in graph_comparisons),
             "signoff": "BLOCKED",
         },
         "independent_graph": {
