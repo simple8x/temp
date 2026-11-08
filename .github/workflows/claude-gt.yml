@@ -30,9 +30,7 @@ jobs:
         run: |
           python claude/tools/gt_probe.py gt_out royer1 619.2 306 626.4 288 2>&1 | tee gt_probe.log
           python claude/tools/gt_probe.py gt_out smps-com 396 214 2>&1 | tee -a gt_probe.log
-          python claude/tools/gt_probe.py gt_out Q17ng 450 342 500.4 342 2>&1 | tee -a gt_probe.log
-          python claude/tools/gt_sch_near.py gt_out Q17ng 450 342 25 2>&1 | tee -a gt_probe.log
-          python claude/tools/gt_sch_near.py gt_out Q17ng 500.4 342 25 2>&1 | tee -a gt_probe.log
+          python claude/tools/gt_probe.py gt_out royer1 450 342 500.4 342 608.4 288 536.4 252 2>&1 | tee -a gt_probe.log
       - name: Style diagnostics
         run: python claude/tools/gt_styles.py gt_out ibis a-multi mult_vca810 up-down-c royer1 Class-D amplifier-ac 2>&1 | tee gt_styles.log
       - name: Format discovery (first lines of one sheet and one netlist)
