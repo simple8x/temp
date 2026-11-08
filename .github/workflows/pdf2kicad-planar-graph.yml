@@ -1,0 +1,109 @@
+name: pdf2kicad planar graph prototype
+
+on:
+  pull_request:
+    paths:
+      - "tools/pdf2kicad/**"
+      - ".github/workflows/pdf2kicad-planar-graph.yml"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/**"
+  push:
+    branches:
+      - "feat/pdf2kicad-planar-graph-v1"
+      - "manus"
+    paths:
+      - "tools/pdf2kicad/**"
+      - ".github/workflows/pdf2kicad-planar-graph.yml"
+      - "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/**"
+
+jobs:
+  planar-graph-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e . pytest
+        working-directory: tools/pdf2kicad
+      - run: python -m pytest -q tools/pdf2kicad/tests
+      - name: Run real QI9 PDF planar-graph diagnostic
+        run: python tools/pdf2kicad/tests/run_planar_graph_real_pdf_audit.py
+      - name: Import independently reviewed QI9 pin/net facts
+        run: >-
+          python -m pdf2kicad.reviewed_reference_import
+          --ledger reference_connectivity_review.json
+          --verification "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/reference_holdout/schematic_reference_verification.json"
+      - name: Produce strict electrical proof and exception ledger
+        run: >-
+          python -m pdf2kicad.proof_and_exceptions
+          --ledger reference_connectivity_review.json
+          --out electrical_proof_and_exceptions.json
+      - name: Render one PDF crop for every reference-review terminal
+        run: |
+          python tools/pdf2kicad/tests/build_pdf_terminal_review_sheet.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --ledger reference_connectivity_review.json \
+            --out terminal-reference-review --radius 60 --scale 1.25 --cards-per-page 8
+      - name: Exercise production CLI writer on pages 5-11
+        run: python tools/pdf2kicad/tests/run_production_cli_real_pdf.py
+      - name: Build PDF-linked reference connectivity review candidates (pages 5-11)
+        run: >-
+          python tools/pdf2kicad/tools/roundtrip_pipeline.py
+          "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --pages 5-11 --outdir pdf2kicad_roundtrip
+      - name: Build independent raw-PDF reference graph and compare parser terminals (pages 5-11)
+        run: >-
+          python -m pdf2kicad.reference_graph_cli
+          "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          5 6 7 8 9 10 11 --outdir pdf_reference_graph
+          --evidence-dir production_cli_real_pdf
+      - name: Resolve raw-PDF pin text candidates and emit independent exception ledger
+        run: >-
+          python -m pdf2kicad.independent_reference_audit
+          --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --ledger reference_connectivity_review.json
+          --graph-dir pdf_reference_graph
+          --outdir independent_reference_audit
+          --pages 5 6 7 8 9 10 11
+      - name: Decode raw vector-stroke text and audit pin-token candidates (pages 5-11)
+        run: >-
+          python -m pdf2kicad.vector_text_audit
+          --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --ledger reference_connectivity_review.json
+          --out independent_reference_audit/independent_vector_text_audit.json
+          --pages 5 6 7 8 9 10 11
+      - name: Build ledger-independent PDF forensic inventory (pages 5-11)
+        run: >-
+          python -m pdf2kicad.independent_pdf_reconstruction
+          --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --pages 5 6 7 8 9 10 11
+          --out independent_reference_audit/independent_pdf_forensic_ir.json
+      - name: Resolve independent pin-text to raw-PDF endpoint candidates (pages 5-11)
+        run: >-
+          python -m pdf2kicad.independent_symbol_pin_resolver
+          --ir independent_reference_audit/independent_pdf_forensic_ir.json
+          --out independent_reference_audit/independent_symbol_pin_resolver.json
+      - name: Generate candidate KiCad sheets and independent read-back (pages 5-11)
+        run: >-
+          python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
+          --input production_cli_real_pdf --outdir pdf2kicad_candidate_schematics --pages 5-11
+      - name: Upload real-PDF audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf2kicad-planar-graph-real-pdf-audit
+          path: |
+            planar_graph_real_pdf_audit.json
+            reference_connectivity_review.json
+            reference_connectivity_review.csv
+            electrical_proof_and_exceptions.json
+            terminal-reference-review/**
+            graph_netlist_candidate.csv
+            production_graph_net_memberships.csv
+            production_cli_real_pdf/**
+            pdf2kicad_roundtrip/**
+            pdf2kicad_candidate_schematics/**
+            pdf_reference_graph/**
+            independent_reference_audit/**
+          retention-days: 3

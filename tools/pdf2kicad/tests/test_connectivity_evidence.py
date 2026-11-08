@@ -4,7 +4,9 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pdf2kicad.connectivity_evidence import build_connectivity_evidence
+from pdf2kicad.connectivity_evidence import (
+    build_connectivity_evidence, build_terminal_reference_map, resolve_terminal_ref,
+)
 from pdf2kicad.primitives import Seg
 from pdf2kicad.topology import Terminal
 
@@ -65,3 +67,44 @@ def test_conflicting_parser_pin_ownership_is_reported_not_hidden():
     assert evidence["pin_conflicts"] == [{
         "ref": "U1", "pin_identity": "A1", "nets": ["NET_A", "NET_B"]
     }]
+
+
+
+def test_geometry_inferred_pin_is_not_mislabeled_as_printed_text():
+    terminal = Terminal(10.0, 5.0, 0, kind="attach", group=2)
+    topo = SimpleNamespace(
+        W=[0], comps=[[0]], segs=[Seg(0.0, 5.0, 10.0, 5.0, "line")],
+        terminals=[terminal],
+        groups=[SimpleNamespace(ref=""), SimpleNamespace(ref=""), SimpleNamespace(ref="D1")],
+    )
+    component = SimpleNamespace(ref="D1", terminals=[terminal])
+    inferred = build_connectivity_evidence(
+        topo, [component], {"NET": [("D1", terminal)]},
+        {id(terminal): "A"},
+    )
+    assert inferred["memberships"][0]["pin_identity_kind"] == "geometry_inferred"
+    assert inferred["terminal_inventory"][0]["pin_identity_kind"] == "geometry_inferred"
+
+    printed = build_connectivity_evidence(
+        topo, [component], {"NET": [("D1", terminal)]},
+        {id(terminal): "A"}, explicit_pin_numbers={id(terminal): "A"},
+    )
+    assert printed["memberships"][0]["pin_identity_kind"] == "parser_pin_token"
+    assert printed["terminal_inventory"][0]["pin_identity_kind"] == "parser_pin_token"
+
+
+def test_terminal_ref_falls_back_to_unique_production_membership_ref():
+    terminal = Terminal(629.52, 330.96, 0, kind="attach", group=99)
+    group_ref = {1: "R1"}
+    production_nets = {"N48": [("Y1", terminal)]}
+    reference_by_terminal = build_terminal_reference_map(production_nets)
+
+    assert resolve_terminal_ref(terminal, group_ref, reference_by_terminal) == "Y1"
+
+
+def test_terminal_ref_does_not_guess_when_production_refs_conflict():
+    terminal = Terminal(629.52, 330.96, 0, kind="attach", group=99)
+    production_nets = {"N48": [("Y1", terminal)], "N49": [("U2", terminal)]}
+    reference_by_terminal = build_terminal_reference_map(production_nets)
+
+    assert resolve_terminal_ref(terminal, {}, reference_by_terminal) is None

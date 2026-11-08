@@ -341,7 +341,14 @@ def pin_tokens(topo, comps, words):
     used = getattr(topo, "used_words", ())
     candidates = [w for w in words
                   if PINTOK.fullmatch(w.text) and id(w) not in used]
-    multi = [g for g in comps if len({t.comp for t in g.terminals}) >= 3]
+    # A two-terminal component still has two physical pin identities. Excluding
+    # it here silently converts both printed pin numbers to coordinate fallbacks.
+    # Use conservative mutual-unique matching for 2-terminal parts; retain the
+    # global assignment for denser multi-pin groups.
+    multi = [
+        g for g in comps
+        if len(g.terminals + getattr(g, "no_connect_terminals", [])) >= 2
+    ]
     out, claimed = {}, set()
     BIG, UNMATCHED, MAX_DISTANCE = 1e6, 12.0, 12.0
 
@@ -366,6 +373,24 @@ def pin_tokens(topo, comps, words):
         if not local:
             continue
 
+        if len(terminals) <= 2:
+            # For small symbols, accept only mutual nearest matches with a
+            # distance margin on both sides; do not infer pin order from layout.
+            distances = [
+                [dist(word, terminal) for word in local]
+                for terminal in terminals
+            ]
+            matched = _unambiguous_pin_assignment(
+                distances, max_distance=MAX_DISTANCE, margin=1.5
+            )
+            for ti, wi in matched.items():
+                word = local[wi]
+                if id(word) in claimed:
+                    continue
+                out[id(terminals[ti])] = word.text
+                claimed.add(id(word))
+            continue
+
         # One private dummy column per terminal means a terminal may remain UNKNOWN
         # instead of being forced onto a distant or already claimed caption.
         matrix = np.full((len(terminals), len(local) + len(terminals)), BIG, dtype=float)
@@ -385,6 +410,86 @@ def pin_tokens(topo, comps, words):
             claimed.add(id(word))
 
     return out, claimed
+
+
+def infer_semantic_pin_identities(topo, comps, words, pins, values_by_ref):
+    """Apply only symbol-semantic pin rules shared by CLI and real-PDF audit.
+
+    Results remain parser candidates. The returned explicit map distinguishes
+    printed pin text from geometry-derived identities; neither is independent
+    electrical verification.
+    """
+    explicit = dict(pins)
+    inferred = set()
+    symbols = {}
+    by_ref = {}
+    for group in comps:
+        by_ref.setdefault(group.ref, []).extend(group.terminals)
+
+    led_value = re.compile(r"red|green|yellow|blue|white|orange|led", re.I)
+    for group in comps:
+        terminals = list({terminal.comp: terminal for terminal in by_ref.get(group.ref, [])}.values())
+        if len(terminals) != 2 or group.ref in symbols:
+            continue
+        prefix_match = re.match(r"[A-Z]+", group.ref)
+        prefix = prefix_match.group() if prefix_match else ""
+        if prefix == "D":
+            diagonal = [segment for segment in group.segs
+                        if segment.x0 != segment.x1 and segment.y0 != segment.y1]
+            ends = {}
+            for segment in diagonal:
+                for point in ((round(segment.x0, 1), round(segment.y0, 1)),
+                              (round(segment.x1, 1), round(segment.y1, 1))):
+                    ends[point] = ends.get(point, 0) + 1
+            apexes = [point for point, count in ends.items() if count >= 2]
+            if apexes:
+                ax, ay = apexes[0]
+                cathode = min(terminals, key=lambda terminal: (terminal.x-ax)**2 + (terminal.y-ay)**2)
+                anode = next(terminal for terminal in terminals if terminal is not cathode)
+                pins[id(cathode)], pins[id(anode)] = "K", "A"
+                symbols[group.ref] = "LED" if led_value.search(values_by_ref.get(group.ref, "")) else "D"
+        elif prefix == "C":
+            plus_marks = [word for word in words
+                          if word.text == "+" and _near(word, group, 0) < 8]
+            for terminal in terminals:
+                if pins.get(id(terminal)) == "+":
+                    pins.pop(id(terminal))
+                    plus_marks = [type("PinMark", (), {
+                        "x0": terminal.x, "x1": terminal.x,
+                        "y0": terminal.y, "y1": terminal.y
+                    })()]
+            if plus_marks:
+                plus = plus_marks[0]
+                cathode = min(terminals, key=lambda terminal:
+                    (terminal.x-(plus.x0+plus.x1)/2)**2 + (terminal.y-(plus.y0+plus.y1)/2)**2)
+                other = next(terminal for terminal in terminals if terminal is not cathode)
+                pins[id(cathode)], pins[id(other)] = "1", "2"
+                inferred.update((id(cathode), id(other)))
+                symbols[group.ref] = "CP"
+            else:
+                symbols[group.ref] = "C"
+        elif prefix in ("R", "L", "F"):
+            symbols[group.ref] = {"R": "R", "L": "L", "F": "FUSE"}[prefix]
+            explicit_numeric = [(terminal, pins.get(id(terminal))) for terminal in terminals
+                                if pins.get(id(terminal)) in ("1", "2")]
+            if len(explicit_numeric) == 1:
+                known_terminal, known_pin = explicit_numeric[0]
+                others = [terminal for terminal in terminals if terminal is not known_terminal]
+                if len(others) == 1 and id(others[0]) not in pins:
+                    pins[id(others[0])] = "2" if known_pin == "1" else "1"
+                    inferred.add(id(others[0]))
+    return pins, explicit, inferred, symbols
+
+
+def pin_identity_provenance(terminal, pin, explicit_pins, inferred_pin_ids):
+    """Classify candidate identity provenance without implying verification."""
+    if pin is None:
+        return "coordinate_fallback"
+    if explicit_pins.get(id(terminal)) == pin:
+        return "printed_text"
+    if id(terminal) in inferred_pin_ids or pin in ("A", "K", "+", "-"):
+        return "geometry_inferred"
+    return "parser_candidate"
 
 
 def _unambiguous_pin_assignment(distances, max_distance=12.0, margin=1.5):
