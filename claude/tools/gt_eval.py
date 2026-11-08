@@ -188,12 +188,19 @@ def evaluate(pdir: pathlib.Path) -> dict:
 
 def main(root: str) -> int:
     tot = collections.Counter()
+    evaluated = skipped = errors = 0
     for d in sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir()):
         try:
             r = evaluate(d)
         except Exception as e:  # noqa: BLE001  one project must never hide the others
             r = {"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
         print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
+        if "error" in r:
+            errors += 1
+        elif "skipped" in r:
+            skipped += 1
+        else:
+            evaluated += 1
         for mode in ("oracle", "detected"):
             m = r.get(mode)
             if m:
@@ -211,8 +218,10 @@ def main(root: str) -> int:
                      "precision_V": round(tpv / max(1, tpv + fpv), 4), "recall_V": round(tpv / pos, 4),
                      "precision_VI": round((tpv + tpi) / max(1, tpv + tpi + fpv + fpi), 4),
                      "recall_VI": round((tpv + tpi) / pos, 4), "FP_V": fpv, "FP_I": fpi}
+    out["dataset"] = {"evaluated_projects": evaluated, "skipped_projects": skipped, "error_projects": errors}
     print("GT_TOTAL " + json.dumps(out, sort_keys=True))
-    return 0
+    # Skips are reported, not hidden; exceptions and an empty benchmark fail the job.
+    return 1 if errors or evaluated == 0 else 0
 
 
 if __name__ == "__main__":
