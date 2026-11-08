@@ -10,7 +10,7 @@ on:
       - "tools/pdf2kicad/path_role_audit.py"
       - "tools/pdf2kicad/pdf_native_object_audit.py"
       - "tools/pdf2kicad/pdf_symbol_body_candidates.py"
-      - "tools/pdf2kicad/native_symbol_body_audit.py"
+      - "tools/pdf2kicad/native_symbol_body_audit.py"\n      - "tools/pdf2kicad/native_symbol_body_survey.py"
       - "tools/pdf2kicad/tests_independent/**"
       - "tools/pdf2kicad/fixtures/**"
       - "tools/pdf2kicad/pdf2kicad/independent_pdf_reconstruction.py"
@@ -59,7 +59,7 @@ jobs:
             --page 6 \
             --oracle tools/pdf2kicad/fixtures/page06_manual_symbol_oracle.json \
             --out native-pdf-object-audit/page06_symbol_body_evaluation.json
-      - name: Upload evidence
+      - name: Survey native symbol-shape candidates across schematic pages 5-11\n        run: |\n          python tools/pdf2kicad/native_symbol_body_survey.py \\\n            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \\\n            --pages 5-11 --out native-pdf-object-audit/schematic_pages_5_11_symbol_survey.json\n      - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
