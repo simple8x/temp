@@ -76,20 +76,20 @@ def extract_segments(page):
         for item_i, item in enumerate(drawing.get("items", [])):
             pairs = []
             if item[0] == "l":
-                pairs = [(item[1], item[2])]
+                pairs = [(tuple(item[1]), tuple(item[2]))]
             elif item[0] == "re":
                 r = item[1]
                 pts = [(r.x0,r.y0),(r.x1,r.y0),(r.x1,r.y1),(r.x0,r.y1)]
                 pairs = list(zip(pts, pts[1:]+pts[:1]))
             for edge_i, (a,b) in enumerate(pairs):
-                length = math.hypot(b.x-a.x, b.y-a.y)
+                length = math.hypot(b[0]-a[0], b[1]-a[1])
                 if length < 0.5:
                     continue
                 segs.append({
                     "id": len(segs), "path_index": path_i, "item_index": item_i,
-                    "edge_index": edge_i, "a": [a.x,a.y], "b": [b.x,b.y],
+                    "edge_index": edge_i, "a": [a[0],a[1]], "b": [b[0],b[1]],
                     "length_pt": round(length,4),
-                    "axis": "H" if abs(a.y-b.y) <= .35 else "V" if abs(a.x-b.x) <= .35 else "OBLIQUE",
+                    "axis": "H" if abs(a[1]-b[1]) <= .35 else "V" if abs(a[0]-b[0]) <= .35 else "OBLIQUE",
                     "stroke_width_pt": drawing.get("width"),
                     "electrical_class": "UNKNOWN_VECTOR_STROKE",
                 })
