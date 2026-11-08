@@ -79,6 +79,11 @@ jobs:
           --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
           --pages 5 6 7 8 9 10 11
           --out independent_reference_audit/independent_pdf_forensic_ir.json
+      - name: Resolve independent pin-text to raw-PDF endpoint candidates (pages 5-11)
+        run: >-
+          python -m pdf2kicad.independent_symbol_pin_resolver
+          --ir independent_reference_audit/independent_pdf_forensic_ir.json
+          --out independent_reference_audit/independent_symbol_pin_resolver.json
       - name: Generate candidate KiCad sheets and independent read-back (pages 5-11)
         run: >-
           python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
