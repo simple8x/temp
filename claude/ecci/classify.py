@@ -43,6 +43,8 @@ LC_OTHER = "OTHER"
 class ClassifyParams:
     manhattan_tol_deg: float = 0.5
     style_min_connected: int = 3       # wire-style choice by structure: minimum connected ends   (ASSUMPTION)
+    style_min_len_share: float = 0.1   # a style needs this share of the longest style's total length (ASSUMPTION)
+    style_len_dominance: float = 2.0   # mean-length ratio that decides when structure is ambiguous (ASSUMPTION)
     style_dominance: float = 1.5       # ... and the winner must have this many times the runner-up (ASSUMPTION)
     style_min_mean_len_frac: float = 0.004   # mean line length / page diagonal below which a style is not a wire (ASSUMPTION)
     border_frac: float = 0.85          # bbox >= this fraction of page width AND height
@@ -219,6 +221,9 @@ def _connected_ends(group: list[Prim], eps: float) -> int:
     return n
 
 
+AMBIGUOUS_STYLE = ("AMBIGUOUS",)   # no line of the page may be called a wire (never guess)
+
+
 def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[str], diag_page: float):
     if len(pop) < params.min_population:
         notes.append(f"wire style undetermined: only {len(pop)} Manhattan open lines")
@@ -233,6 +238,14 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
         min_len = params.style_min_mean_len_frac * diag_page
         big = {k: v for k, v in big.items()
                if sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) >= min_len} or big
+        # ... nor one that carries a negligible share of the longest style's total length
+        tot = {k: sum(math.dist(p.pts[0], p.pts[-1]) for p in v) for k, v in big.items()}
+        top = max(tot.values())
+        big = {k: v for k, v in big.items() if tot[k] >= params.style_min_len_share * top}
+        if len(big) == 1:
+            k = next(iter(big))
+            notes.append("wire style chosen: the only style with wire-like length after discarding tiny styles")
+            return k, len(groups[k]) / len(pop)
     if len(big) >= 2:
         # several populated styles (e.g. wires, pin lines, bus lines in different colours):
         # choose by structure, not by count, and only if one style clearly dominates
@@ -246,8 +259,16 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
                          f"runner-up {second:.2f}")
             return best_k, len(groups[best_k]) / len(pop)
         if conn[best_k] > 0:
+            # tie-break (ASSUMPTION, kept explicit): wires are much longer on average than pin lines / glyph strokes
+            mean_len = {k: sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) for k, v in big.items()}
+            cands = [k for k in ranked if ratio[k] >= 0.5 * ratio[best_k] and conn[k] >= params.style_min_connected]
+            cands.sort(key=lambda k: (-mean_len[k], str(k)))
+            if len(cands) >= 2 and mean_len[cands[0]] >= params.style_len_dominance * mean_len[cands[1]]:
+                notes.append(f"wire style chosen by length tie-break: mean length {mean_len[cands[0]]:.1f} vs "
+                             f"{mean_len[cands[1]]:.1f}")
+                return cands[0], len(groups[cands[0]]) / len(pop)
             notes.append(f"wire style undetermined: structure ambiguous ({ratio[best_k]:.2f} vs {second:.2f})")
-            return None, len(groups[best_k]) / len(pop)
+            return AMBIGUOUS_STYLE, len(groups[best_k]) / len(pop)
     key, cnt = Counter(style_key(p, params.width_round) for p in pop).most_common(1)[0]
     share = cnt / len(pop)
     if share >= params.min_mode_share:
@@ -288,6 +309,9 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
            and not p.line_closed and is_manhattan(p, params.manhattan_tol_deg)
            and p.prov.source == SRC_VECTOR and p.id not in text_ids]
     mode, share = _choose_wire_style(pop, params, notes, diag_page)
+    no_wire = mode == AMBIGUOUS_STYLE
+    if no_wire:
+        mode = ('__none__',)    # matches no style: every line stays BODY/OTHER, nothing becomes a wire
 
     records: dict[int, ClassRecord] = {}
     diag = math.hypot(W, H)
@@ -348,4 +372,4 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
             reasons.append("large non-frame element")
         dec = decide_role(ev, reg)
         records[pid] = ClassRecord(pid, cls, dec.status, tuple(ev), tuple(reasons))
-    return PageClassification(records, reg, mode, share, notes)
+    return PageClassification(records, reg, (None if no_wire else mode), share, notes)

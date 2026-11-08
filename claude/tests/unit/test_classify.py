@@ -88,3 +88,46 @@ def test_no_evidence_item_uses_connectivity_or_weak_sources():
     pi, c = classify(WIRES + b" 1.2 w 5 5 290 190 re S 0.9 w 100 100 m 120 100 l 120 120 l h S")
     for it in c.registry.items.values():
         assert not it.uses_connectivity and it.source == "VECTOR"
+
+
+# ---- wire style by structure, length tie-break, and "never guess" on ambiguity
+def _seg(x0, y0, x1, y1, rgb):
+    return f"{rgb} RG 0.45 w {x0} {y0} m {x1} {y1} l S\n".encode()
+
+
+def _style_of(content: bytes):
+    pi = ingest_pdf(one_page(content, size=(600, 400))).pages[0]
+    return classify_page(pi)
+
+
+def test_long_wires_beat_equal_width_short_pin_lines_of_other_colour():
+    g, r = "0 0.6 0", "0.5 0 0"
+    c = b""
+    for i in range(6):                       # green: long wires, chained end to end
+        c += _seg(20 + 80 * i, 100, 100 + 80 * i, 100, g)
+    for i in range(12):                      # dark red: short, uniform pin-like lines, partly touching
+        c += _seg(30 + 40 * i, 200, 30 + 40 * i, 207, r)
+        c += _seg(30 + 40 * i, 207, 37 + 40 * i, 207, r)
+    res = _style_of(c)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_tiny_perfectly_connected_group_cannot_win():
+    c = b""
+    for i in range(5):
+        c += _seg(20 + 90 * i, 100, 110 + 90 * i, 100, "0 0.6 0")
+    for i in range(4):                       # magenta crosses: every end touches another magenta end
+        c += _seg(300, 300 + 3 * i, 303, 300 + 3 * i, "0.5 0 0.5")
+        c += _seg(303, 300 + 3 * i, 303, 303 + 3 * i, "0.5 0 0.5")
+    res = _style_of(c)
+    assert res.wire_style is None or res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_ambiguous_structure_yields_no_wire_at_all():
+    c = b""
+    for i in range(8):                       # two similar styles, similar lengths, similar structure
+        c += _seg(20 + 60 * i, 100, 70 + 60 * i, 100, "0 0.6 0")
+        c += _seg(20 + 60 * i, 200, 70 + 60 * i, 200, "0.5 0 0")
+    res = _style_of(c)
+    if res.wire_style is None:
+        assert not any(r.cls == LC_WIRE for r in res.records.values())
