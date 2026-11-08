@@ -62,8 +62,8 @@ jobs:
             --out native-pdf-object-audit/page06_symbol_body_evaluation.json
       - name: Survey native symbol-shape candidates across schematic pages 5-11
         run: |
-          python tools/pdf2kicad/native_symbol_body_survey.py \\
-            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \\
+          python tools/pdf2kicad/native_symbol_body_survey.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
             --pages 5-11 --out native-pdf-object-audit/schematic_pages_5_11_symbol_survey.json
       - name: Upload evidence
         if: always()
