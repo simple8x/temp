@@ -9,6 +9,10 @@ on:
       - "tools/pdf2kicad/benchmark/**"
       - ".github/workflows/m4-kicad-ground-truth.yml"
 
+concurrency:
+  group: m4-kicad-ground-truth-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
