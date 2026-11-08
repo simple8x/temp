@@ -432,7 +432,6 @@ def main(argv=None):
     ap.add_argument("--outdir", required=True)
     ap.add_argument("--pages", nargs="+", type=int, default=list(range(5, 12)))
     ap.add_argument("--vector-audit")
-    ap.add_argument("--graph-dir")
     ap.add_argument("--fused-out")
     args = ap.parse_args(argv)
     out = Path(args.outdir)
