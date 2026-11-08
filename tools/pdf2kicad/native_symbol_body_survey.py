@@ -67,7 +67,7 @@ def main():
     }
     target = Path(args.out)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(out, indent=2) + "\\n", encoding="utf-8")
+    target.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"source_sha256": digest, "pages": pages, "totals": out["totals"], "decision": out["decision"]}, indent=2))
 
 
