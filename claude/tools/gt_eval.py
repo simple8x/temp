@@ -127,6 +127,7 @@ def evaluate(pdir: pathlib.Path) -> dict:
     emap = {e.id: e for e in g.edges}
     fp_rules = collections.Counter()
     fp_v_detail = []
+    fp_i_detail = []
     gp_of = {}
     for gp in vis:
         ws = tuple(sorted({oid for oid, ends in wire_ends
@@ -151,13 +152,14 @@ def evaluate(pdir: pathlib.Path) -> dict:
             rules = sorted({(emap[e].rule if e in emap else ("SITE" if e.startswith("site:") else e.split(":")[0]))
                             for e in best[2]}) or ["SAME_PRIM"]
             fp_rules[st + ":" + "+".join(rules)] += 1
-            if st == "VERIFIED" and len(fp_v_detail) < 4:
+            if (st == "VERIFIED" and len(fp_v_detail) < 4) or (st == "INFERRED" and len(fp_i_detail) < 3):
                 ga, gb = gp_of.get((attached[i][0], attached[i][1])), gp_of.get((attached[j][0], attached[j][1]))
-                fp_v_detail.append({
+                (fp_v_detail if st == "VERIFIED" else fp_i_detail).append({
                     "pins": [f"{ga.ref}.{ga.number}@{ga.x:.1f},{ga.y:.1f}:{ga.net}" if ga else "?",
                              f"{gb.ref}.{gb.number}@{gb.x:.1f},{gb.y:.1f}:{gb.net}" if gb else "?"],
                     "path": [{"edge": e, "rule": emap[e].rule if e in emap else "?",
                               "coord": emap[e].coord if e in emap else "", "n_prims": emap[e].n_prims if e in emap else -1,
+                              "roles": [(r.kind, r.status, len(r.evidence)) for r in emap[e].roles] if e in emap else [],
                               "prov": list(emap[e].prov) if e in emap else []} for e in best[2]],
                     "same_prim": best[0] == best[1]})
     # detected-pin matching (greedy nearest, one-to-one)
@@ -182,7 +184,8 @@ def evaluate(pdir: pathlib.Path) -> dict:
         "dots": len(built.dots), "nets": len(nets), "open_nets": sum(n.closure == "OPEN" for n in nets),
         "quarantined": len(res.quarantined), "library_symbols": len(lib.symbols),
         "library_warnings": len(lib.warnings), "oracle": oracle, "detected": detected,
-        "oracle_fp_rules": dict(fp_rules), "oracle_fp_verified_detail": fp_v_detail,
+        "oracle_fp_rules": dict(fp_rules), "oracle_fp_verified_detail": fp_v_detail, "oracle_fp_inferred_detail": fp_i_detail,
+        "dot_radii": sorted(round(v[1], 2) for v in built.dots.values())[:8],
     }
 
 
