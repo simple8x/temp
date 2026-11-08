@@ -35,7 +35,8 @@ def _maxdim(b) -> float:
 
 
 def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFAULT,
-                  gap_frac: float = 0.5, exclude: frozenset = frozenset()) -> list[Cluster]:
+                  gap_frac: float = 0.5, exclude: frozenset = frozenset(),
+                  min_gap_part_frac: float = 0.003) -> list[Cluster]:
     """Group BODY primitives into symbol-body clusters.
 
     Step 1: primitives that touch are one part. Step 2 (single link, repeated to a fixpoint):
@@ -65,6 +66,9 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
             if ra != rb:
                 parent[max(ra, rb)] = min(ra, rb)
 
+    # parts smaller than this (glyph strokes, tick marks) never merge by proximity: only by touching.
+    # Without it, text strokes chain into one page-sized "cluster" that matches nothing.
+    min_part = min_gap_part_frac * (pi.geom.width ** 2 + pi.geom.height ** 2) ** 0.5
     if gap_frac >= 0:
         for _ in range(16):                       # fixpoint; merged parts grow, so iterate
             groups: dict[int, list[int]] = {}
@@ -80,8 +84,12 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
             for ai, a in enumerate(order):
                 ba = boxes[a]
                 reach = ba[2] + gap_frac * _maxdim(ba)
+                if _maxdim(ba) < min_part:
+                    continue
                 for b in order[ai + 1:]:
                     bb = boxes[b]
+                    if _maxdim(bb) < min_part:
+                        continue
                     if bb[0] > reach:             # sorted by x0: no later part can be within reach
                         break
                     if find(a) != find(b) and _gap(ba, bb) <= gap_frac * min(_maxdim(ba), _maxdim(bb)):

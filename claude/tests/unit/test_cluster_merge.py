@@ -82,9 +82,19 @@ def test_m4_tiny_part_near_big_body_is_not_swallowed():
     pi, cls = page(big + tiny)
     clusters = body_clusters(pi, cls)
     assert len(clusters) == 2
-    near = b"0.9 w 140.3 100 m 141.3 100 l 141.3 101 l S"  # 0.3 pt from the body: within 0.5 x 1
+    near = b"0.9 w 140.3 100 m 141.3 100 l 141.3 101 l S"  # 0.3 pt from the body
     pi2, cls2 = page(big + near)
-    assert len(body_clusters(pi2, cls2)) == 1
+    assert len(body_clusters(pi2, cls2)) == 2              # parts below min_gap_part_frac merge only by touching
+    assert len(body_clusters(pi2, cls2, min_gap_part_frac=0.0)) == 1
+    touch = b"0.9 w 140 100 m 141 100 l 141 101 l S"       # touching: merged whatever the size
+    pi3, cls3 = page(big + touch)
+    assert len(body_clusters(pi3, cls3)) == 1
+
+
+def test_glyph_sized_parts_do_not_chain_into_one_cluster():
+    strokes = b"".join(b"0.45 w %.1f 100 m %.1f 100 l S\n" % (20 + 1.2 * i, 21 + 1.2 * i) for i in range(30))
+    pi, cls = page(strokes)
+    assert len(body_clusters(pi, cls)) == 30               # 1 pt strokes 0.2 pt apart stay separate
 
 
 @settings(max_examples=60, deadline=None, suppress_health_check=[HealthCheck.too_slow])

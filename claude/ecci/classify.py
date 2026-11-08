@@ -43,6 +43,7 @@ LC_OTHER = "OTHER"
 class ClassifyParams:
     manhattan_tol_deg: float = 0.5
     style_min_connected: int = 3       # wire-style choice by structure: minimum connected ends   (ASSUMPTION)
+    style_max_mean_len_frac: float = 0.2    # mean line length / page diagonal above which a style is sheet furniture (ASSUMPTION)
     style_min_len_share: float = 0.1   # a style needs this share of the longest style's total length (ASSUMPTION)
     style_len_dominance: float = 2.0   # mean-length ratio that decides when structure is ambiguous (ASSUMPTION)
     style_dominance: float = 1.5       # ... and the winner must have this many times the runner-up (ASSUMPTION)
@@ -238,6 +239,10 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
         min_len = params.style_min_mean_len_frac * diag_page
         big = {k: v for k, v in big.items()
                if sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) >= min_len} or big
+        # ... nor lines spanning a large part of the page (drawing-sheet / title-block rules)
+        max_len = params.style_max_mean_len_frac * diag_page
+        big = {k: v for k, v in big.items()
+               if sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) <= max_len} or big
         # ... nor one that carries a negligible share of the longest style's total length
         tot = {k: sum(math.dist(p.pts[0], p.pts[-1]) for p in v) for k, v in big.items()}
         top = max(tot.values())
