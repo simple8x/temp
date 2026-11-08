@@ -74,7 +74,7 @@ def _decode_vector_text_independently(pdf_path: str, page_index: int):
 
 
 def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
-                                           *, symbol_context_pt: float = 72.0,
+                                           *, symbol_context_pt: float = 24.0,
                                            endpoint_tolerance_pt: float = 0.35) -> dict:
     """Discover PDF objects without reading production parser or review-ledger data."""
     path = Path(pdf_path)
@@ -234,6 +234,10 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
             ],
             "summary": {
                 "text_words": len(words),
+                "raw_text_layer_words": sum(w.get("source") == "pymupdf_raw_pdf_text" for w in words),
+                "stroke_font_text_words": sum(w.get("source") == "raw_pdf_vector_newstroke_decode_shared_decoder" for w in words),
+                "stroke_font_reference_candidates": sum(w.get("source") == "raw_pdf_vector_newstroke_decode_shared_decoder" and w.get("reference_candidate") for w in words),
+                "stroke_font_pin_token_candidates": sum(w.get("source") == "raw_pdf_vector_newstroke_decode_shared_decoder" and w.get("pin_token_candidate") for w in words),
                 "reference_candidates": len(references),
                 "symbol_association_candidates": len(symbols),
                 "vector_primitives": len(primitives),
