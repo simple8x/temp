@@ -43,7 +43,7 @@ def components(segments, tolerance=0.8):
         ys=[v for s in items for v in (s["a"][1],s["b"][1])]
         out.append({"component_id":cid,"segment_count":len(items),
                     "bbox_pdf_pt":[min(xs),min(ys),max(xs),max(ys)],
-                    "segment_ids":[s["id"] for s in items]})
+                    "segment_count":len(items)})
     return out
 
 def rect_distance(p,b):
@@ -59,7 +59,7 @@ def run(source,out,tolerance,radius):
         pairs=[]
         for ref in refs:
             p=ref["center_pdf_pt"]
-            ranked=sorted((rect_distance(p,c["bbox_pdf_pt"]),c) for c in comps)
+            ranked=sorted(((rect_distance(p,c["bbox_pdf_pt"]),c) for c in comps), key=lambda item:(item[0],item[1]["component_id"]))
             candidates=[]
             for dist,c in ranked:
                 if dist>radius: break
