@@ -52,6 +52,31 @@ def pair_metrics(items, status_fn):
     return out
 
 
+def shortest_path(final_edges, a, b):
+    """Edge ids on a shortest a-b path over the edges that form the nets (diagnostics only)."""
+    adj = collections.defaultdict(list)
+    for eid, x, y in final_edges:
+        adj[x].append((y, eid))
+        adj[y].append((x, eid))
+    prev = {a: None}
+    q = collections.deque([a])
+    while q:
+        u = q.popleft()
+        if u == b:
+            break
+        for v, eid in adj[u]:
+            if v not in prev:
+                prev[v] = (u, eid)
+                q.append(v)
+    if b not in prev:
+        return []
+    out, cur = [], b
+    while prev[cur] is not None:
+        cur, eid = prev[cur][0], prev[cur][1]
+        out.append(eid)
+    return out[::-1]
+
+
 def evaluate(pdir: pathlib.Path) -> dict:
     t0 = time.time()
     xml = sorted(pdir.glob("*.xml"))
@@ -98,6 +123,43 @@ def evaluate(pdir: pathlib.Path) -> dict:
         return best
 
     oracle = pair_metrics(attached, oracle_status)
+    # diagnostics: which rules sit on the path of every false positive; details of VERIFIED false positives
+    emap = {e.id: e for e in g.edges}
+    fp_rules = collections.Counter()
+    fp_v_detail = []
+    gp_of = {}
+    for gp in vis:
+        ws = tuple(sorted({oid for oid, ends in wire_ends
+                           if any(math.hypot(e[0] - gp.x, e[1] - gp.y) <= TOL_WIRE for e in ends)}))
+        if ws:
+            gp_of.setdefault((ws, gp.net), gp)
+    for i in range(len(attached)):
+        for j in range(i + 1, len(attached)):
+            if attached[i][1] == attached[j][1]:
+                continue
+            st = oracle_status(attached[i][0], attached[j][0])
+            if st not in LEVELS:
+                continue
+            best = None
+            for wa in attached[i][0]:
+                for wb in attached[j][0]:
+                    pth = [] if wa == wb else shortest_path(res.final_edges, wa, wb)
+                    if wa == wb or pth:
+                        best = (wa, wb, pth) if best is None or len(pth) < len(best[2]) else best
+            if best is None:
+                continue
+            rules = sorted({(emap[e].rule if e in emap else ("SITE" if e.startswith("site:") else e.split(":")[0]))
+                            for e in best[2]}) or ["SAME_PRIM"]
+            fp_rules[st + ":" + "+".join(rules)] += 1
+            if st == "VERIFIED" and len(fp_v_detail) < 4:
+                ga, gb = gp_of.get((attached[i][0], attached[i][1])), gp_of.get((attached[j][0], attached[j][1]))
+                fp_v_detail.append({
+                    "pins": [f"{ga.ref}.{ga.number}@{ga.x:.1f},{ga.y:.1f}:{ga.net}" if ga else "?",
+                             f"{gb.ref}.{gb.number}@{gb.x:.1f},{gb.y:.1f}:{gb.net}" if gb else "?"],
+                    "path": [{"edge": e, "rule": emap[e].rule if e in emap else "?",
+                              "coord": emap[e].coord if e in emap else "", "n_prims": emap[e].n_prims if e in emap else -1,
+                              "prov": list(emap[e].prov) if e in emap else []} for e in best[2]],
+                    "same_prim": best[0] == best[1]})
     # detected-pin matching (greedy nearest, one-to-one)
     tips = sorted(built.pin_tips.items())
     cand = sorted(((math.hypot(t[0] - gp.x, t[1] - gp.y), pi_, oid) for pi_, gp in enumerate(vis) for oid, t in tips
@@ -120,6 +182,7 @@ def evaluate(pdir: pathlib.Path) -> dict:
         "dots": len(built.dots), "nets": len(nets), "open_nets": sum(n.closure == "OPEN" for n in nets),
         "quarantined": len(res.quarantined), "library_symbols": len(lib.symbols),
         "library_warnings": len(lib.warnings), "oracle": oracle, "detected": detected,
+        "oracle_fp_rules": dict(fp_rules), "oracle_fp_verified_detail": fp_v_detail,
     }
 
 

@@ -121,6 +121,7 @@ class SolveResult:
     _net_of: dict = field(default_factory=dict, repr=False)
     _vgroup: dict = field(default_factory=dict, repr=False)
     _quar: set = field(default_factory=set, repr=False)
+    final_edges: list = field(default_factory=list, repr=False)   # (id, a, b) of the edges that form the nets
 
     def pair_status(self, p: str, q: str) -> str:
         """VERIFIED / INFERRED = same net with an all-VERIFIED / some-INFERRED path.
@@ -473,7 +474,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
                 vg[o] = r
     netq = {frep[o] for o in Q}
     return SolveResult(status, site_res, nets, quarantined, sorted(set(warns)),
-                       dict(frep), vg, netq)
+                       dict(frep), vg, netq, final_edges)
 
 
 def audit_result(G: ConnGraph, res: SolveResult) -> list[str]:
