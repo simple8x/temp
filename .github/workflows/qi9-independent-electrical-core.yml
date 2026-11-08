@@ -1,0 +1,49 @@
+name: qi9-independent-electrical-core
+on:
+  push:
+    branches: [experiment/qi9-independent-electrical-core]
+    paths:
+      - ".github/workflows/qi9-independent-electrical-core.yml"
+      - "tools/pdf2kicad/independent_electrical_core.py"
+      - "tools/pdf2kicad/independent_pdf_audit.py"
+      - "tools/pdf2kicad/tests_independent/**"
+      - "tools/pdf2kicad/fixtures/**"
+      - "tools/pdf2kicad/pdf2kicad/independent_pdf_reconstruction.py"
+      - "tools/pdf2kicad/pdf2kicad/electrical_evidence.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install bounded dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "PyMuPDF==1.26.7" pytest
+      - name: Validate adversarial labeled oracle
+        run: |
+          PYTHONPATH=tools/pdf2kicad pytest -q tools/pdf2kicad/tests_independent
+          python tools/pdf2kicad/independent_electrical_core.py --out independent-oracle-report.json
+      - name: Verify source PDF identity and run independent forensic inventory
+        run: |
+          python tools/pdf2kicad/independent_pdf_audit.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --outdir independent-pdf-audit
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qi9-independent-electrical-core
+          path: |
+            independent-oracle-report.json
+            independent-pdf-audit/**
+          if-no-files-found: warn
+          retention-days: 7
