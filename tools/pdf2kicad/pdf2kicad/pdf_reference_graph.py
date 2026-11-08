@@ -185,6 +185,7 @@ def compare_parser_memberships(reference_graph: dict, parser_evidence: dict,
             if d<best[0]: best=(d,comp_of[s["id"]])
         return best
     rows=[]
+    page_number = reference_graph.get("page")
     for row in parser_evidence.get("memberships",[]):
         t=row.get("terminal",{})
         d,c=nearest_component(t.get("x",0),t.get("y",0))
@@ -193,9 +194,44 @@ def compare_parser_memberships(reference_graph: dict, parser_evidence: dict,
                      "distance_pt":round(d,4),"status":"GEOMETRY_MATCH_CANDIDATE" if d<=tolerance
                      else "NO_INDEPENDENT_GEOMETRY_MATCH",
                      "electrical_verification":"NOT_ESTABLISHED"})
+    comparable = [r for r in rows if r["status"] == "GEOMETRY_MATCH_CANDIDATE"
+                  and r.get("net") and r.get("pdf_component") is not None]
+    pair_comparisons = agreement_pairs = mismatch_pairs = 0
+    parser_same_net_pairs = graph_same_component_pairs = 0
+    mismatch_examples = []
+    for index, left in enumerate(comparable):
+        for right in comparable[index + 1:]:
+            parser_same = left["net"] == right["net"]
+            graph_same = left["pdf_component"] == right["pdf_component"]
+            pair_comparisons += 1
+            parser_same_net_pairs += int(parser_same)
+            graph_same_component_pairs += int(graph_same)
+            if parser_same == graph_same:
+                agreement_pairs += 1
+            else:
+                mismatch_pairs += 1
+                if len(mismatch_examples) < 50:
+                    mismatch_examples.append({
+                        "left": {"ref": left.get("ref"), "pin": left.get("pin"),
+                                 "parser_net": left.get("net"), "pdf_component": left.get("pdf_component")},
+                        "right": {"ref": right.get("ref"), "pin": right.get("pin"),
+                                  "parser_net": right.get("net"), "pdf_component": right.get("pdf_component")},
+                        "decision": "PARTITION_DISAGREEMENT_CANDIDATE",
+                    })
     return {"schema":"pdf-graph-comparison/v1","parser_rows":len(rows),
             "geometry_candidates":sum(r["status"]=="GEOMETRY_MATCH_CANDIDATE" for r in rows),
             "exceptions":sum(r["status"]!="GEOMETRY_MATCH_CANDIDATE" for r in rows),
+            "partition_comparison":{
+                "comparable_terminal_rows":len(comparable),
+                "pair_comparisons":pair_comparisons,
+                "agreement_pairs":agreement_pairs,
+                "mismatch_pairs":mismatch_pairs,
+                "parser_same_net_pairs":parser_same_net_pairs,
+                "independent_graph_same_component_pairs":graph_same_component_pairs,
+                "status":"PAIRWISE_PARTITION_MATCH" if mismatch_pairs == 0 else "PAIRWISE_PARTITION_MISMATCH",
+                "authority":"DIAGNOSTIC_ONLY_GRAPH_STROKES_NOT_CLASSIFIED_AS_ELECTRICAL_WIRES",
+                "mismatch_examples":mismatch_examples,
+            },
             "independently_verified_electrical_memberships":0,
             "status":"DIAGNOSTIC_ONLY_ELECTRICAL_SIGNOFF_BLOCKED",
             "rows":rows}
