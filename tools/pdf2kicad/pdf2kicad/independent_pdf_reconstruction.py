@@ -141,6 +141,7 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
         pin_text_candidates = [w for w in words if w["pin_token_candidate"]]
         symbols = []
         terminals = []
+        geometric_endpoint_candidate_count = 0
         for ref_index, ref in enumerate(references):
             rb = ref["bbox"]
             cx, cy = (rb[0] + rb[2]) / 2, (rb[1] + rb[3]) / 2
@@ -184,6 +185,7 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                 "pin_identity": "UNKNOWN",
                 "source": "independent_pdf_reference_and_geometry_discovery",
             })
+            geometric_endpoint_candidate_count += len(endpoint_rows)
             # Keep a bounded shortlist; all raw geometry remains in the
             # primitive inventory, so candidates can be recomputed without
             # duplicating thousands of endpoints for every reference label.
@@ -234,8 +236,8 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                 "wire_or_graphic_candidates": sum(
                     p["classification"] == "WIRE_OR_GRAPHIC_CANDIDATE" for p in primitives),
                 "junction_mark_candidates": len(dots),
-                "geometric_terminal_candidates": len(endpoint_rows),
-                "geometric_terminal_candidates_retained_for_review": min(32, len(endpoint_rows)),
+                "geometric_terminal_candidates": geometric_endpoint_candidate_count,
+                "geometric_terminal_candidates_retained_for_review": len(terminals),
                 "verified_symbol_ownership": 0,
                 "verified_pin_identity": 0,
                 "verified_wire_primitives": 0,
