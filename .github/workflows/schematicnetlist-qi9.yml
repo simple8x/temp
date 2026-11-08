@@ -5,6 +5,7 @@ on:
     branches: [experiment/schematicnetlist-qi9]
     paths:
       - ".github/workflows/schematicnetlist-qi9.yml"
+      - "tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py"
   workflow_dispatch:
 
 permissions:
