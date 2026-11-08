@@ -324,6 +324,7 @@ def build_independent_evidence_fusion(ledger: dict, vector_audit: dict,
             row = {
                 "entry_index": global_i, "page": page,
                 "ref_candidate": entry.get("ref_candidate"),
+                "existing_reference_status": entry.get("reference_status", "UNKNOWN"),
                 "terminal_xy_pdf_pt": xy,
                 "symbol_ownership_candidate": (
                     "EXACT_REFERENCE_TEXT_FOUND" if ref_token else "UNKNOWN_REFERENCE_TEXT_ASSOCIATION"),
@@ -362,17 +363,20 @@ def build_independent_evidence_fusion(ledger: dict, vector_audit: dict,
     # candidates and parser net-name candidates exist. Agreement is diagnostic,
     # never proof, because the graph still includes unclassified symbol strokes.
     pair_comparisons = agreement_pairs = mismatch_pairs = 0
-    comparable_rows = [r for r in rows if r["graph_component_candidate"] is not None
-                       and r["parser_net_candidate_diagnostic_only"]]
-    for i, left in enumerate(comparable_rows):
-        for right in comparable_rows[i + 1:]:
-            same_parser = left["parser_net_candidate_diagnostic_only"] == right["parser_net_candidate_diagnostic_only"]
-            same_graph = left["graph_component_candidate"] == right["graph_component_candidate"]
-            pair_comparisons += 1
-            if same_parser == same_graph:
-                agreement_pairs += 1
-            else:
-                mismatch_pairs += 1
+    comparable_by_page = defaultdict(list)
+    for row in rows:
+        if row["graph_component_candidate"] is not None and row["parser_net_candidate_diagnostic_only"]:
+            comparable_by_page[row["page"]].append(row)
+    for page_rows in comparable_by_page.values():
+        for i, left in enumerate(page_rows):
+            for right in page_rows[i + 1:]:
+                same_parser = left["parser_net_candidate_diagnostic_only"] == right["parser_net_candidate_diagnostic_only"]
+                same_graph = left["graph_component_candidate"] == right["graph_component_candidate"]
+                pair_comparisons += 1
+                if same_parser == same_graph:
+                    agreement_pairs += 1
+                else:
+                    mismatch_pairs += 1
 
     pin_candidate_count = sum(r["pin_text_status"] == "MUTUAL_NEAREST_PIN_TEXT_CANDIDATE" for r in rows)
     reference_candidate_count = sum(r["symbol_ownership_candidate"] == "EXACT_REFERENCE_TEXT_FOUND" for r in rows)
@@ -397,7 +401,8 @@ def build_independent_evidence_fusion(ledger: dict, vector_audit: dict,
             },
             "pin_identity": {
                 "mutual_nearest_one_to_one_text_candidates": pin_candidate_count,
-                "unknown_or_ambiguous": len(rows) - pin_candidate_count - verified_existing,
+                "unknown_or_ambiguous": sum(r["pin_text_status"] != "MUTUAL_NEAREST_PIN_TEXT_CANDIDATE"
+                                            and r["existing_reference_status"] != "VERIFIED" for r in rows),
                 "newly_verified": 0,
                 "status": "CANDIDATE_ONLY",
             },
