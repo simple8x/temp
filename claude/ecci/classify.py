@@ -43,7 +43,8 @@ LC_OTHER = "OTHER"
 class ClassifyParams:
     manhattan_tol_deg: float = 0.5
     style_min_connected: int = 3       # wire-style choice by structure: minimum connected ends   (ASSUMPTION)
-    style_dominance: float = 2.0       # ... and the winner must have this many times the runner-up (ASSUMPTION)
+    style_dominance: float = 1.5       # ... and the winner must have this many times the runner-up (ASSUMPTION)
+    style_min_mean_len_frac: float = 0.004   # mean line length / page diagonal below which a style is not a wire (ASSUMPTION)
     border_frac: float = 0.85          # bbox >= this fraction of page width AND height
     body_max_frac: float = 0.35        # BODY bbox diagonal <= this fraction of page diagonal
     min_population: int = 3            # wire style needs this many Manhattan open lines
@@ -218,7 +219,7 @@ def _connected_ends(group: list[Prim], eps: float) -> int:
     return n
 
 
-def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[str]):
+def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[str], diag_page: float):
     if len(pop) < params.min_population:
         notes.append(f"wire style undetermined: only {len(pop)} Manhattan open lines")
         return None, 0.0
@@ -226,6 +227,12 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
     for p in pop:
         groups.setdefault(style_key(p, params.width_round), []).append(p)
     big = {k: v for k, v in groups.items() if len(v) >= params.min_population}
+    if len(big) >= 2:
+        # a style whose lines are only a few line-widths long (no-connect crosses, glyph strokes,
+        # tick marks) cannot be the wire style: drop it from the structural comparison
+        min_len = params.style_min_mean_len_frac * diag_page
+        big = {k: v for k, v in big.items()
+               if sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) >= min_len} or big
     if len(big) >= 2:
         # several populated styles (e.g. wires, pin lines, bus lines in different colours):
         # choose by structure, not by count, and only if one style clearly dominates
@@ -280,7 +287,7 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
     pop = [p for p in pi.prims if p.kind == "polyline" and p.stroke and not p.fill
            and not p.line_closed and is_manhattan(p, params.manhattan_tol_deg)
            and p.prov.source == SRC_VECTOR and p.id not in text_ids]
-    mode, share = _choose_wire_style(pop, params, notes)
+    mode, share = _choose_wire_style(pop, params, notes, diag_page)
 
     records: dict[int, ClassRecord] = {}
     diag = math.hypot(W, H)
