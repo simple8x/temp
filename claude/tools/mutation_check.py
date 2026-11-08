@@ -62,8 +62,23 @@ MUTATIONS = [
      "cr.conflicts.append(PinConflict(cl.id, \"UNEXPECTED_CONTACT\", end, pid))", "pass"),
     ("M21-border-threshold-removed", "ecci/classify.py",
      "bw >= params.border_frac * W and bh >= params.border_frac * H", "bw >= 0 and bh >= 0"),
-    ("M22-clusters-need-touching-only", "ecci/symbols.py",
-     "            if b[1] - merge_gap <= box[3] and box[1] - merge_gap <= b[3]:", "            if False:"),
+    ("M22-overlap-merge-disabled", "ecci/symbols.py",
+     "                    if find(a) != find(b) and _gap(ba, bb)", "                    if False and find(a) != find(b) and _gap(ba, bb)"),
+    # ---- M2.1
+    ("M23-text-needs-no-row-validity", "ecci/classify.py",
+     "        if _row_valid(ms, boxes, params):", "        if True:"),
+    ("M24-row-alignment-ignored", "ecci/classify.py",
+     "if aligned and bx0 - ax1 <= params.row_gap_frac * h:", "if bx0 - ax1 <= params.row_gap_frac * h:"),
+    ("M25-pair-tolerance-huge", "ecci/classify.py",
+     "pair_tol: float = 0.15", "pair_tol: float = 50.0"),
+    ("M26-glyph-size-limit-removed", "ecci/classify.py",
+     "> params.glyph_max_diag_frac * diag_page:", "> 1e9 * diag_page:"),
+    ("M27-merge-uses-larger-part", "ecci/symbols.py",
+     "_gap(ba, bb) <= gap_frac * min(_maxdim(ba), _maxdim(bb))", "_gap(ba, bb) <= gap_frac * max(_maxdim(ba), _maxdim(bb))"),
+    ("M28-merge-disabled", "ecci/symbols.py",
+     "    if gap_frac >= 0:\n        for _ in range(16):", "    if False:\n        for _ in range(16):"),
+    ("M29-text-counted-in-wire-population", "ecci/classify.py",
+     "and p.prov.source == SRC_VECTOR and p.id not in text_ids]", "and p.prov.source == SRC_VECTOR]"),
 ]
 
 

@@ -73,6 +73,7 @@ class ClusterResult:
 @dataclass(frozen=True)
 class PinParams:
     match: MatchParams = MatchParams()
+    cluster_gap_frac: float = 0.5     # see symbols.body_clusters
     s2_rel: float = 0.1               # endpoint tolerance as a fraction of the pin length
     contact_abs: float = 0.05
 
@@ -124,7 +125,7 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
     results: list[ClusterResult] = []
     syms = list(symbols)
     index = _SegIndex(_wire_segments(pi, cls, set()))
-    for cl in body_clusters(pi, cls, eps):
+    for cl in body_clusters(pi, cls, eps, params.cluster_gap_frac):
         hits = match_cluster(cl, syms, params.match) if syms else []
         res = resolve(cl, hits, params.match)
         cr = ClusterResult(cl, res)

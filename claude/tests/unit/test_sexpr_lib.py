@@ -26,7 +26,7 @@ def test_num_rejects_non_finite_and_garbage(v):
 
 def test_library_symbols_pins_and_token():
     lib = load_library(LIB)
-    assert set(lib.symbols) == {"R", "R_LONG", "D", "U4", "OSC"}
+    assert set(lib.symbols) == {"R", "R_LONG", "D", "U4", "OSC", "LED", "C"}
     assert len(lib.sha256) == 64 and not lib.warnings
     r = lib.symbols["R"]
     assert r.lib_token == f"lib:lib_min.kicad_sym@{lib.sha256[:12]}"

@@ -32,4 +32,22 @@
       (arc (start -1.27 0) (mid 0 1.27) (end 1.27 0) (stroke (width 0.254) (type default)) (fill (type none))))
     (symbol "OSC_1_1"
       (pin passive line (at 0 5.08 270) (length 2.54) (name "A") (number "1"))
-      (pin passive line (at 0 -5.08 90) (length 2.54) (name "B") (number "2")))))
+      (pin passive line (at 0 -5.08 90) (length 2.54) (name "B") (number "2"))))
+  (symbol "LED"
+    (symbol "LED_0_1"
+      (polyline (pts (xy -1.27 1.27) (xy -1.27 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+      (polyline (pts (xy 1.27 1.27) (xy -1.27 0) (xy 1.27 -1.27) (xy 1.27 1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+      (polyline (pts (xy -0.254 2.286) (xy 1.016 3.556)) (stroke (width 0.254) (type default)) (fill (type none)))
+      (polyline (pts (xy 0.381 3.429) (xy 1.016 3.556) (xy 0.889 2.921)) (stroke (width 0.254) (type default)) (fill (type none)))
+      (polyline (pts (xy 0.646 1.386) (xy 1.916 2.656)) (stroke (width 0.254) (type default)) (fill (type none)))
+      (polyline (pts (xy 1.281 2.529) (xy 1.916 2.656) (xy 1.789 2.021)) (stroke (width 0.254) (type default)) (fill (type none))))
+    (symbol "LED_1_1"
+      (pin passive line (at 3.81 0 180) (length 2.54) (name "K") (number "1"))
+      (pin passive line (at -3.81 0 0) (length 2.54) (name "A") (number "2"))))
+  (symbol "C"
+    (symbol "C_0_1"
+      (polyline (pts (xy -2.032 0.762) (xy 2.032 0.762)) (stroke (width 0.508) (type default)) (fill (type none)))
+      (polyline (pts (xy -2.032 -0.762) (xy 2.032 -0.762)) (stroke (width 0.508) (type default)) (fill (type none))))
+    (symbol "C_1_1"
+      (pin passive line (at 0 3.81 270) (length 3.048) (name "~") (number "1"))
+      (pin passive line (at 0 -3.81 90) (length 3.048) (name "~") (number "2")))))
