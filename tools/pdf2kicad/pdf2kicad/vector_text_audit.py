@@ -15,10 +15,20 @@ from pathlib import Path
 from pdf2kicad.primitives import load_page
 from pdf2kicad import glyphs as G, font, textdecode as T
 
-# Raw strings need a single backslash for the regex digit class. The previous
-# double-escaped forms matched the literal characters "\\d", not digits.
-PIN_TOKEN = re.compile(r"^(?:\d{1,3}|[A-Z]{1,2}\d{0,2}|[A-Z][+-])$", re.I)
+# Classify reference designators before pin numbers. The former permissive
+# [A-Z]{1,2}\d{0,2} pattern misclassified C5/U3/B12 and package/value text
+# such as SS34 as pin labels. In this source, a printed pin identifier is
+# accepted only when it is a 1- or 2-digit pin number or a single-letter
+# electrical pin name (optionally +/-). Alphanumeric strings are deliberately
+# left UNKNOWN for review; proximity cannot disambiguate them safely.
+PIN_TOKEN = re.compile(r"^(?:\d{1,2}|[A-Z](?:[+-])?)$", re.I)
 REF_TOKEN = re.compile(r"^(?:RN|SW|[A-Z])\d+[A-Z]?$", re.I)
+
+
+def is_pin_token_candidate(text: str) -> bool:
+    token = text.strip()
+    return bool(token and not REF_TOKEN.fullmatch(token)
+                and PIN_TOKEN.fullmatch(token))
 
 
 def box_distance(point, bbox):
@@ -47,8 +57,13 @@ def decode_vector_words(pdf: str, page_no: int) -> list[dict]:
             "bbox": [round(word.x0, 4), round(word.y0, 4),
                      round(word.x1, 4), round(word.y1, 4)],
             "rotation": word.rot, "decode_score": round(float(word.score), 6),
-            "pin_token_candidate": bool(PIN_TOKEN.fullmatch(text)),
+            "pin_token_candidate": is_pin_token_candidate(text),
             "reference_token_candidate": bool(REF_TOKEN.fullmatch(text)),
+            "token_classification": (
+                "REFERENCE_DESIGNATOR" if REF_TOKEN.fullmatch(text)
+                else "PIN_TOKEN_CANDIDATE" if is_pin_token_candidate(text)
+                else "OTHER_OR_AMBIGUOUS"
+            ),
             "source": "raw_pdf_vector_strokes_decoded_with_kicad_newstroke",
         })
     return out
@@ -94,17 +109,18 @@ def audit(pdf: str, ledger_path: str, pages: list[int], radius: float = 24.0) ->
         })
     candidate_rows = [r for r in rows if r["decision"] == "VECTOR_TEXT_CANDIDATE_ONLY"]
     return {
-        "schema": "qi9-independent-vector-text-audit/v1",
+        "schema": "qi9-independent-vector-text-audit/v2",
         "source_sha256": hashlib.sha256(Path(pdf).read_bytes()).hexdigest(),
         "pages": pages, "vector_text_word_count": len(vector_words),
         "vector_pin_token_count": sum(w["pin_token_candidate"] for w in vector_words),
         "vector_reference_token_count": sum(w["reference_token_candidate"] for w in vector_words),
+        "vector_other_or_ambiguous_token_count": sum(w["token_classification"] == "OTHER_OR_AMBIGUOUS" for w in vector_words),
         "terminal_count": len(rows),
         "nearby_vector_pin_candidates": len(candidate_rows),
         "unknown_terminals": len(rows) - len(candidate_rows),
         "electrical_memberships_verified": 0,
         "words": vector_words, "terminal_candidates": rows,
-        "authority": "Vector-stroke decoding and proximity are candidate evidence only; no electrical or symbol identity is verified.",
+        "authority": "Strict token shape and proximity produce candidates only; no electrical or symbol identity is verified.",
     }
 
 
@@ -121,8 +137,8 @@ def main(argv=None):
     Path(args.out).write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps({k: result[k] for k in (
         "vector_text_word_count", "vector_pin_token_count",
-        "vector_reference_token_count", "terminal_count",
-        "nearby_vector_pin_candidates", "unknown_terminals",
+        "vector_reference_token_count", "vector_other_or_ambiguous_token_count",
+        "terminal_count", "nearby_vector_pin_candidates", "unknown_terminals",
         "electrical_memberships_verified")}, indent=2))
 
 
