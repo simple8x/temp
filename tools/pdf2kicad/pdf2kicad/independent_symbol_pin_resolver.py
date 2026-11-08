@@ -143,7 +143,7 @@ def main(argv=None):
                               unique_margin_pt=args.unique_margin_pt)
     output = Path(args.out)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(result, indent=2) + "\\n", encoding="utf-8")
+    output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"summary": result["summary"],
                       "electrical_signoff": result["electrical_signoff"]}, indent=2))
 
