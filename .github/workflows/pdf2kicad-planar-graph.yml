@@ -58,6 +58,14 @@ jobs:
           "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
           5 6 7 8 9 10 11 --outdir pdf_reference_graph
           --evidence-dir production_cli_real_pdf
+      - name: Resolve raw-PDF pin text candidates and emit independent exception ledger
+        run: >-
+          python -m pdf2kicad.independent_reference_audit
+          --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --ledger reference_connectivity_review.json
+          --graph-dir pdf_reference_graph
+          --outdir independent_reference_audit
+          --pages 5 6 7 8 9 10 11
       - name: Generate candidate KiCad sheets and independent read-back (pages 5-11)
         run: >-
           python tools/pdf2kicad/tests/run_candidate_kicad_roundtrip.py
@@ -79,4 +87,5 @@ jobs:
             pdf2kicad_roundtrip/**
             pdf2kicad_candidate_schematics/**
             pdf_reference_graph/**
+            independent_reference_audit/**
           retention-days: 3
