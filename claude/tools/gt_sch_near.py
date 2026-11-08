@@ -8,7 +8,7 @@ import sys
 K = 72 / 25.4
 root, proj, x, y = pathlib.Path(sys.argv[1]), sys.argv[2], float(sys.argv[3]), float(sys.argv[4])
 R = float(sys.argv[5]) if len(sys.argv) > 5 else 20.0
-sch = sorted((root / proj).glob("*.kicad_sch"))[0].read_text(errors="replace")
+sch = sorted((root / proj / "src").rglob("*.kicad_sch"))[0].read_text(errors="replace")
 pat = re.compile(r"\((wire|bus|bus_entry|junction|label|global_label|hierarchical_label|no_connect|polyline)\b")
 print("SCHNEAR", proj, x, y, "R", R)
 for m in pat.finditer(sch):
