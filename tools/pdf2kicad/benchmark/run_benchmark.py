@@ -199,6 +199,10 @@ def main() -> int:
         except Exception as exc:
             record["status"] = "ERROR"
             record["error"] = f"{type(exc).__name__}: {exc}"
+            if isinstance(exc, subprocess.CalledProcessError):
+                record["command"] = exc.cmd
+                record["command_exit_code"] = exc.returncode
+                record["command_output"] = (exc.stdout or "")[-6000:]
         rows.append(record)
         (sample_dir / "result.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
