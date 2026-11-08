@@ -15,8 +15,10 @@ from pathlib import Path
 from pdf2kicad.primitives import load_page
 from pdf2kicad import glyphs as G, font, textdecode as T
 
-PIN_TOKEN = re.compile(r"^(?:\\d{1,3}|[A-Z]{1,2}\\d{0,2}|[A-Z][+-])$", re.I)
-REF_TOKEN = re.compile(r"^(?:RN|SW|[A-Z])\\d+[A-Z]?$", re.I)
+# Raw strings need a single backslash for the regex digit class. The previous
+# double-escaped forms matched the literal characters "\\d", not digits.
+PIN_TOKEN = re.compile(r"^(?:\d{1,3}|[A-Z]{1,2}\d{0,2}|[A-Z][+-])$", re.I)
+REF_TOKEN = re.compile(r"^(?:RN|SW|[A-Z])\d+[A-Z]?$", re.I)
 
 
 def box_distance(point, bbox):
