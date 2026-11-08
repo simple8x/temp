@@ -120,12 +120,12 @@ def _wire_segments(pi: PageIngest, cls: PageClassification, exclude: set[int]):
 
 
 def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinParams = PinParams(),
-                eps: float = 0.02) -> list[ClusterResult]:
+                eps: float = 0.02, exclude: frozenset = frozenset()) -> list[ClusterResult]:
     reg = cls.registry
     results: list[ClusterResult] = []
     syms = list(symbols)
     index = _SegIndex(_wire_segments(pi, cls, set()))
-    for cl in body_clusters(pi, cls, eps, params.cluster_gap_frac):
+    for cl in body_clusters(pi, cls, eps, params.cluster_gap_frac, exclude):
         hits = match_cluster(cl, syms, params.match) if syms else []
         res = resolve(cl, hits, params.match)
         cr = ClusterResult(cl, res)

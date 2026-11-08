@@ -35,7 +35,7 @@ def _maxdim(b) -> float:
 
 
 def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFAULT,
-                  gap_frac: float = 0.5) -> list[Cluster]:
+                  gap_frac: float = 0.5, exclude: frozenset = frozenset()) -> list[Cluster]:
     """Group BODY primitives into symbol-body clusters.
 
     Step 1: primitives that touch are one part. Step 2 (single link, repeated to a fixpoint):
@@ -45,7 +45,8 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
     neighbouring symbols stay apart because the wires between them are not BODY. gap_frac=0
     merges only touching or overlapping parts. Parts farther apart than the rule allows stay
     separate (a known limit, see docs)."""
-    prims = {p.id: p for p in pi.prims if cls.records[p.id].cls == LC_BODY and p.kind == "polyline"}
+    prims = {p.id: p for p in pi.prims if cls.records[p.id].cls == LC_BODY and p.kind == "polyline"
+             and p.id not in exclude}
     if not prims:
         return []
     graph = build_arrangement(list(prims.values()), eps)
