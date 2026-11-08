@@ -72,7 +72,7 @@ def discover_symbol_body_candidates(pdf_path, page_no, references):
                            "bbox":[round(v,4) for v in box],
                            "stroke_width_pt":d.get("width"),
                            "fill_color":d.get("fill"),
-                           "drawing_type":d.get("type)})
+                           "drawing_type":d.get("type")})
     rows=[]
     for ref in references:
         ref_box=ref["bbox"]
