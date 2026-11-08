@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pymupdf
 
+from pdf2kicad.vector_text_audit import decode_vector_words
+
 REF_RE = re.compile(r"^(?:RN|SW|[A-Z])\d+[A-Z]?$", re.I)
 PIN_RE = re.compile(r"^(?:\d{1,2}|[A-Z](?:[+-])?)$", re.I)
 
@@ -117,7 +119,26 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                         "electrical_authority": "NOT_ESTABLISHED",
                     })
 
+        # The source schematic uses KiCad newstroke vector text for many labels.
+        # Decode those strokes independently of the production terminal ledger and
+        # merge them into this inventory. They remain text candidates, never pin facts.
+        vector_words = decode_vector_words(pdf_path, page_no)
+        raw_keys = {(w["text"], tuple(round(v, 2) for v in w["bbox"])) for w in words}
+        for vw in vector_words:
+            key = (vw["text"], tuple(round(v, 2) for v in vw["bbox"]))
+            if key in raw_keys:
+                continue
+            words.append({
+                "text": vw["text"], "bbox": vw["bbox"],
+                "reference_candidate": vw["reference_token_candidate"],
+                "pin_token_candidate": vw["pin_token_candidate"],
+                "source": vw["source"],
+                "decode_score": vw["decode_score"],
+            })
+            raw_keys.add(key)
+
         references = [w for w in words if w["reference_candidate"]]
+        pin_text_candidates = [w for w in words if w["pin_token_candidate"]]
         symbols = []
         terminals = []
         for ref_index, ref in enumerate(references):
@@ -140,9 +161,24 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                             "endpoint": endpoint_name, "xy": point,
                             "distance_to_reference_text_center_pt": round(_dist(point, (cx, cy)), 4),
                         })
+            # Spatially nearby printed pin tokens are retained as alternatives.
+            # This is not a pin assignment: repeated/overlapping candidates stay UNKNOWN.
+            pin_alternatives = []
+            for token in pin_text_candidates:
+                tb = token["bbox"]
+                tx, ty = (tb[0] + tb[2]) / 2, (tb[1] + tb[3]) / 2
+                distance = _dist((tx, ty), (cx, cy))
+                if distance <= symbol_context_pt:
+                    pin_alternatives.append({
+                        "text": token["text"], "bbox": tb,
+                        "distance_to_reference_text_center_pt": round(distance, 4),
+                        "source": token["source"],
+                    })
             symbols.append({
                 "page": page_no, "reference_text": ref["text"],
                 "reference_bbox": rb, "nearby_primitive_ids": sorted(set(nearby)),
+                "printed_pin_text_alternatives": sorted(
+                    pin_alternatives, key=lambda x: x["distance_to_reference_text_center_pt"]),
                 "ownership": "REFERENCE_ASSOCIATION_CANDIDATE",
                 "symbol_identity": "UNKNOWN",
                 "pin_identity": "UNKNOWN",
@@ -185,7 +221,11 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
             ],
             "summary": {
                 "text_words": len(words),
+                "raw_pdf_text_words": sum(w["source"] == "pymupdf_raw_pdf_text" for w in words),
+                "vector_stroke_text_words": sum(w["source"] == "raw_pdf_vector_strokes_decoded_with_kicad_newstroke" for w in words),
                 "reference_candidates": len(references),
+                "vector_reference_candidates": sum(w["reference_candidate"] and w["source"] == "raw_pdf_vector_strokes_decoded_with_kicad_newstroke" for w in words),
+                "printed_pin_text_candidates": len(pin_text_candidates),
                 "symbol_association_candidates": len(symbols),
                 "vector_primitives": len(primitives),
                 "wire_or_graphic_candidates": sum(
@@ -211,6 +251,8 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
         "independence_contract": {
             "reads_production_terminal_ledger": False,
             "reads_parser_pin_candidates": False,
+            "discovers_reference_text_from_raw_pdf_vector_strokes": True,
+            "discovers_pin_text_candidates_from_raw_pdf_vector_strokes": True,
             "reads_parser_net_ids": False,
             "reads_bom_for_pin_or_connectivity_inference": False,
         },
