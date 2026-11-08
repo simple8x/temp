@@ -20,7 +20,7 @@ import pymupdf
 PIN_TOKEN = re.compile(r"^(?:\d{1,3}|[A-Z]{1,2}\d{0,2}|[A-Z]\+|[A-Z]-)$", re.I)
 REF_TOKEN = re.compile(r"^(?:RN|SW|[A-Z])\d+[A-Z]?$", re.I)
 NET_OR_VALUE = re.compile(
-    r"^(?:GND|VCC|VIN|VOUT|TX[A-Z0-9_-]*|RX[A-Z0-9_-]*|[+-]?\d+(?:\.\d+)?(?:k|r|m|u|n|p|v|a|f|h)?|[0-9]+[kKmMrR][0-9]+)$",
+    r"^(?:GND|VCC|VIN|VOUT|TX[A-Z0-9_-]*|RX[A-Z0-9_-]*|[+-]?\d+(?:\.\d+)?(?:k|r|m|u|n|p|v|a|f|h)|[0-9]+[kKmMrR][0-9]+)$",
     re.I,
 )
 
