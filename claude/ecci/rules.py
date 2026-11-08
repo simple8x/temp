@@ -94,6 +94,22 @@ def _is_disc(p, W: float, H: float, prm: RulesParams):
     return (cx, cy), rm
 
 
+def _bridges_body_boundary(a, b, cluster, tol: float) -> bool:
+    """True when a wire segment joins two symbol-body boundary points through the body's bbox.
+
+    This catches symbol strokes that the style classifier mistakes for wires: their endpoints
+    coincide with the body outline, so strict interior/interior crossing tests do not see them.
+    It is deliberately conservative and only used as negative C4 evidence, never as a connection.
+    """
+    bx0, by0, bx1, by1 = cluster.bbox
+    mx, my = (a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0
+    if not (bx0 + tol < mx < bx1 - tol and by0 + tol < my < by1 - tol):
+        return False
+    da = min((point_segment_distance(a, c, d) for c, d in cluster.segs), default=math.inf)
+    db = min((point_segment_distance(b, c, d) for c, d in cluster.segs), default=math.inf)
+    return da <= tol and db <= tol
+
+
 def _proper_cross(a, b, c, d, eps: float) -> tuple[float, float] | None:
     """Intersection of segments ab and cd if they cross at points interior to both (> eps from all ends)."""
     rx, ry = b[0] - a[0], b[1] - a[1]
@@ -324,6 +340,10 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                 continue
             if max(a[0], b[0]) < bx0 - prm.eps or min(a[0], b[0]) > bx1 + prm.eps or \
                     max(a[1], b[1]) < by0 - prm.eps or min(a[1], b[1]) > by1 + prm.eps:
+                continue
+            bridge_tol = max(prm.eps, 0.5 * by_id[pid].stroke_w)
+            if _bridges_body_boundary(a, b, cr.cluster, bridge_tol):
+                offenders[pid] = "wire-like primitive bridges two symbol-body boundary points"
                 continue
             for c, d in cr.cluster.segs:
                 if _proper_cross(a, b, c, d, prm.eps) is not None:
