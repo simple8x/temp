@@ -8,6 +8,7 @@ on:
       - "tools/pdf2kicad/independent_pdf_audit.py"
       - "tools/pdf2kicad/path_role_classifier.py"
       - "tools/pdf2kicad/path_role_audit.py"
+      - "tools/pdf2kicad/pdf_native_object_audit.py"
       - "tools/pdf2kicad/tests_independent/**"
       - "tools/pdf2kicad/fixtures/**"
       - "tools/pdf2kicad/pdf2kicad/independent_pdf_reconstruction.py"
@@ -44,6 +45,11 @@ jobs:
           python tools/pdf2kicad/path_role_audit.py \
             --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
             --page 6 --out independent-pdf-audit/page6_path_role_audit.json
+      - name: Preserve native PDF drawing objects and render page 6
+        run: |
+          python tools/pdf2kicad/pdf_native_object_audit.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --page 6 --outdir native-pdf-object-audit --dpi 120
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -52,5 +58,6 @@ jobs:
           path: |
             independent-oracle-report.json
             independent-pdf-audit/**
+            native-pdf-object-audit/**
           if-no-files-found: warn
           retention-days: 7
