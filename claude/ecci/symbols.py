@@ -102,3 +102,41 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
         xs, ys = [v[0] for v in verts], [v[1] for v in verts]
         out.append(Cluster(cid, ids, (min(xs), min(ys), max(xs), max(ys)), tuple(verts), tuple(segs)))
     return out
+
+
+def _rebuild(cid: int, ids: tuple[int, ...], by_id: dict) -> Cluster:
+    verts = [q for i in ids for q in by_id[i].pts]
+    segs = [(a, b) for i in ids for _, a, b in by_id[i].segments()]
+    xs, ys = [v[0] for v in verts], [v[1] for v in verts]
+    return Cluster(cid, ids, (min(xs), min(ys), max(xs), max(ys)), tuple(verts), tuple(segs))
+
+
+def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: float = 0.6):
+    """Split off dangling stubs: 2-vertex primitives with exactly one end touching the rest of the cluster and
+    the other end free. In some plotters (KiCad) pin lines are drawn in the body colour and land in the cluster;
+    the template model has no pin lines, so matching is retried on the cluster WITHOUT them.
+
+    Returns (reduced cluster, stub prim ids) or None when nothing can be stripped. Pure geometry: the stubs
+    are NOT assumed to be pins here; the template decides, and the stub primitives then serve as the measured
+    second evidence (their lineage never contains the library token)."""
+    from .flatten import point_segment_distance
+    ids = list(cl.prim_ids)
+    maxd = _maxdim(cl.bbox)
+    stubs: list[int] = []
+    for i in ids:
+        p = by_id[i]
+        if len(p.pts) != 2 or p.line_closed:
+            continue
+        a, b = p.pts[0], p.pts[-1]
+        if ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5 > max_frac * maxd:
+            continue
+        touch = []
+        for end in (a, b):
+            touch.append(any(point_segment_distance(end, s0, s1) <= eps
+                             for j in ids if j != i for _, s0, s1 in by_id[j].segments()))
+        if touch[0] != touch[1]:
+            stubs.append(i)
+    rest = tuple(i for i in ids if i not in set(stubs))
+    if not stubs or not rest:
+        return None
+    return _rebuild(cl.id, rest, by_id), tuple(stubs)

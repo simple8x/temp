@@ -23,7 +23,7 @@ from .classify import LC_WIRE, PageClassification
 from .evidence import EvidenceItem, decide_role
 from .flatten import point_segment_distance
 from .ir import PageIngest, SRC_VECTOR
-from .symbols import Cluster, body_clusters
+from .symbols import strip_stubs, Cluster, body_clusters
 from .template import MatchParams, Resolution, match_cluster, resolve, tolerance
 
 POS_CONFIRMED = "CONFIRMED"
@@ -125,8 +125,16 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
     results: list[ClusterResult] = []
     syms = list(symbols)
     index = _SegIndex(_wire_segments(pi, cls, set()))
+    prim_by_id = {q.id: q for q in pi.prims}
     for cl in body_clusters(pi, cls, eps, params.cluster_gap_frac, exclude):
         hits = match_cluster(cl, syms, params.match) if syms else []
+        stub_ids: tuple[int, ...] = ()
+        if syms and not hits:                       # pin lines drawn in body colour: retry without dangling stubs
+            sp = strip_stubs(cl, prim_by_id, eps)
+            if sp is not None:
+                hits2 = match_cluster(sp[0], syms, params.match)
+                if hits2:
+                    cl, stub_ids, hits = sp[0], sp[1], hits2
         res = resolve(cl, hits, params.match)
         cr = ClusterResult(cl, res)
         tau = tolerance(cl, params.match)
@@ -148,7 +156,8 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                 explained.append((rp.base, max(params.match.tau_abs, params.s2_rel * plen)))
                 if plen > 0:
                     t2 = max(params.match.tau_abs, params.s2_rel * plen)
-                    for pid, si, a, b in wires:
+                    stub_segs = [(sid, 0, q.pts[0], q.pts[-1]) for sid in stub_ids for q in [prim_by_id[sid]]]
+                    for pid, si, a, b in list(wires) + stub_segs:
                         fwd = math.hypot(a[0] - rp.base[0], a[1] - rp.base[1]) <= t2 and \
                             math.hypot(b[0] - rp.tip[0], b[1] - rp.tip[1]) <= t2
                         rev = math.hypot(b[0] - rp.base[0], b[1] - rp.base[1]) <= t2 and \
