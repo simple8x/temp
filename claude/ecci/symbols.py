@@ -34,9 +34,34 @@ def _maxdim(b) -> float:
     return max(b[2] - b[0], b[3] - b[1])
 
 
+def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("inf"),
+               min_host: float = 0.0, axis_tol: float = 0.01) -> set[int]:
+    """Ids of dangling stubs among `prims`: 2-vertex open primitives with exactly one end touching another
+    primitive of size >= min_host and the other end free (pin lines drawn in the body colour). Axis-aligned only
+    (ASSUMPTION: pin lines are horizontal or vertical; diagonal LED arrows and the like are body parts). Pure geometry."""
+    from .flatten import point_segment_distance
+    out: set[int] = set()
+    items = list(prims.items())
+    for i, p in items:
+        if len(p.pts) != 2 or p.line_closed:
+            continue
+        a, b = p.pts[0], p.pts[-1]
+        if ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5 > max_len:
+            continue
+        if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > axis_tol:
+            continue
+        bb = _bbox(p)
+        near = [q for j, q in items if j != i and _gap(bb, _bbox(q)) <= eps and _maxdim(_bbox(q)) >= min_host]
+        touch = [any(point_segment_distance(end, s0, s1) <= eps for q in near for _, s0, s1 in q.segments())
+                 for end in (a, b)]
+        if touch[0] != touch[1]:
+            out.add(i)
+    return out
+
+
 def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFAULT,
                   gap_frac: float = 0.5, exclude: frozenset = frozenset(),
-                  min_gap_part_frac: float = 0.003) -> list[Cluster]:
+                  min_gap_part_frac: float = 0.003, stub_aware: bool = True) -> list[Cluster]:
     """Group BODY primitives into symbol-body clusters.
 
     Step 1: primitives that touch are one part. Step 2 (single link, repeated to a fixpoint):
@@ -50,6 +75,12 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
              and p.id not in exclude}
     if not prims:
         return []
+    all_prims = prims
+    min_part = min_gap_part_frac * (pi.geom.width ** 2 + pi.geom.height ** 2) ** 0.5
+    stubs = find_stubs(all_prims, eps, min_host=min_part) if stub_aware else set()
+    prims = {i: p for i, p in all_prims.items() if i not in stubs} or all_prims
+    if prims is all_prims:
+        stubs = set()
     graph = build_arrangement(list(prims.values()), eps)
     parent = {i: i for i in prims}
 
@@ -102,6 +133,22 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
     groups = {}
     for i in prims:
         groups.setdefault(find(i), []).append(i)
+    if stubs:                                  # a stub joins the cluster of the body part it touches
+        from .flatten import point_segment_distance
+        owner = {i: r for r, ids in groups.items() for i in ids}
+        for sid in sorted(stubs):
+            sp = all_prims[sid]
+            hit = None
+            for i in sorted(prims):
+                if any(point_segment_distance(e, s0, s1) <= eps for e in (sp.pts[0], sp.pts[-1])
+                       for _, s0, s1 in prims[i].segments()):
+                    hit = owner[i]
+                    break
+            if hit is None:
+                groups[("stub", sid)] = [sid]
+            else:
+                groups[hit].append(sid)
+        prims = all_prims
     out: list[Cluster] = []
     for cid, key in enumerate(sorted(groups, key=lambda k: min(groups[k]))):
         ids = tuple(sorted(groups[key]))
@@ -136,6 +183,8 @@ def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: fl
         if len(p.pts) != 2 or p.line_closed:
             continue
         a, b = p.pts[0], p.pts[-1]
+        if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > 0.01:
+            continue
         if ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5 > max_frac * maxd:
             continue
         touch = []
