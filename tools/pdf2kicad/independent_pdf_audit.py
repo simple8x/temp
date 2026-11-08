@@ -7,6 +7,79 @@ from pdf2kicad.independent_pdf_reconstruction import extract_independent_pdf_rec
 from pdf2kicad.electrical_evidence import classify_pages
 
 EXPECTED="a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc"
+
+def classify_strokes_independently(page_result, tolerance=0.35):
+    """Conservative raw-PDF stroke-role candidates; never electrical truth."""
+    import math
+    totals = {"SYMBOL_OUTLINE_CANDIDATE": 0, "SYMBOL_INTERIOR_CANDIDATE": 0,
+              "WIRE_CANDIDATE": 0, "AMBIGUOUS_OR_GRAPHIC": 0,
+              "OBLIQUE_GRAPHIC_CANDIDATE": 0}
+    pages = []
+    def dist_to_segment(p, a, b):
+        dx, dy = b[0]-a[0], b[1]-a[1]
+        den = dx*dx + dy*dy
+        t = 0.0 if den == 0 else max(0.0, min(1.0, ((p[0]-a[0])*dx+(p[1]-a[1])*dy)/den))
+        return math.hypot(p[0]-a[0]-t*dx, p[1]-a[1]-t*dy)
+    for page in page_result:
+        segs = page.get("primitive_inventory", [])
+        hs, vs = [], []
+        for s in segs:
+            a,b=s["a"],s["b"]; dx,dy=abs(a[0]-b[0]),abs(a[1]-b[1])
+            if dy <= tolerance and dx >= 8:
+                hs.append((s,min(a[0],b[0]),max(a[0],b[0]),(a[1]+b[1])/2))
+            elif dx <= tolerance and dy >= 8:
+                vs.append((s,min(a[1],b[1]),max(a[1],b[1]),(a[0]+b[0])/2))
+        rectangles=[]
+        for i,h1 in enumerate(hs):
+            for h2 in hs[i+1:]:
+                if abs(h1[1]-h2[1])>tolerance or abs(h1[2]-h2[2])>tolerance:
+                    continue
+                x0,x1=(h1[1]+h2[1])/2,(h1[2]+h2[2])/2
+                y0,y1=sorted((h1[3],h2[3]))
+                if y1-y0<8: continue
+                left=any(abs(v[3]-x0)<=tolerance and abs(v[1]-y0)<=tolerance and abs(v[2]-y1)<=tolerance for v in vs)
+                right=any(abs(v[3]-x1)<=tolerance and abs(v[1]-y0)<=tolerance and abs(v[2]-y1)<=tolerance for v in vs)
+                if left and right: rectangles.append((x0,y0,x1,y1,{h1[0]["id"],h2[0]["id"]}))
+        outline=set()
+        for x0,y0,x1,y1,hids in rectangles:
+            outline.update(hids)
+            for v in vs:
+                if (abs(v[3]-x0)<=tolerance or abs(v[3]-x1)<=tolerance) and abs(v[1]-y0)<=tolerance and abs(v[2]-y1)<=tolerance:
+                    outline.add(v[0]["id"])
+        interior=set()
+        for s in segs:
+            if s["id"] in outline: continue
+            a,b=s["a"],s["b"]; sx0,sx1=sorted((a[0],b[0])); sy0,sy1=sorted((a[1],b[1]))
+            if any(sx0>=x0+1 and sx1<=x1-1 and sy0>=y0+1 and sy1<=y1-1 for x0,y0,x1,y1,_ in rectangles):
+                interior.add(s["id"])
+        marks=[m["center"] for m in page.get("junction_mark_candidates",[])]
+        rows=[]
+        for s in segs:
+            if s["id"] in outline: role="SYMBOL_OUTLINE_CANDIDATE"
+            elif s["id"] in interior: role="SYMBOL_INTERIOR_CANDIDATE"
+            elif s.get("axis")=="OBLIQUE": role="OBLIQUE_GRAPHIC_CANDIDATE"
+            elif s.get("axis") in ("H","V") and s.get("length_pt",0)>=3:
+                contact=False
+                for other in segs:
+                    if other["id"]==s["id"] or other["id"] in outline or other["id"] in interior: continue
+                    if any(dist_to_segment(p,other["a"],other["b"])<=tolerance for p in (s["a"],s["b"])):
+                        contact=True; break
+                marked=any(dist_to_segment(m,s["a"],s["b"])<=tolerance for m in marks)
+                role="WIRE_CANDIDATE" if contact or marked else "AMBIGUOUS_OR_GRAPHIC"
+            else: role="AMBIGUOUS_OR_GRAPHIC"
+            totals[role]+=1
+            rows.append({"primitive_id":s["id"],"role_candidate":role,"authority":"CANDIDATE_ONLY",
+                         "source_path_index":s.get("path_index"),"source_item_index":s.get("item_index")})
+        pages.append({"page":page["page"],"rectangular_outline_count":len(rectangles),"primitive_role_candidates":rows})
+    return {"algorithm":"independent_raw_pdf_rectangle_exclusion_and_endpoint_contact_v1",
+            "tolerance_pt":tolerance,"summary":totals,"pages":pages,
+            "authority":"NO_ELECTRICAL_ROLE_VERIFIED",
+            "limitations":["Only closed axis-aligned rectangles are detected as outlines.",
+              "Contact-supported wire candidates are geometric, not semantic or electrical proof.",
+              "Non-rectangular symbol bodies and connected decorative strokes can remain ambiguous.",
+              "The classifier is independent of production Topology but shares PyMuPDF source extraction.",
+              "No pin identity or net membership is promoted."]}
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--pdf",required=True); p.add_argument("--outdir",required=True)
@@ -16,7 +89,10 @@ def main():
     inv=extract_independent_pdf_reconstruction(str(pdf),list(range(5,12)))
     (out/"independent_pdf_forensic_ir.json").write_text(json.dumps(inv,indent=2)+"\n")
     junctions=classify_pages(pdf,range(5,12),out/"junction_evidence")
+    stroke_roles=classify_strokes_independently(inv["page_results"])
+    (out/"independent_stroke_role_candidates.json").write_text(json.dumps(stroke_roles,indent=2)+"\\n")
     summary={"source_sha256":digest,"pages":7,
+      "independent_stroke_role_candidates":stroke_roles["summary"],
       "reference_candidates":inv["summary"].get("reference_candidates",0),
       "stroke_font_text_words":inv["summary"].get("stroke_font_text_words",0),
       "stroke_font_reference_candidates":inv["summary"].get("stroke_font_reference_candidates",0),
