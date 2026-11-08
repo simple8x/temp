@@ -101,6 +101,7 @@ def resolve_ledger_candidates(ledger: dict, inventory: dict, *, radius_pt: float
             else:
                 status = "UNKNOWN_AMBIGUOUS_PRINTED_PIN_TEXT"
         rows.append({
+            "existing_reference_status": entry.get("reference_status", "UNKNOWN"),
             "page": entry.get("page"),
             "ref_candidate": entry.get("ref_candidate"),
             "parser_pin_candidate": entry.get("pin_candidate"),
@@ -123,14 +124,17 @@ def resolve_ledger_candidates(ledger: dict, inventory: dict, *, radius_pt: float
 
     counts = Counter(r.get("pin_identity_status", "UNKNOWN") for r in rows)
     already_verified = sum(e.get("reference_status") == "VERIFIED" for e in ledger.get("entries", []))
-    candidate = sum(r.get("pin_identity_status") == "PRINTED_PIN_TEXT_CANDIDATE" for r in rows)
+    candidate = sum(r.get("pin_identity_status") == "PRINTED_PIN_TEXT_CANDIDATE"
+                     and r.get("existing_reference_status") != "VERIFIED" for r in rows)
     return {
         "schema": "qi9-independent-pin-text-resolution/v1",
         "source_sha256": inventory["source_sha256"],
         "terminal_count": len(rows),
         "independently_verified_pin_facts_from_existing_review": already_verified,
         "printed_pin_text_candidates": candidate,
-        "unknown_pin_identity": len(rows) - already_verified - candidate,
+        "unknown_pin_identity": sum(r.get("existing_reference_status") != "VERIFIED"
+                                    and r.get("pin_identity_status") != "PRINTED_PIN_TEXT_CANDIDATE"
+                                    for r in rows),
         "status_counts": dict(counts),
         "symbol_identity_resolved": 0,
         "electrical_memberships_verified_by_text_extraction": 0,
@@ -145,6 +149,8 @@ def build_exception_ledger(ledger: dict, text_resolution: dict, graph_comparison
     unknown = text_resolution["unknown_pin_identity"]
     exceptions = []
     for row in text_resolution["rows"]:
+        if row.get("existing_reference_status") == "VERIFIED":
+            continue
         if row.get("pin_identity_status") != "PRINTED_PIN_TEXT_CANDIDATE":
             exceptions.append({
                 "page": row.get("page"), "ref_candidate": row.get("ref_candidate"),
