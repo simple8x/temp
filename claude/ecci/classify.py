@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 
 from .arrangement import EPS_DEFAULT, build_arrangement, independent_prims_at
 from .evidence import EvidenceItem, EvidenceRegistry, decide_role
+from .flatten import point_segment_distance
 from .ir import PageIngest, Prim, SRC_VECTOR
 
 LC_BORDER = "BORDER"
@@ -41,6 +42,8 @@ LC_OTHER = "OTHER"
 @dataclass(frozen=True)
 class ClassifyParams:
     manhattan_tol_deg: float = 0.5
+    style_min_connected: int = 3       # wire-style choice by structure: minimum connected ends   (ASSUMPTION)
+    style_dominance: float = 2.0       # ... and the winner must have this many times the runner-up (ASSUMPTION)
     border_frac: float = 0.85          # bbox >= this fraction of page width AND height
     body_max_frac: float = 0.35        # BODY bbox diagonal <= this fraction of page diagonal
     min_population: int = 3            # wire style needs this many Manhattan open lines
@@ -188,6 +191,62 @@ def _row_valid(ms: list[int], boxes, params: ClassifyParams) -> bool:
     return False
 
 
+def _connected_ends(group: list[Prim], eps: float) -> int:
+    """Number of endpoints of `group` primitives that touch ANOTHER primitive of the same group
+    (end-to-end, corner or T). Pin lines of symbols touch symbols, not each other, while wires of
+    one net touch each other: this separates the two when they share width and colour."""
+    cell = 8.0
+    grid: dict[tuple[int, int], list[int]] = {}
+    segs: list[tuple[int, tuple, tuple]] = []
+    for pi_, p in enumerate(group):
+        for _, a, b in p.segments():
+            k = len(segs)
+            segs.append((pi_, a, b))
+            for gx in range(int(math.floor((min(a[0], b[0]) - eps) / cell)), int(math.floor((max(a[0], b[0]) + eps) / cell)) + 1):
+                for gy in range(int(math.floor((min(a[1], b[1]) - eps) / cell)), int(math.floor((max(a[1], b[1]) + eps) / cell)) + 1):
+                    grid.setdefault((gx, gy), []).append(k)
+    n = 0
+    for pi_, p in enumerate(group):
+        for e in (p.pts[0], p.pts[-1]):
+            hit = False
+            for k in grid.get((int(math.floor(e[0] / cell)), int(math.floor(e[1] / cell))), ()):
+                oi, a, b = segs[k]
+                if oi != pi_ and point_segment_distance(e, a, b) <= eps:
+                    hit = True
+                    break
+            n += hit
+    return n
+
+
+def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[str]):
+    if len(pop) < params.min_population:
+        notes.append(f"wire style undetermined: only {len(pop)} Manhattan open lines")
+        return None, 0.0
+    groups: dict[tuple, list[Prim]] = {}
+    for p in pop:
+        groups.setdefault(style_key(p, params.width_round), []).append(p)
+    big = {k: v for k, v in groups.items() if len(v) >= params.min_population}
+    if len(big) >= 2:
+        # several populated styles (e.g. wires, pin lines, bus lines in different colours):
+        # choose by structure, not by count, and only if one style clearly dominates
+        score = {k: _connected_ends(v, EPS_DEFAULT) for k, v in big.items()}
+        ranked = sorted(score.items(), key=lambda kv: (-kv[1], str(kv[0])))
+        best_k, best = ranked[0]
+        second = ranked[1][1]
+        if best >= params.style_min_connected and best >= params.style_dominance * max(second, 1):
+            notes.append(f"wire style chosen by structure: {best} connected ends vs {second} for the runner-up")
+            return best_k, len(groups[best_k]) / len(pop)
+        if best > 0:
+            notes.append(f"wire style undetermined: structure ambiguous ({best} vs {second} connected ends)")
+            return None, len(groups[best_k]) / len(pop)
+    key, cnt = Counter(style_key(p, params.width_round) for p in pop).most_common(1)[0]
+    share = cnt / len(pop)
+    if share >= params.min_mode_share:
+        return key, share
+    notes.append(f"wire style undetermined: modal share {share:.2f} < {params.min_mode_share}")
+    return None, share
+
+
 def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> PageClassification:
     W, H = pi.geom.width, pi.geom.height
     page = pi.geom.page_index
@@ -219,17 +278,7 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
     pop = [p for p in pi.prims if p.kind == "polyline" and p.stroke and not p.fill
            and not p.line_closed and is_manhattan(p, params.manhattan_tol_deg)
            and p.prov.source == SRC_VECTOR and p.id not in text_ids]
-    mode: tuple | None = None
-    share = 0.0
-    if len(pop) >= params.min_population:
-        key, cnt = Counter(style_key(p, params.width_round) for p in pop).most_common(1)[0]
-        share = cnt / len(pop)
-        if share >= params.min_mode_share:
-            mode = key
-        else:
-            notes.append(f"wire style undetermined: modal share {share:.2f} < {params.min_mode_share}")
-    else:
-        notes.append(f"wire style undetermined: only {len(pop)} Manhattan open lines")
+    mode, share = _choose_wire_style(pop, params, notes)
 
     records: dict[int, ClassRecord] = {}
     diag = math.hypot(W, H)
