@@ -36,8 +36,45 @@ def _inside_or_near(point, box, radius):
             and box[1] - radius <= y <= box[3] + radius)
 
 
+def _decode_vector_text_independently(pdf_path: str, page_index: int):
+    """Decode stroke-font text from raw PDF vectors without consuming parser ledgers.
+
+    Geometry extraction is performed again from the source PDF. The existing
+    KiCad newstroke glyph/template decoder is reused; this is therefore an
+    independent source pass, not an independently implemented OCR algorithm.
+    """
+    import sys
+    package_root = Path(__file__).resolve().parent
+    if str(package_root) not in sys.path:
+        sys.path.insert(0, str(package_root))
+    from pdf2kicad.primitives import load_page
+    from pdf2kicad import glyphs, font, textdecode
+
+    pg = load_page(str(pdf_path), page_index)
+    found = glyphs.find_glyphs(pg.segs)
+    grouped = glyphs.build_words(found)
+    decoded = textdecode.decode_all(
+        grouped, font.load_templates(), glyphs.estimate_text_sizes(grouped))
+    rows = []
+    for word in decoded:
+        if not textdecode.is_text(word) or not word.text or "?" in word.text:
+            continue
+        rows.append({
+            "text": word.text.strip(),
+            "bbox": [round(float(word.x0), 4), round(float(word.y0), 4),
+                     round(float(word.x1), 4), round(float(word.y1), 4)],
+            "reference_candidate": bool(REF_RE.fullmatch(word.text.strip())),
+            "pin_token_candidate": bool(PIN_RE.fullmatch(word.text.strip())
+                                         and not REF_RE.fullmatch(word.text.strip())),
+            "source": "raw_pdf_vector_newstroke_decode_shared_decoder",
+            "decode_score": round(float(word.score), 6),
+            "rotation": int(word.rot),
+        })
+    return rows
+
+
 def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
-                                           *, symbol_context_pt: float = 72.0,
+                                           *, symbol_context_pt: float = 24.0,
                                            endpoint_tolerance_pt: float = 0.35) -> dict:
     """Discover PDF objects without reading production parser or review-ledger data."""
     path = Path(pdf_path)
@@ -117,6 +154,18 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
                         "electrical_authority": "NOT_ESTABLISHED",
                     })
 
+        # Run a second source pass for KiCad stroke-font text. The PDF text
+        # layer alone is sparse on plotted schematics and is not a complete
+        # reference/pin inventory. Preserve both sources and deduplicate only
+        # exact text + near-identical boxes.
+        vector_words = _decode_vector_text_independently(path, page_no - 1)
+        seen = {(w["text"], tuple(round(v, 1) for v in w["bbox"])) for w in words}
+        for vw in vector_words:
+            key = (vw["text"], tuple(round(v, 1) for v in vw["bbox"]))
+            if key not in seen:
+                words.append(vw)
+                seen.add(key)
+
         references = [w for w in words if w["reference_candidate"]]
         symbols = []
         terminals = []
@@ -185,6 +234,10 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
             ],
             "summary": {
                 "text_words": len(words),
+                "raw_text_layer_words": sum(w.get("source") == "pymupdf_raw_pdf_text" for w in words),
+                "stroke_font_text_words": sum(w.get("source") == "raw_pdf_vector_newstroke_decode_shared_decoder" for w in words),
+                "stroke_font_reference_candidates": sum(w.get("source") == "raw_pdf_vector_newstroke_decode_shared_decoder" and w.get("reference_candidate") for w in words),
+                "stroke_font_pin_token_candidates": sum(w.get("source") == "raw_pdf_vector_newstroke_decode_shared_decoder" and w.get("pin_token_candidate") for w in words),
                 "reference_candidates": len(references),
                 "symbol_association_candidates": len(symbols),
                 "vector_primitives": len(primitives),
@@ -213,12 +266,15 @@ def extract_independent_pdf_reconstruction(pdf_path: str, pages: list[int],
             "reads_parser_pin_candidates": False,
             "reads_parser_net_ids": False,
             "reads_bom_for_pin_or_connectivity_inference": False,
+            "reextracts_stroke_font_from_raw_pdf": True,
+            "shares_newstroke_template_decoder_with_production": True,
         },
         "policy": {
             "reference_text_is_candidate_not_verified_symbol": True,
             "nearby_geometry_is_not_symbol_ownership": True,
             "line_geometry_is_not_wire_classification": True,
             "endpoint_contact_is_not_electrical_connectivity": True,
+            "stroke_font_text_is_source_candidate_not_verified_identity": True,
             "unknowns_are_never_auto_promoted": True,
         },
         "summary": dict(totals),

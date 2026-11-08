@@ -10,12 +10,18 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import sys
+
+# Make the repository-local standalone topology core importable when this file
+# is invoked by path from the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pdf2kicad.cli import extract
 from pdf2kicad.netlist import pin_tokens, values as extract_values, infer_semantic_pin_identities, pin_identity_provenance
 from pdf2kicad.electrical_evidence import classify_page
 from pdf2kicad.connectivity_evidence import build_terminal_reference_map, resolve_terminal_ref
 from pdf2kicad.planar_graph import Primitive, build_planar_graph
+from independent_electrical_core import point_on_segment, solve as solve_independent_topology
 
 PDF = Path("QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf")
 PAGES = range(5, 12)
@@ -53,6 +59,7 @@ def main():
     results, candidate_rows, production_rows, review_rows, review_page_evidence = [], [], [], [], []
     any_empty_graph = False
     any_component_legacy_conflict = False
+    page8_independent_core_pilot = None
     for page_no in PAGES:
         comps, production_nets, words, topo = extract(str(PDF), page_no, full=True)
         topo.page_no = page_no
@@ -105,6 +112,110 @@ def main():
         })
         pin_map, claimed_pin_words = pin_tokens(topo, comps, words)
         value_map = extract_values(topo, comps, words, claimed_pin_words)
+
+        # One-page pilot: run the independent topology engine over the page-8
+        # wire primitives selected by the existing PDF classifier. This isolates
+        # topology semantics from the legacy graph implementation, but does NOT
+        # independently validate the upstream wire/symbol classifier.
+        if page_no == 8:
+            pilot_case = {
+                "segments": [{
+                    "id": primitive.primitive_id,
+                    "role": "wire",
+                    "a": [primitive.x0, primitive.y0],
+                    "b": [primitive.x1, primitive.y1],
+                } for primitive in primitives],
+                "junctions": [[float(dot[0]), float(dot[1])] for dot in topo.dots],
+            }
+            independent = solve_independent_topology(pilot_case, tolerance=NODE_TOLERANCE)
+            partition_by_segment = {
+                segment_id: partition_id
+                for partition_id, partition in enumerate(independent["partitions"])
+                for segment_id in partition
+            }
+            pilot_terminals = []
+            for terminal in topo.terminals:
+                p = [terminal.x, terminal.y]
+                candidate_ids = [
+                    primitive.primitive_id for primitive in primitives
+                    if point_on_segment(
+                        p,
+                        [primitive.x0, primitive.y0],
+                        [primitive.x1, primitive.y1],
+                        NODE_TOLERANCE,
+                    )
+                ]
+                candidate_partitions = sorted({
+                    partition_by_segment[sid] for sid in candidate_ids
+                    if sid in partition_by_segment
+                })
+                if len(candidate_partitions) == 1:
+                    independent_partition = candidate_partitions[0]
+                    mapping = "MAPPED_UNIQUE_PARTITION"
+                elif len(candidate_partitions) == 0:
+                    independent_partition = None
+                    mapping = "UNMAPPED"
+                else:
+                    independent_partition = None
+                    mapping = "AMBIGUOUS_MULTIPLE_PARTITIONS"
+                pilot_terminals.append({
+                    "terminal_xy_pdf_pt": [round(terminal.x, 4), round(terminal.y, 4)],
+                    "parser_component_candidate": terminal.comp,
+                    "independent_partition_candidate": independent_partition,
+                    "mapping": mapping,
+                    "candidate_segment_count": len(candidate_ids),
+                    "terminal_kind": terminal.kind,
+                })
+            comparable = [
+                row for row in pilot_terminals
+                if row["mapping"] == "MAPPED_UNIQUE_PARTITION"
+                and row["parser_component_candidate"] is not None
+                and row["terminal_kind"] != "nc_stub_body_end"
+            ]
+            agreement = mismatch = pair_count = 0
+            for i, left in enumerate(comparable):
+                for right in comparable[i + 1:]:
+                    parser_same = left["parser_component_candidate"] == right["parser_component_candidate"]
+                    independent_same = left["independent_partition_candidate"] == right["independent_partition_candidate"]
+                    pair_count += 1
+                    if parser_same == independent_same:
+                        agreement += 1
+                    else:
+                        mismatch += 1
+            page8_independent_core_pilot = {
+                "schema": "qi9-page8-independent-topology-pilot/v1",
+                "page": 8,
+                "source_pdf_sha256": digest,
+                "wire_input_count": len(primitives),
+                "junction_input_count": len(topo.dots),
+                "independent_partition_count": len(independent["partitions"]),
+                "independent_contact_relations": len(independent["evidence"]),
+                "terminal_count": len(topo.terminals),
+                "terminal_mapping": {
+                    "unique": sum(x["mapping"] == "MAPPED_UNIQUE_PARTITION" for x in pilot_terminals),
+                    "unmapped": sum(x["mapping"] == "UNMAPPED" for x in pilot_terminals),
+                    "ambiguous": sum(x["mapping"] == "AMBIGUOUS_MULTIPLE_PARTITIONS" for x in pilot_terminals),
+                },
+                "pairwise_partition_comparison": {
+                    "comparable_terminals": len(comparable),
+                    "pair_count": pair_count,
+                    "agreement_pairs": agreement,
+                    "mismatch_pairs": mismatch,
+                    "agreement_ratio": round(agreement / pair_count, 6) if pair_count else None,
+                },
+                "terminal_rows": pilot_terminals,
+                "authority": "DIAGNOSTIC_ONLY",
+                "wire_symbol_classifier": "INHERITED_FROM_EXISTING_PRODUCTION_TOPOLOGY; NOT_INDEPENDENTLY_VALIDATED",
+                "pin_identity": "NOT_EVALUATED",
+                "electrical_net_membership": "UNKNOWN",
+                "limitations": [
+                    "The independent topology engine receives only the production classifier's wire primitives.",
+                    "This pilot tests endpoint/T-junction/crossing partition semantics, not PDF wire-versus-symbol classification.",
+                    "Terminal pair agreement is not independent electrical ground truth.",
+                    "Labels, global power nets, and independently reviewed pin identities are not resolved.",
+                    "No candidate is promoted to VERIFIED.",
+                ],
+            }
         pin_map, explicit_pin_map, inferred_pin_ids, symbol_map = infer_semantic_pin_identities(
             topo, comps, words, pin_map, value_map
         )
@@ -348,6 +459,7 @@ def main():
         "source_repository": "simple8x/temp", "source_path": str(PDF),
         "source_sha256": digest, "source_sha256_check": "PASS",
         "pages": list(PAGES), "results": results,
+        "page8_independent_core_pilot": page8_independent_core_pilot,
         "summary": {
             "wire_primitives": sum(x["wire_primitives"] for x in results),
             "graph_nodes": sum(x["graph_nodes"] for x in results),

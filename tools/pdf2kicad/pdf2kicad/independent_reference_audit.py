@@ -199,6 +199,236 @@ def build_exception_ledger(ledger: dict, text_resolution: dict, graph_comparison
     }
 
 
+
+def _point_segment_distance(point, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    den = dx * dx + dy * dy
+    t = 0.0 if den == 0 else max(0.0, min(1.0,
+        ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / den))
+    qx, qy = a[0] + t * dx, a[1] + t * dy
+    return math.hypot(point[0] - qx, point[1] - qy)
+
+
+def build_independent_evidence_fusion(ledger: dict, vector_audit: dict,
+                                      graph_dir: str | Path, *,
+                                      pin_radius_pt: float = 24.0,
+                                      unique_margin_pt: float = 1.5,
+                                      terminal_tolerance_pt: float = 0.5) -> dict:
+    """Fuse independent PDF text and geometry into a review queue, never a netlist.
+
+    Pin-token assignment is one-to-one mutual-nearest-neighbour matching. Raw
+    H/V segment adjacency and graph-component membership remain candidates:
+    symbol strokes have not been classified as electrical wires. No candidate
+    is promoted to VERIFIED by this function.
+    """
+    source_hash = ledger.get("source_pdf_sha256")
+    if not source_hash or source_hash != vector_audit.get("source_sha256"):
+        raise ValueError("source PDF SHA-256 mismatch between ledger and vector audit")
+    if vector_audit.get("terminal_count") != len(ledger.get("entries", [])):
+        raise ValueError("terminal count mismatch between ledger and vector audit")
+
+    tokens_by_page = defaultdict(list)
+    refs_by_page = defaultdict(list)
+    for word in vector_audit.get("words", []):
+        if word.get("pin_token_candidate"):
+            tokens_by_page[word["page"]].append(word)
+        if word.get("reference_token_candidate"):
+            refs_by_page[word["page"]].append(word)
+
+    def box_distance_xy(xy, box):
+        return _box_distance(box, float(xy[0]), float(xy[1]))
+
+    rows = []
+    graph_summaries = []
+    page_graphs = {}
+    for page in sorted({int(e["page"]) for e in ledger.get("entries", [])}):
+        graph_path = Path(graph_dir) / f"page-{page}.pdf-reference-graph.json"
+        if not graph_path.exists():
+            graph_path = Path(graph_dir) / f"page-{page}.graph.json"
+        if not graph_path.exists():
+            raise FileNotFoundError(f"missing independent PDF graph for page {page}: {graph_path}")
+        graph = json.loads(graph_path.read_text(encoding="utf-8"))
+        if graph.get("source_sha256") != source_hash:
+            raise ValueError(f"source PDF SHA-256 mismatch in page {page} graph")
+        page_graphs[page] = graph
+
+    # Pair the raw-vector pin tokens and reference labels with terminals.
+    # Mutual nearest-neighbour prevents one printed glyph from being reused by
+    # several terminal candidates; this is still only a review proposal.
+    for page in sorted(page_graphs):
+        entries = [(i, e) for i, e in enumerate(ledger["entries"]) if e.get("page") == page]
+        tokens = tokens_by_page.get(page, [])
+        refs = refs_by_page.get(page, [])
+        terminal_distances = {}
+        token_best_terminal = {}
+        for global_i, entry in entries:
+            xy = entry.get("terminal_xy_pdf_pt")
+            if not xy or len(xy) != 2:
+                continue
+            ranked = sorted((box_distance_xy(xy, token["bbox"]), ti)
+                            for ti, token in enumerate(tokens))
+            terminal_distances[global_i] = ranked
+            for distance, ti in ranked:
+                prior = token_best_terminal.get(ti)
+                if prior is None or (distance, global_i) < prior:
+                    token_best_terminal[ti] = (distance, global_i)
+
+        graph = page_graphs[page]
+        segment_component = {}
+        for component_id, segment_ids in enumerate(graph.get("components", [])):
+            for segment_id in segment_ids:
+                segment_component[int(segment_id)] = component_id
+        segments = graph.get("segments", [])
+        terminal_segment = {}
+        for global_i, entry in entries:
+            xy = entry.get("terminal_xy_pdf_pt")
+            if not xy or len(xy) != 2 or not segments:
+                continue
+            ranked_segments = sorted(
+                (_point_segment_distance(xy, s["a"], s["b"]), int(s["id"]))
+                for s in segments
+            )
+            if ranked_segments and ranked_segments[0][0] <= terminal_tolerance_pt:
+                terminal_segment[global_i] = {
+                    "segment_id": ranked_segments[0][1],
+                    "distance_pt": round(ranked_segments[0][0], 4),
+                    "component_id": segment_component.get(ranked_segments[0][1]),
+                }
+
+        page_rows = []
+        for global_i, entry in entries:
+            xy = entry.get("terminal_xy_pdf_pt")
+            ranked = terminal_distances.get(global_i, [])
+            nearest = ranked[0] if ranked else None
+            second_distance = ranked[1][0] if len(ranked) > 1 else None
+            selected_token = None
+            token_status = "UNKNOWN_NO_PIN_TOKEN_WITHIN_RADIUS"
+            if nearest and nearest[0] <= pin_radius_pt:
+                token_i = nearest[1]
+                mutual = token_best_terminal.get(token_i, (None, None))[1] == global_i
+                margin = (second_distance - nearest[0]) if second_distance is not None else float("inf")
+                if mutual and margin >= unique_margin_pt:
+                    selected_token = tokens[token_i]
+                    token_status = "MUTUAL_NEAREST_PIN_TEXT_CANDIDATE"
+                elif mutual:
+                    token_status = "AMBIGUOUS_NEAR_TIE"
+                else:
+                    token_status = "TOKEN_CLOSER_TO_ANOTHER_TERMINAL"
+
+            ref_token = None
+            exact_refs = [r for r in refs if r.get("text") == entry.get("ref_candidate")]
+            if len(exact_refs) == 1:
+                ref_token = exact_refs[0]
+
+            segment = terminal_segment.get(global_i)
+            row = {
+                "entry_index": global_i, "page": page,
+                "ref_candidate": entry.get("ref_candidate"),
+                "existing_reference_status": entry.get("reference_status", "UNKNOWN"),
+                "terminal_xy_pdf_pt": xy,
+                "symbol_ownership_candidate": (
+                    "EXACT_REFERENCE_TEXT_FOUND" if ref_token else "UNKNOWN_REFERENCE_TEXT_ASSOCIATION"),
+                "reference_text_bbox": ref_token.get("bbox") if ref_token else None,
+                "symbol_ownership": "UNKNOWN",
+                "pin_text_candidate": selected_token.get("text") if selected_token else None,
+                "pin_text_bbox": selected_token.get("bbox") if selected_token else None,
+                "pin_text_status": token_status,
+                "pin_identity": "UNKNOWN",
+                "adjacent_segment_candidate": segment,
+                "wire_classification": "UNKNOWN",
+                "graph_component_candidate": segment.get("component_id") if segment else None,
+                "net_membership": "UNKNOWN",
+                "parser_net_candidate_diagnostic_only": entry.get("candidate_net_name_diagnostic_only"),
+                "review_status": "REQUIRES_SOURCE_CROP_REVIEW",
+                "promotion_policy": "NEVER_AUTO_PROMOTE",
+            }
+            rows.append(row)
+            page_rows.append(row)
+
+        terminal_points = [e.get("terminal_xy_pdf_pt") for _, e in entries
+                           if e.get("terminal_xy_pdf_pt") and len(e["terminal_xy_pdf_pt"]) == 2]
+        adjacent_segments = 0
+        for segment in segments:
+            if any(_point_segment_distance(p, segment["a"], segment["b"]) <= terminal_tolerance_pt
+                   for p in terminal_points):
+                adjacent_segments += 1
+        graph_summaries.append({
+            "page": page, "raw_hv_segment_count": len(segments),
+            "terminal_adjacent_segment_candidates": adjacent_segments,
+            "terminal_segment_candidates": sum(1 for r in page_rows if r["adjacent_segment_candidate"]),
+            "symbol_wire_classification_verified": 0,
+        })
+
+    # Compare pairwise partitions only where both independent graph component
+    # candidates and parser net-name candidates exist. Agreement is diagnostic,
+    # never proof, because the graph still includes unclassified symbol strokes.
+    pair_comparisons = agreement_pairs = mismatch_pairs = 0
+    comparable_by_page = defaultdict(list)
+    for row in rows:
+        if row["graph_component_candidate"] is not None and row["parser_net_candidate_diagnostic_only"]:
+            comparable_by_page[row["page"]].append(row)
+    for page_rows in comparable_by_page.values():
+        for i, left in enumerate(page_rows):
+            for right in page_rows[i + 1:]:
+                same_parser = left["parser_net_candidate_diagnostic_only"] == right["parser_net_candidate_diagnostic_only"]
+                same_graph = left["graph_component_candidate"] == right["graph_component_candidate"]
+                pair_comparisons += 1
+                if same_parser == same_graph:
+                    agreement_pairs += 1
+                else:
+                    mismatch_pairs += 1
+
+    pin_candidate_count = sum(r["pin_text_status"] == "MUTUAL_NEAREST_PIN_TEXT_CANDIDATE" for r in rows)
+    reference_candidate_count = sum(r["symbol_ownership_candidate"] == "EXACT_REFERENCE_TEXT_FOUND" for r in rows)
+    terminal_segment_count = sum(r["adjacent_segment_candidate"] is not None for r in rows)
+    verified_existing = sum(e.get("reference_status") == "VERIFIED" for e in ledger.get("entries", []))
+    return {
+        "schema": "qi9-independent-evidence-fusion-review/v1",
+        "source_sha256": source_hash,
+        "terminal_count": len(rows),
+        "stages": {
+            "wire_vs_symbol_vs_graphic": {
+                "raw_hv_segments": sum(x["raw_hv_segment_count"] for x in graph_summaries),
+                "terminal_adjacent_segment_candidates": sum(x["terminal_adjacent_segment_candidates"] for x in graph_summaries),
+                "verified_wire_classifications": 0,
+                "status": "CANDIDATE_ONLY_UNCLASSIFIED_STROKES",
+            },
+            "symbol_ownership": {
+                "exact_reference_text_candidates": reference_candidate_count,
+                "independently_verified_existing_facts": verified_existing,
+                "newly_verified": 0,
+                "status": "CANDIDATE_ONLY",
+            },
+            "pin_identity": {
+                "mutual_nearest_one_to_one_text_candidates": pin_candidate_count,
+                "unknown_or_ambiguous": sum(r["pin_text_status"] != "MUTUAL_NEAREST_PIN_TEXT_CANDIDATE"
+                                            and r["existing_reference_status"] != "VERIFIED" for r in rows),
+                "newly_verified": 0,
+                "status": "CANDIDATE_ONLY",
+            },
+            "net_membership": {
+                "terminal_segment_component_candidates": terminal_segment_count,
+                "pair_comparisons": pair_comparisons,
+                "partition_agreement_pairs": agreement_pairs,
+                "partition_mismatch_pairs": mismatch_pairs,
+                "newly_verified_memberships": 0,
+                "status": "DIAGNOSTIC_ONLY",
+            },
+        },
+        "page_summaries": graph_summaries,
+        "review_rows": rows,
+        "policy": {
+            "one_printed_token_is_never_reused_for_multiple_terminals": True,
+            "raw_hv_geometry_is_not_assumed_to_be_wire": True,
+            "reference_text_proximity_is_not_symbol_ownership": True,
+            "pin_text_match_is_not_pin_identity": True,
+            "graph_component_is_not_verified_net_membership": True,
+            "no_candidate_is_auto_promoted": True,
+        },
+        "electrical_signoff": "BLOCKED",
+    }
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--pdf", required=True)
@@ -206,6 +436,8 @@ def main(argv=None):
     ap.add_argument("--graph-dir", required=True)
     ap.add_argument("--outdir", required=True)
     ap.add_argument("--pages", nargs="+", type=int, default=list(range(5, 12)))
+    ap.add_argument("--vector-audit")
+    ap.add_argument("--fused-out")
     args = ap.parse_args(argv)
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
@@ -218,6 +450,13 @@ def main(argv=None):
         if path.exists():
             comparisons.append(json.loads(path.read_text(encoding="utf-8")))
     exceptions = build_exception_ledger(ledger, resolution, comparisons)
+    if args.fused_out:
+        if not args.vector_audit or not args.graph_dir:
+            raise SystemExit("--fused-out requires --vector-audit and --graph-dir")
+        vector_audit = json.loads(Path(args.vector_audit).read_text(encoding="utf-8"))
+        fused = build_independent_evidence_fusion(ledger, vector_audit, args.graph_dir)
+        Path(args.fused_out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.fused_out).write_text(json.dumps(fused, indent=2), encoding="utf-8")
     (out / "independent_pdf_text_inventory.json").write_text(json.dumps(inventory, indent=2), encoding="utf-8")
     (out / "independent_pin_text_resolution.json").write_text(json.dumps(resolution, indent=2), encoding="utf-8")
     (out / "independent_reference_exception_ledger.json").write_text(json.dumps(exceptions, indent=2), encoding="utf-8")
@@ -228,6 +467,9 @@ def main(argv=None):
         "unknown_pin_identity": resolution["unknown_pin_identity"],
         "independent_graph_pages": exceptions["independent_graph"]["pages_compared"],
         "electrical_signoff": "BLOCKED",
+        "fused_review_rows": len(fused["review_rows"]) if args.fused_out else 0,
+        "mutual_nearest_pin_text_candidates": fused["stages"]["pin_identity"]["mutual_nearest_one_to_one_text_candidates"] if args.fused_out else 0,
+        "partition_mismatch_pairs": fused["stages"]["net_membership"]["partition_mismatch_pairs"] if args.fused_out else 0,
         "status": exceptions["status"],
     }, indent=2))
 

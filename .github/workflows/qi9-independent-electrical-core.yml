@@ -1,0 +1,84 @@
+name: qi9-independent-electrical-core
+on:
+  push:
+    branches: [experiment/qi9-independent-electrical-core]
+    paths:
+      - ".github/workflows/qi9-independent-electrical-core.yml"
+      - "tools/pdf2kicad/independent_electrical_core.py"
+      - "tools/pdf2kicad/independent_pdf_audit.py"
+      - "tools/pdf2kicad/path_role_classifier.py"
+      - "tools/pdf2kicad/path_role_audit.py"
+      - "tools/pdf2kicad/pdf_native_object_audit.py"
+      - "tools/pdf2kicad/pdf_symbol_body_candidates.py"
+      - "tools/pdf2kicad/native_symbol_body_audit.py"
+      - "tools/pdf2kicad/native_symbol_body_survey.py"
+      - "tools/pdf2kicad/native_symbol_review_pack.py"
+      - "tools/pdf2kicad/tests_independent/**"
+      - "tools/pdf2kicad/fixtures/**"
+      - "tools/pdf2kicad/pdf2kicad/independent_pdf_reconstruction.py"
+      - "tools/pdf2kicad/pdf2kicad/electrical_evidence.py"
+      - "tools/pdf2kicad/pdf2kicad/glyphs.py"
+      - "tools/pdf2kicad/pdf2kicad/font.py"
+      - "tools/pdf2kicad/pdf2kicad/textdecode.py"
+      - "tools/pdf2kicad/pdf2kicad/primitives.py"
+      - "tools/pdf2kicad/data/newstroke_ascii.json"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install bounded dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "PyMuPDF==1.26.7" "numpy==2.2.6" pytest
+      - name: Validate adversarial labeled oracle
+        run: |
+          PYTHONPATH=tools/pdf2kicad pytest -q tools/pdf2kicad/tests_independent
+          python tools/pdf2kicad/independent_electrical_core.py --out independent-oracle-report.json
+      - name: Audit path-group classifier on schematic page 6
+        run: |
+          python tools/pdf2kicad/path_role_audit.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --page 6 --out independent-pdf-audit/page6_path_role_audit.json
+      - name: Preserve native PDF drawing objects and render page 6
+        run: |
+          python tools/pdf2kicad/pdf_native_object_audit.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --page 6 --outdir native-pdf-object-audit --dpi 120
+      - name: Evaluate native symbol boundaries against manual page-6 oracle
+        run: |
+          python tools/pdf2kicad/native_symbol_body_audit.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --page 6 \
+            --oracle tools/pdf2kicad/fixtures/page06_manual_symbol_oracle.json \
+            --out native-pdf-object-audit/page06_symbol_body_evaluation.json
+      - name: Survey native symbol-shape candidates across schematic pages 5-11
+        run: |
+          python tools/pdf2kicad/native_symbol_body_survey.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --pages 5-11 --out native-pdf-object-audit/schematic_pages_5_11_symbol_survey.json
+      - name: Build human-review overlays and blank manual-label templates for pages 5-11
+        run: |
+          python tools/pdf2kicad/native_symbol_review_pack.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --pages 5-11 --outdir native-pdf-object-audit/manual-review-pack --dpi 100
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qi9-independent-electrical-core
+          path: |
+            independent-oracle-report.json
+            independent-pdf-audit/**
+            native-pdf-object-audit/**
+          if-no-files-found: warn
+          retention-days: 7

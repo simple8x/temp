@@ -2,11 +2,12 @@ name: schematicnetlist-qi9-independent-benchmark
 
 on:
   push:
-    branches: [experiment/schematicnetlist-qi9]
+    branches: [experiment/schematicnetlist-qi9, experiment/qi9-ecsr-core]
     paths:
       - ".github/workflows/schematicnetlist-qi9.yml"
       - "tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py"
       - "tools/pdf2kicad/forensics/symbol_ownership_candidates.py"
+      - "tools/pdf2kicad/forensics/pin_connectivity_solver.py"
   workflow_dispatch:
 
 permissions:
@@ -19,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: experiment/schematicnetlist-qi9
+          ref: ${{ github.ref_name }}
 
       - uses: actions/setup-python@v5
         with:
@@ -116,10 +117,15 @@ jobs:
           python tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py --self-test
           python tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" --outdir schematicnetlist-qi9-output/independent-fusion --pages 5 6 7 8 9 10 11 --scale 3.0
 
-      - name: Resolve reference-to-vector-component candidates (never promote ownership)
+      - name: Run ECSR topology + global reference assignment (never promote ownership)
         run: |
           python tools/pdf2kicad/forensics/symbol_ownership_candidates.py --self-test
-          python tools/pdf2kicad/forensics/symbol_ownership_candidates.py --input schematicnetlist-qi9-output/independent-fusion/independent_ocr_vector_fusion.json --output schematicnetlist-qi9-output/symbol_ownership_candidates.json
+          python tools/pdf2kicad/forensics/symbol_ownership_candidates.py --input schematicnetlist-qi9-output/independent-fusion/independent_ocr_vector_fusion.json --output schematicnetlist-qi9-output/ecsr_geometric_core.json
+
+      - name: Resolve pin identity candidates and connectivity partitions (never promote)
+        run: |
+          python tools/pdf2kicad/forensics/pin_connectivity_solver.py --self-test
+          python tools/pdf2kicad/forensics/pin_connectivity_solver.py --input schematicnetlist-qi9-output/ecsr_geometric_core.json --output schematicnetlist-qi9-output/pin_connectivity_candidates.json
 
       - name: Upload benchmark artifacts
         if: always()

@@ -1,0 +1,275 @@
+{
+  "corpus_id": "qi9-topology-adversarial-v1",
+  "provenance": "Manually specified synthetic oracle fixtures. Segment roles and expected partitions are explicit labels, not inferred from PDF.",
+  "cases": [
+    {
+      "id": "endpoint_join",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "a",
+          "role": "wire",
+          "a": [
+            0,
+            0
+          ],
+          "b": [
+            10,
+            0
+          ]
+        },
+        {
+          "id": "b",
+          "role": "wire",
+          "a": [
+            10,
+            0
+          ],
+          "b": [
+            20,
+            0
+          ]
+        }
+      ],
+      "expected_partitions": [
+        [
+          "a",
+          "b"
+        ]
+      ]
+    },
+    {
+      "id": "t_junction",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "main",
+          "role": "wire",
+          "a": [
+            0,
+            0
+          ],
+          "b": [
+            20,
+            0
+          ]
+        },
+        {
+          "id": "branch",
+          "role": "wire",
+          "a": [
+            10,
+            0
+          ],
+          "b": [
+            10,
+            10
+          ]
+        }
+      ],
+      "expected_partitions": [
+        [
+          "branch",
+          "main"
+        ]
+      ]
+    },
+    {
+      "id": "bare_crossing",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "h",
+          "role": "wire",
+          "a": [
+            0,
+            5
+          ],
+          "b": [
+            10,
+            5
+          ]
+        },
+        {
+          "id": "v",
+          "role": "wire",
+          "a": [
+            5,
+            0
+          ],
+          "b": [
+            5,
+            10
+          ]
+        }
+      ],
+      "expected_partitions": [
+        [
+          "h"
+        ],
+        [
+          "v"
+        ]
+      ]
+    },
+    {
+      "id": "crossing_with_dot",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "h",
+          "role": "wire",
+          "a": [
+            0,
+            5
+          ],
+          "b": [
+            10,
+            5
+          ]
+        },
+        {
+          "id": "v",
+          "role": "wire",
+          "a": [
+            5,
+            0
+          ],
+          "b": [
+            5,
+            10
+          ]
+        }
+      ],
+      "junctions": [
+        [
+          5,
+          5
+        ]
+      ],
+      "expected_partitions": [
+        [
+          "h",
+          "v"
+        ]
+      ]
+    },
+    {
+      "id": "explicit_no_connect",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "h",
+          "role": "wire",
+          "a": [
+            0,
+            5
+          ],
+          "b": [
+            10,
+            5
+          ]
+        },
+        {
+          "id": "v",
+          "role": "wire",
+          "a": [
+            5,
+            0
+          ],
+          "b": [
+            5,
+            10
+          ]
+        }
+      ],
+      "no_connects": [
+        [
+          5,
+          5
+        ]
+      ],
+      "expected_partitions": [
+        [
+          "h"
+        ],
+        [
+          "v"
+        ]
+      ]
+    },
+    {
+      "id": "near_but_disconnected",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "a",
+          "role": "wire",
+          "a": [
+            0,
+            0
+          ],
+          "b": [
+            10,
+            0
+          ]
+        },
+        {
+          "id": "b",
+          "role": "wire",
+          "a": [
+            10.1,
+            0
+          ],
+          "b": [
+            20,
+            0
+          ]
+        }
+      ],
+      "expected_partitions": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
+    },
+    {
+      "id": "symbol_graphic_not_wire",
+      "oracle_case": true,
+      "segments": [
+        {
+          "id": "wire",
+          "role": "wire",
+          "a": [
+            0,
+            0
+          ],
+          "b": [
+            10,
+            0
+          ]
+        },
+        {
+          "id": "symbol",
+          "role": "symbol",
+          "a": [
+            10,
+            0
+          ],
+          "b": [
+            20,
+            0
+          ]
+        }
+      ],
+      "expected_partitions": [
+        [
+          "wire"
+        ]
+      ]
+    }
+  ]
+}

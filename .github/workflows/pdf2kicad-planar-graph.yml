@@ -73,6 +73,16 @@ jobs:
           --ledger reference_connectivity_review.json
           --out independent_reference_audit/independent_vector_text_audit.json
           --pages 5 6 7 8 9 10 11
+      - name: Fuse independent pin-text, reference, wire-adjacency, and graph candidates
+        run: >-
+          python -m pdf2kicad.independent_reference_audit
+          --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf"
+          --ledger reference_connectivity_review.json
+          --graph-dir pdf_reference_graph
+          --outdir independent_reference_audit
+          --pages 5 6 7 8 9 10 11
+          --vector-audit independent_reference_audit/independent_vector_text_audit.json
+          --fused-out independent_reference_audit/independent_evidence_fusion_review.json
       - name: Build ledger-independent PDF forensic inventory (pages 5-11)
         run: >-
           python -m pdf2kicad.independent_pdf_reconstruction
