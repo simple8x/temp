@@ -112,10 +112,7 @@ jobs:
       - name: Run independent OCR TSV and vector geometry fusion
         run: |
           python tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py --self-test
-          python tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py \\
-            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \\
-            --outdir schematicnetlist-qi9-output/independent-fusion \\
-            --pages 5 6 7 8 9 10 11 --scale 3.0
+          python tools/pdf2kicad/forensics/independent_ocr_vector_fusion.py --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" --outdir schematicnetlist-qi9-output/independent-fusion --pages 5 6 7 8 9 10 11 --scale 3.0
 
       - name: Upload benchmark artifacts
         if: always()
