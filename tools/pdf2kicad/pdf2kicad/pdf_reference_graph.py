@@ -86,32 +86,71 @@ def build_pdf_reference_graph(pdf_path: str, page_number: int, *, rotate: int = 
     for segment_id, segment in enumerate(segments):
         segment["id"] = segment_id
     uf = _UF(len(segments))
-    endpoints = [(i, p) for i,s in enumerate(segments) for p in (s["a"],s["b"])]
+    from bisect import bisect_left, bisect_right
+
+    # Spatial hash for endpoint contacts: avoids the former O(E^2) pair scan.
+    cell_size = max(tolerance, 1e-6)
+    endpoint_cells = defaultdict(list)
+    def cell_of(p, size):
+        return (math.floor(p[0] / size), math.floor(p[1] / size))
+    endpoints = [(i, p) for i, s in enumerate(segments) for p in (s["a"], s["b"])]
+    for i, p in endpoints:
+        cx, cy = cell_of(p, cell_size)
+        for gx in (cx - 1, cx, cx + 1):
+            for gy in (cy - 1, cy, cy + 1):
+                for j, q in endpoint_cells[(gx, gy)]:
+                    if math.hypot(p[0] - q[0], p[1] - q[1]) <= tolerance:
+                        uf.union(i, j)
+        endpoint_cells[(cx, cy)].append((i, p))
+
+    # Junction-dot lookup is also spatially indexed.
+    dot_cells = defaultdict(list)
+    dot_size = max(junction_radius, 1e-6)
+    for dot in dots:
+        dot_cells[cell_of(dot, dot_size)].append(dot)
     def dot_near(p):
-        return any(math.hypot(p[0]-d[0],p[1]-d[1]) <= junction_radius for d in dots)
-    for ix,(i,p) in enumerate(endpoints):
-        for j,q in endpoints[ix+1:]:
-            if math.hypot(p[0]-q[0],p[1]-q[1]) <= tolerance:
-                uf.union(i,j)
+        cx, cy = cell_of(p, dot_size)
+        return any(
+            math.hypot(p[0] - d[0], p[1] - d[1]) <= junction_radius
+            for gx in (cx - 1, cx, cx + 1)
+            for gy in (cy - 1, cy, cy + 1)
+            for d in dot_cells[(gx, gy)]
+        )
+
+    # Sweep candidate verticals by x-range for each horizontal segment.
+    # Work is proportional to actual x-overlap candidates, not all segment pairs.
+    vertical_by_x = defaultdict(list)
+    for segment in segments:
+        if segment["axis"] == "v":
+            x = (segment["a"][0] + segment["b"][0]) / 2
+            y0, y1 = sorted((segment["a"][1], segment["b"][1]))
+            vertical_by_x[x].append((y0, y1, segment))
+    vertical_xs = sorted(vertical_by_x)
     intersections = []
-    for i,a in enumerate(segments):
-        ax0,ax1=sorted((a["a"][0],a["b"][0])); ay0,ay1=sorted((a["a"][1],a["b"][1]))
-        for j in range(i+1,len(segments)):
-            b=segments[j]
-            if a["axis"] == b["axis"]: continue
-            h,v=(a,b) if a["axis"]=="h" else (b,a)
-            p=(v["a"][0],h["a"][1])
-            if (min(h["a"][0],h["b"][0])-tolerance <= p[0] <= max(h["a"][0],h["b"][0])+tolerance
-                and min(v["a"][1],v["b"][1])-tolerance <= p[1] <= max(v["a"][1],v["b"][1])+tolerance):
-                endpoint_hit = any(math.hypot(p[0]-e[0],p[1]-e[1])<=tolerance
-                                   for e in (h["a"],h["b"],v["a"],v["b"]))
+    for h in (s for s in segments if s["axis"] == "h"):
+        hy = (h["a"][1] + h["b"][1]) / 2
+        hx0, hx1 = sorted((h["a"][0], h["b"][0]))
+        left = bisect_left(vertical_xs, hx0 - tolerance)
+        right = bisect_right(vertical_xs, hx1 + tolerance)
+        for vx in vertical_xs[left:right]:
+            for vy0, vy1, v in vertical_by_x[vx]:
+                if not (vy0 - tolerance <= hy <= vy1 + tolerance):
+                    continue
+                p = (vx, hy)
+                endpoint_hit = any(
+                    math.hypot(p[0] - e[0], p[1] - e[1]) <= tolerance
+                    for e in (h["a"], h["b"], v["a"], v["b"])
+                )
                 marked = dot_near(p)
-                if marked or (endpoint_hit and dot_near(p)):
-                    uf.union(a["id"],b["id"])
-                intersections.append({"point":p,"segments":[a["id"],b["id"]],
-                                       "explicit_dot_candidate":marked,
-                                       "endpoint_contact":endpoint_hit,
-                                       "decision":"JOIN" if marked else "CROSSING_OR_T_CONTACT_UNRESOLVED"})
+                if marked:
+                    uf.union(h["id"], v["id"])
+                intersections.append({
+                    "point": p,
+                    "segments": [h["id"], v["id"]],
+                    "explicit_dot_candidate": marked,
+                    "endpoint_contact": endpoint_hit,
+                    "decision": "JOIN" if marked else "CROSSING_OR_T_CONTACT_UNRESOLVED",
+                })
     groups=defaultdict(list)
     for s in segments: groups[uf.find(s["id"])].append(s["id"])
     components=[sorted(v) for _,v in sorted(groups.items(),key=lambda kv:min(kv[1]))]
