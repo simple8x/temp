@@ -66,3 +66,23 @@ def test_filtered_oblique_rectangle_edges_do_not_break_union_find(tmp_path):
     ids = [segment["id"] for segment in graph["segments"]]
     assert ids == list(range(len(ids)))
     assert len(graph["components"]) >= 1
+
+def test_pairwise_partition_comparison_is_diagnostic_only():
+    graph = {
+        "page": 5,
+        "segments": [{"id": 0, "a": (0, 0), "b": (20, 0)}],
+        "components": [[0]],
+    }
+    evidence = {"memberships": [
+        {"ref": "R1", "pin_identity": "1", "net": "N1", "terminal_index": 0,
+         "terminal": {"x": 5, "y": 0}},
+        {"ref": "R2", "pin_identity": "1", "net": "N1", "terminal_index": 1,
+         "terminal": {"x": 15, "y": 0}},
+    ]}
+    result = compare_parser_memberships(graph, evidence)
+    partition = result["partition_comparison"]
+    assert partition["pair_comparisons"] == 1
+    assert partition["agreement_pairs"] == 1
+    assert partition["mismatch_pairs"] == 0
+    assert result["independently_verified_electrical_memberships"] == 0
+    assert "DIAGNOSTIC_ONLY" in partition["authority"]
