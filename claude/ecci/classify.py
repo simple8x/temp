@@ -317,6 +317,14 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
             continue
         cand_box[ci] = box
     row_size, row_id = _text_rows(cand_box, params) if cand_box else ({}, {})
+    if cand_box:
+        # vertical text (rotated 90 deg, e.g. pin names on left/right pins): same test on transposed boxes
+        tb = {c: (b[1], b[0], b[3], b[2]) for c, b in cand_box.items()
+              if c not in row_size and b[2] - b[0] > EPS_DEFAULT and b[3] - b[1] > EPS_DEFAULT}
+        vsize, vid = _text_rows(tb, params) if tb else ({}, {})
+        for c, n in vsize.items():
+            row_size[c] = n
+            row_id[c] = -1 - vid[c]
     # second, row-independent kind of text: a small component built from many tiny 2-point strokes
     # (a lone glyph or a short label such as "R2" never forms a row of >= glyph_min_row components)
     seg_max = params.glyph_seg_max_frac * diag_page

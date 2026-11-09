@@ -145,3 +145,15 @@ def test_t14_text_strokes_do_not_define_wire_style():
     assert wires
     assert all(cls.records[p.id].cls == LC_WIRE for p in wires), \
         [cls.records[p.id].cls for p in wires]
+
+
+def test_t15_vertical_text_row_is_text_too():
+    # a column of glyph-like stroke clusters rotated 90 degrees: transposed rows must be recognised
+    from ecci.classify import LC_TEXT
+    content = b""
+    for k in range(6):
+        y = 100 + 9 * k
+        content += (f"0.4 w 100 {y} m 104 {y} l S 104 {y} m 104 {y + 6} l S 100 {y + 3} m 104 {y + 3} l S\n").encode()
+    pi = ingest_pdf(one_page(content, size=(300, 300))).pages[0]
+    cls = classify_page(pi)
+    assert any(r.cls == LC_TEXT for r in cls.records.values())

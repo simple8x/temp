@@ -12,7 +12,7 @@ Claims checked per case:
 
 import math
 
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, assume, given, settings, strategies as st
 
 from ecci.classify import classify_page
 from ecci.ingest_vector import ingest_pdf
@@ -35,6 +35,11 @@ def test_random_placement_matches_oracle(name, orient, s, tx, ty):
     sym = LIB.symbols[name]
     content = draw_symbol(sym, orient, s, (tx, ty), body_w=0.9, pin_w=0.45)
     pi = ingest_pdf(one_page(WIRES + content, size=(W, H))).pages[0]
+    # the fixed wires are scenery: skip placements whose symbol would touch them (a wire crossing a body is
+    # a different scene, reported as UNEXPECTED_CONTACT by design), not placements the detector gets wrong
+    from ecci.flatten import point_segment_distance
+    wsegs = [(a, b) for p in pi.prims[:3] for _, a, b in p.segments()]
+    assume(all(point_segment_distance(q, a, b) > 3.0 for p in pi.prims[3:] for q in p.pts for a, b in wsegs))
     results = detect_pins(pi, classify_page(pi), list(LIB.symbols.values()))
     assert len(results) == 1, [r.cluster.bbox for r in results]
     cr = results[0]
