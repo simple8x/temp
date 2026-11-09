@@ -14,6 +14,7 @@ from ecci.symbols import strip_stubs  # noqa: E402
 
 root, proj = pathlib.Path(sys.argv[1]), sys.argv[2]
 maxn = int(sys.argv[3]) if len(sys.argv) > 3 else 8
+only = sys.argv[4] if len(sys.argv) > 4 else None
 pdir = root / proj
 sch = sorted((pdir / "src").rglob("*.kicad_sch"))[0]
 pins, info = gt_pins(str(sch), str(sorted(pdir.glob("*.xml"))[0]))
@@ -38,6 +39,8 @@ for (ref, lid), ps in sorted(byref.items()):
     if "UNIQUE" in st:
         ok += 1
         continue
+    if only and only not in lid:
+        continue
     fails += 1
     if fails <= maxn:
         sd = lib.symbols.get(lid.split(":")[-1]) or lib.symbols.get(lid)
@@ -49,10 +52,10 @@ for (ref, lid), ps in sorted(byref.items()):
                   "segs", len(c.cluster.segs), "bbox", [round(v, 1) for v in c.cluster.bbox],
                   "stripped", None if sp is None else (len(sp[1]), len(sp[0].segs)))
         if fails <= 2:
-            for c in cand[:2]:
+            for c in cand[:3]:
                 for i in c.cluster.prim_ids:
                     q = by_id[i]
-                    print("CL      prim", i, cls.records[i].cls, round(q.stroke_w, 2), [(round(a, 1), round(b, 1)) for a, b in q.pts][:5])
+                    print("CL      prim", i, cls.records[i].cls, round(q.stroke_w, 2), len(q.pts), q.line_closed, [(round(a, 1), round(b, 1)) for a, b in q.pts][:4])
         if not cand:
             print("CL    no cluster near", round(cx, 1), round(cy, 1))
 from ecci.classify import style_key  # noqa: E402

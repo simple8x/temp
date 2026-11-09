@@ -41,7 +41,9 @@ jobs:
           python claude/tools/gt_probe.py gt_out 'sonde xilinx' 453.6 197 453.6 213 2>&1 | tee -a gt_probe.log
       - name: Cluster diagnostics
         run: |
-          for p in 'sonde xilinx' interf_u up-down-c; do python claude/tools/gt_clusters.py gt_out "$p" 6 2>&1 | tee -a gt_clusters.log; done
+          python claude/tools/gt_clusters.py gt_out Class-D 2 VDC 2>&1 | tee gt_clusters.log
+          python claude/tools/gt_clusters.py gt_out laser_driver 2 Generic_Opamp 2>&1 | tee -a gt_clusters.log
+          python claude/tools/gt_clusters.py gt_out royer1 2 L_Small 2>&1 | tee -a gt_clusters.log
       - name: Style diagnostics
         run: python claude/tools/gt_styles.py gt_out interf_u Q17ng "sonde xilinx" 2>&1 | tee gt_styles.log
       - name: Format discovery (first lines of one sheet and one netlist)
