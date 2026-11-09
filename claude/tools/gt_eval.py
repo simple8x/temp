@@ -338,8 +338,13 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
                     if c_ is None or sd is None:
                         print("DUMP   diag", tag, "n/a", "lib_known", sd is not None)
                         continue
-                    for ln in diagnose_match(c_, sd)[:6]:
+                    for ln in diagnose_match(c_, sd)[:2]:
                         print("DUMP   diag", tag, ln)
+                    if tag == "stripped":
+                        ps_ = sorted((by_id_d[i_] for i_ in c_.prim_ids), key=lambda q_: min(a_[0] for a_ in q_.pts))
+                        for q_ in ps_[:5] + ps_[-5:]:
+                            print("DUMP   edge", q_.id, cls.records[q_.id].cls, round(q_.stroke_w, 2), getattr(q_, "stroke_color", None),
+                                  len(q_.pts), q_.line_closed, [(round(a_, 1), round(b_, 1)) for a_, b_ in q_.pts][:3])
             for q in pi.prims:
                 if any(math.hypot(a - gp.x, b - gp.y) <= 45 for a, b in q.pts) and cls.records[q.id].cls != "TEXT":
                     print("DUMP   prim", q.id, cls.records[q.id].cls, round(q.stroke_w, 2), getattr(q, "stroke_color", None), len(q.pts),
