@@ -138,7 +138,7 @@ function renderCandidates(){
  const box=$("candidateList");box.innerHTML="";
  const refs=template?.references||[];
  if(!refs.length){box.textContent="No reference candidates in this page template.";return;}
- for(const r of refs){const b=document.createElement("button");b.textContent=r.reference+" · "+(r.best_candidate_path_id||"no candidate")+" · "+r.candidate_count+" candidate(s)";b.addEventListener("click",()=>{$("reference").value=r.reference;draft=r.best_candidate_bbox?{bbox:r.best_candidate_bbox.slice()}:null;draw();});box.appendChild(b);}
+ for(const r of refs){const b=document.createElement("button");b.textContent=r.reference+" · "+(r.best_candidate_path_id||"no candidate")+" · "+r.candidate_count+" candidate(s)";b.addEventListener("click",()=>{$("reference").value=r.reference;draft=r.best_candidate_bbox?{bbox:r.best_candidate_bbox.slice(),pdf_object_ids:r.best_candidate_path_id?[String(r.best_candidate_path_id)]:[]}:null;draw();});box.appendChild(b);}
 }
 async function loadPage(){
  if(!index)return;
@@ -187,7 +187,7 @@ $("add").addEventListener("click",()=>{
  const kind=$("kind").value,decision=$("decision").value,now=Date.now();
  const id="p"+page+"-ann-"+(anns().length+1)+"-"+now.toString(36);
  const row={annotation_id:id,kind,status:decisionStatus(decision,kind),subject:{type:kind.toLowerCase(),id,reference:$("reference").value.trim()||undefined,pin_number:$("pin").value.trim()||undefined},evidence:[{source_type:"PDF_RENDER",source_id:template.source_image,page,note:$("note").value.trim()}],reviewers:[{reviewer_id:reviewer,decision,note:$("note").value.trim()}]};
- if(draft)row.geometry=JSON.parse(JSON.stringify(draft));
+ if(draft){row.geometry=JSON.parse(JSON.stringify(draft));for(const objectId of (draft.pdf_object_ids||[]))row.evidence.push({source_type:"PDF_VECTOR",source_id:objectId,page,note:"Candidate PDF object selected for human review; candidate status is not proof."});}
  if(kind==="CONNECTIVITY"){
   const from=$("fromEndpoint").value,to=$("toEndpoint").value;
   if(!from||!to||from===to){setStatus("Connectivity requires two different existing annotation endpoints.");return;}
