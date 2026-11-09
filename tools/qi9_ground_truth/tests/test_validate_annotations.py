@@ -69,6 +69,21 @@ class AnnotationValidationTests(unittest.TestCase):
         doc["annotations"][1]["status"] = "UNKNOWN"
         self.assertEqual(validate(doc), [])
 
+    def test_mixed_reviewer_decisions_cannot_be_verified(self):
+        doc = base_document()
+        doc["annotations"][0]["reviewers"][1]["decision"] = "DISAGREE"
+        self.assertTrue(any("unanimous CONFIRM" in e for e in validate(doc)))
+
+    def test_duplicate_reviewer_id_is_blocked(self):
+        doc = base_document()
+        doc["annotations"][0]["reviewers"][1]["reviewer_id"] = "reviewer-a"
+        self.assertTrue(any("reviewer IDs must be unique" in e for e in validate(doc)))
+
+    def test_non_finite_geometry_is_blocked(self):
+        doc = base_document()
+        doc["annotations"][0]["geometry"] = {"point": [float("nan"), 2]}
+        self.assertTrue(any("finite numbers" in e for e in validate(doc)))
+
 
 if __name__ == "__main__":
     unittest.main()
