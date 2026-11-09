@@ -39,11 +39,9 @@ jobs:
           python claude/tools/gt_profile.py gt_out video 1 2>&1 | tee -a gt_profile.log
       - name: Evaluate ECCI against KiCad ground truth
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
-        env:
-          MSG: ${{ github.event.head_commit.message }}
         run: |
-          # commit message tag "[only:proj#p1,other]" restricts the run to those projects/pages
-          only=$(printf '%s' "$MSG" | grep -o '\[only:[^]]*\]' | head -1 | sed 's/\[only://;s/\]//' || true)
+          # claude/tools/gt_only.txt (comma list "proj" or "proj#pN"; empty = everything) restricts the run
+          only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)
           echo "GT_ONLY='$only'"
           GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
       - name: Misses by library symbol
