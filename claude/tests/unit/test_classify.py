@@ -2,7 +2,7 @@ import pytest
 
 from ecci.classify import (LC_BODY, LC_BORDER, LC_OTHER, LC_WIRE, ClassifyParams, classify_page,
                            is_manhattan)
-from ecci.classify import style_key
+from ecci.classify import LC_TEXT, style_key
 from ecci.ingest_vector import ingest_pdf
 from pdfgen import one_page
 
@@ -164,3 +164,36 @@ def test_style_with_negligible_total_length_loses_even_if_perfectly_connected():
     mag = _chain(300, 8, 4, "0.5 0 0.5", x0=40)                                                     # 8 x 4, chained
     res = _style_of(green + mag)
     assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def _pairs(y, n, rgb, length=50, x0=20):
+    """n lines of `length`; consecutive pairs touch (half of all ends are connected), pairs 30pt apart."""
+    out = b""
+    for k in range(n):
+        base = x0 + (length * 2 + 30) * (k // 2)
+        a = base + (length if k % 2 else 0)
+        out += _seg(a, y, a + length, y, rgb)
+    return out
+
+
+def test_colour_that_draws_closed_outlines_cannot_be_the_wire_style():
+    boxes = b"".join(f"0.5 0 0 RG 0.45 w {x} 300 m {x + 20} 300 l {x + 20} 320 l {x} 320 l h S\n".encode()
+                     for x in (20, 80))
+    red_chain = _chain(100, 8, 50, "0.5 0 0")            # strongly connected, but red also draws bodies
+    green = _pairs(200, 8, "0 0.6 0")                     # weaker structure
+    res = _style_of(boxes + red_chain + green)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_style_of_page_spanning_lines_is_sheet_furniture_not_wire():
+    furniture = _chain(100, 8, 200, "0.5 0 0", x0=0)     # title-block like: mean length far above 0.2 x diagonal
+    green = _pairs(300, 8, "0 0.6 0")
+    res = _style_of(furniture + green)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_lone_glyph_of_tiny_strokes_is_text_without_any_row():
+    pts = [(300, 200), (301.2, 200.9), (300.2, 201.6), (301.4, 202.3), (300.3, 203.0), (301.1, 203.8), (300.1, 204.4)]
+    c = b"".join(_seg(a[0], a[1], b[0], b[1], "0.5 0 0") for a, b in zip(pts, pts[1:]))
+    res = _style_of(c)
+    assert all(r.cls == LC_TEXT for r in res.records.values())
