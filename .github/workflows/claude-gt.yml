@@ -43,7 +43,7 @@ jobs:
           # claude/tools/gt_only.txt (comma list "proj" or "proj#pN"; empty = everything) restricts the run
           only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)
           echo "GT_ONLY='$only'"
-          GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
+          GT_DUMP_LIB="$(cat claude/tools/gt_dump.txt 2>/dev/null | tr -d ' \n')" GT_DUMP_MAX=1 GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
       - name: Misses by library symbol
         if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log

@@ -1,2 +1,1 @@
-# comma list: project or project#pN; empty = all
-jetson-agx-thor-baseboard#p1,multichannel_mixer
+video,jetson-agx-thor-baseboard,vme-wren

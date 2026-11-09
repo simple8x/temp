@@ -314,19 +314,20 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
     n_local_pins = sum(1 for gp in vis if comp_of(gp.x, gp.y) is not None)
     n_local_found = sum(1 for k in used_gt if comp_of(vis[k].x, vis[k].y) is not None)
     miss = collections.Counter()
-    dump_n = [0]
+    dump_n = collections.Counter()
     miss_lib = collections.Counter()
     for k, gp in enumerate(vis):
         if k in used_gt or comp_of(gp.x, gp.y) is None:
             continue
         near = [c for c in clusters if c.cluster.bbox[0] - 4 <= gp.x <= c.cluster.bbox[2] + 4
                 and c.cluster.bbox[1] - 4 <= gp.y <= c.cluster.bbox[3] + 4]
-        if DUMP_LIB and DUMP_LIB in gp.lib_id and dump_n[0] < DUMP_MAX:
-            dump_n[0] += 1
+        dl = next((d for d in DUMP_LIB.split(",") if d and d in gp.lib_id), None)
+        if dl and dump_n[dl] < DUMP_MAX:
+            dump_n[dl] += 1
             print("DUMP", name, gp.ref, gp.lib_id, "pin", gp.number, "at", round(gp.x, 1), round(gp.y, 1),
                   "near_clusters", [(c.resolution.status, len(c.cluster.prim_ids)) for c in near][:3])
             for q in pi.prims:
-                if any(math.hypot(a - gp.x, b - gp.y) <= 22 for a, b in q.pts):
+                if any(math.hypot(a - gp.x, b - gp.y) <= 14 for a, b in q.pts):
                     print("DUMP   prim", q.id, cls.records[q.id].cls, round(q.stroke_w, 2), getattr(q, "stroke_color", None), len(q.pts),
                           q.line_closed, [(round(a, 1), round(b, 1)) for a, b in q.pts][:5])
         if not near:
