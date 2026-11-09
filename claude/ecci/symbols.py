@@ -166,7 +166,7 @@ def _rebuild(cid: int, ids: tuple[int, ...], by_id: dict) -> Cluster:
     return Cluster(cid, ids, (min(xs), min(ys), max(xs), max(ys)), tuple(verts), tuple(segs))
 
 
-def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: float = 0.6):
+def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: float = 1.5):
     """Split off dangling stubs: 2-vertex primitives with exactly one end touching the rest of the cluster and
     the other end free. In some plotters (KiCad) pin lines are drawn in the body colour and land in the cluster;
     the template model has no pin lines, so matching is retried on the cluster WITHOUT them.

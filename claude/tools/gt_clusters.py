@@ -50,4 +50,12 @@ for (ref, lid), ps in sorted(byref.items()):
                   "stripped", None if sp is None else (len(sp[1]), len(sp[0].segs)))
         if not cand:
             print("CL    no cluster near", round(cx, 1), round(cy, 1))
+from ecci.classify import style_key  # noqa: E402
+for c in clusters:
+    if len(c.cluster.prim_ids) > 150:
+        h = collections.Counter((style_key(by_id[i]), by_id[i].kind, len(by_id[i].pts) if len(by_id[i].pts) < 4 else 4)
+                                for i in c.cluster.prim_ids)
+        print("CL BIG cluster", c.cluster.id, len(c.cluster.prim_ids), "wire_style", cls.wire_style)
+        for k, n in h.most_common(8):
+            print("CL    ", n, k)
 print("CL SUMMARY", proj, "instances ok", ok, "fail", fails)
