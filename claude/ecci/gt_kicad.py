@@ -104,6 +104,18 @@ def read_sch(path: str) -> dict:
         for p in children(sym, "property"):
             if len(p) > 2 and p[1] == "Reference":
                 ref = str(p[2])
+        # hierarchical sheets: the annotation that the netlist uses lives in the instance record, not in the
+        # Reference property (which can be stale). One instance -> use it; several -> ambiguous, excluded.
+        inst_refs = []
+        inst = child(sym, "instances")
+        for pr in (children(inst, "project") if inst else []):
+            for pa in children(pr, "path"):
+                rn = child(pa, "reference")
+                if rn is not None and len(rn) > 1:
+                    inst_refs.append(str(rn[1]))
+        multi_inst = len(set(inst_refs)) > 1
+        if len(set(inst_refs)) == 1:
+            ref = inst_refs[0]
         mir = child(sym, "mirror")
         unit = child(sym, "unit")
         conv = child(sym, "convert")
@@ -112,7 +124,7 @@ def read_sch(path: str) -> dict:
                        "at": (num(at[1]), num(at[2]), num(at[3]) if len(at) > 3 else 0.0),
                        "mirror": str(mir[1]) if mir and len(mir) > 1 else None,
                        "unit": int(unit[1]) if unit else 1, "convert": int(conv[1]) if conv else 1,
-                       "ref": ref})
+                       "ref": ref, "multi_instance": multi_inst})
     wires = []
     for w in children(tree, "wire"):
         pts = child(w, "pts")
@@ -166,6 +178,9 @@ def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[lis
     for sp in sch["placed"]:
         ref = sp["ref"] or ""
         if ref.startswith("#") or sp["lib_id"].startswith("power:"):
+            continue
+        if sp.get("multi_instance"):      # same sheet instantiated several times: (ref, pin) is not one pin
+            n_amb_inst += 1
             continue
         sym = sch["libs"].get(sp["lib_name"] or sp["lib_id"])
         if sym is None:

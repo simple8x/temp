@@ -77,24 +77,81 @@ def shortest_path(final_edges, a, b):
     return out[::-1]
 
 
-def evaluate(pdir: pathlib.Path) -> dict:
-    t0 = time.time()
+def _grid(pts):
+    return {(round(x / 0.5), round(y / 0.5)) for x, y in pts}
+
+
+def _near(g, x, y):
+    cx, cy = round(x / 0.5), round(y / 0.5)
+    return any((cx + i, cy + j) in g for i in (-1, 0, 1) for j in (-1, 0, 1))
+
+
+def map_pages_to_sheets(pdf_path: str, schs: list, npages: int):
+    """Page -> sheet by geometry only: the share of a sheet's wire end points (mm -> pt) found among the end
+    points of the page's polylines. Both come from KiCad (file vs plot), neither from ECCI. A page is mapped only
+    if one sheet clearly wins (>= 0.8 and >= 0.2 above the runner-up) and no other page claims the same sheet."""
+    from ecci.gt_kicad import MM_TO_PT, read_sch
+    sheets = []
+    for sp in schs:
+        sc = read_sch(str(sp))
+        sheets.append([(x * MM_TO_PT, y * MM_TO_PT) for w in sc["wires"] for x, y in w])
+    res = {}
+    ingest = ingest_pdf(pdf_path, pages=list(range(npages)))
+    for k, pg in enumerate(ingest.pages):
+        g = _grid([q for p in pg.prims for q in (p.pts[0], p.pts[-1])])
+        sc = [sum(_near(g, x, y) for x, y in ends) / max(1, len(ends)) if ends else 0.0 for ends in sheets]
+        order = sorted(range(len(sc)), key=lambda i: -sc[i])
+        best = order[0]
+        second = sc[order[1]] if len(order) > 1 else 0.0
+        if sc[best] >= 0.8 and sc[best] - second >= 0.2:
+            res[k] = (best, round(sc[best], 3), round(second, 3))
+        else:
+            res[k] = (None, round(sc[best], 3), round(second, 3))
+    claimed = collections.Counter(v[0] for v in res.values() if v[0] is not None)
+    return {k: (v if v[0] is None or claimed[v[0]] == 1 else (None, v[1], v[2])) for k, v in res.items()}
+
+
+def evaluate_project(pdir: pathlib.Path) -> list[dict]:
     xml = sorted(pdir.glob("*.xml"))
     pdf = sorted(pdir.glob("*.pdf"))
     if not xml or not pdf:
-        return {"project": pdir.name, "skipped": "no pdf/netlist"}
+        return [{"project": pdir.name, "skipped": "no pdf/netlist"}]
     schs = sorted((pdir / "src").rglob("*.kicad_sch"))
     with pikepdf.open(pdf[0]) as p:
         npages = len(p.pages)
-    if npages != 1 or len(schs) != 1:
-        return {"project": pdir.name, "skipped": f"hierarchical or multi-page ({npages} pages, {len(schs)} sheets)"}
+    if npages == 1 and len(schs) == 1:
+        return [evaluate(pdir, 0, schs[0], pdir.name)]
+    if npages > 40 or len(schs) > 40:
+        return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
+    mp = map_pages_to_sheets(str(pdf[0]), schs, npages)
+    out = []
+    for k, (si, score, second) in sorted(mp.items()):
+        name = f"{pdir.name}#p{k}"
+        if si is None:
+            out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})"})
+            continue
+        try:
+            r = evaluate(pdir, k, schs[si], name)
+            r["sheet"] = str(schs[si].relative_to(pdir / "src"))
+            r["map_score"] = score
+        except Exception as e:  # noqa: BLE001
+            r = {"project": name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
+        out.append(r)
+    return out
+
+
+def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str) -> dict:
+    t0 = time.time()
+    xml = sorted(pdir.glob("*.xml"))
+    pdf = sorted(pdir.glob("*.pdf"))
+    schs = [sch]
     pins, info = gt_pins(str(schs[0]), str(xml[0]))
     vis = [p for p in pins if not p.hidden and p.net]
     with tempfile.TemporaryDirectory() as td:
         lib_path = pathlib.Path(td) / "embedded.kicad_sym"
         lib_path.write_text(embedded_library_text(str(schs[0])))
         lib = load_library(str(lib_path))
-    pi = ingest_pdf(str(pdf[0]), pages=[0]).pages[0]
+    pi = ingest_pdf(str(pdf[0]), pages=[page]).pages[0]
     cls, clusters, built, res = analyze_page(pi, lib.symbols.values())
     g = built.graph
     prim = {p.id: p for p in pi.prims}
@@ -176,7 +233,7 @@ def evaluate(pdir: pathlib.Path) -> dict:
     detected = pair_metrics(matched, lambda a, b: res.pair_status(a, b))
     nets = res.nets
     return {
-        "project": pdir.name, "seconds": round(time.time() - t0, 1), "gt": info,
+        "project": name, "seconds": round(time.time() - t0, 1), "gt": info,
         "gt_pins": len(pins), "gt_pins_visible_with_net": len(vis),
         "oracle_attached_pins": len(attached), "detected_pins": len(tips), "detected_matched_gt": len(matched),
         "prims": len(pi.prims), "wire_objects": sum(1 for o in g.objects if o.kind == "WIRE"),
@@ -196,18 +253,19 @@ def main(root: str) -> int:
     tot = collections.Counter()
     for d in sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir()):
         try:
-            r = evaluate(d)
+            rs = evaluate_project(d)
         except Exception as e:  # noqa: BLE001  one project must never hide the others
-            r = {"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
-        print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
-        for mode in ("oracle", "detected"):
-            m = r.get(mode)
-            if m:
-                for k in ("pos", "neg"):
-                    tot[f"{mode}_{k}"] += m[k]
-                for lv in LEVELS:
-                    tot[f"{mode}_TP_{lv}"] += m[lv]["tp"]
-                    tot[f"{mode}_FP_{lv}"] += m[lv]["fp"]
+            rs = [{"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}]
+        for r in rs:
+            print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
+            for mode in ("oracle", "detected"):
+                m = r.get(mode)
+                if m:
+                    for k in ("pos", "neg"):
+                        tot[f"{mode}_{k}"] += m[k]
+                    for lv in LEVELS:
+                        tot[f"{mode}_TP_{lv}"] += m[lv]["tp"]
+                        tot[f"{mode}_FP_{lv}"] += m[lv]["fp"]
     out = {}
     for mode in ("oracle", "detected"):
         tpv, fpv = tot[f"{mode}_TP_VERIFIED"], tot[f"{mode}_FP_VERIFIED"]
