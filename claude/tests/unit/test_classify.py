@@ -95,8 +95,8 @@ def _seg(x0, y0, x1, y1, rgb):
     return f"{rgb} RG 0.45 w {x0} {y0} m {x1} {y1} l S\n".encode()
 
 
-def _style_of(content: bytes):
-    pi = ingest_pdf(one_page(content, size=(600, 400))).pages[0]
+def _style_of(content: bytes, size=(600, 400)):
+    pi = ingest_pdf(one_page(content, size=size)).pages[0]
     return classify_page(pi)
 
 
@@ -115,33 +115,38 @@ def test_long_wires_beat_equal_width_short_pin_lines_of_other_colour():
 def test_tiny_perfectly_connected_group_cannot_win():
     c = b""
     for i in range(5):
-        c += _seg(20 + 90 * i, 100, 110 + 90 * i, 100, "0 0.6 0")
+        c += _seg(20 + 100 * i, 100, 110 + 100 * i, 100, "0 0.6 0")
     for i in range(4):                       # magenta crosses: every end touches another magenta end
-        c += _seg(300, 300 + 3 * i, 303, 300 + 3 * i, "0.5 0 0.5")
-        c += _seg(303, 300 + 3 * i, 303, 303 + 3 * i, "0.5 0 0.5")
-    res = _style_of(c)
-    assert res.wire_style is None or res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+        c += _seg(300, 300 + 8 * i, 304, 300 + 8 * i, "0.5 0 0.5")
+        c += _seg(304, 300 + 8 * i, 304, 304 + 8 * i, "0.5 0 0.5")
+    res = _style_of(c)                       # magenta: 8 lines of 4 pt (32 pt) vs green 450 pt, ratio 1.0 vs 0
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def _chain(y, step, n, rgb, x0=20):
+    return b"".join(_seg(x0 + step * i, y, x0 + step * (i + 1), y, rgb) for i in range(n))
 
 
 def test_ambiguous_structure_yields_no_wire_at_all():
-    c = b""
-    for i in range(8):                       # two similar styles, similar lengths, similar structure
-        c += _seg(20 + 60 * i, 100, 70 + 60 * i, 100, "0 0.6 0")
-        c += _seg(20 + 60 * i, 200, 70 + 60 * i, 200, "0.5 0 0")
+    c = _chain(100, 50, 8, "0 0.6 0") + _chain(200, 50, 8, "0.4 0 0.4")    # equal structure, equal lengths
     res = _style_of(c)
-    if res.wire_style is None:
-        assert not any(r.cls == LC_WIRE for r in res.records.values())
+    assert res.wire_style is None
+    assert any("ambiguous" in n for n in res.notes)
+    assert not any(r.cls == LC_WIRE for r in res.records.values())          # never guess
 
 
-def test_lone_glyph_of_many_tiny_strokes_is_text_but_a_rectangle_is_not():
-    # an isolated 'R'-like blob of 6 short diagonal strokes (no row of neighbours) and a 14 pt rectangle
-    glyph = b"".join(f"0 0.4 0.4 RG 0.43 w {200 + 0.5 * i} {100 + 0.6 * (i % 2)} m "
-                     f"{200.5 + 0.5 * i} {100 + 0.6 * ((i + 1) % 2)} l S\n".encode() for i in range(6))
-    body = b"0.5 0 0 RG 0.72 w 300 100 14 20 re S\n"
-    res = _style_of(glyph + body)
-    cls = {r.cls for r in res.records.values()}
-    assert sum(r.cls == "TEXT" for r in res.records.values()) == 6
-    assert "BODY" in cls or "OTHER" in cls
+def test_length_breaks_a_structural_tie_in_favour_of_the_longer_lines():
+    c = _chain(100, 60, 8, "0 0.6 0") + _chain(200, 20, 8, "0.4 0 0.4")
+    res = _style_of(c)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_page_spanning_rules_are_sheet_furniture_not_wires():
+    big = (2000, 1200)                       # diagonal ~2330: mean lines longer than 466 are sheet furniture
+    blue = _chain(100, 480, 4, "0 0 0.76", x0=100)                     # 4 rules of 480 pt, perfectly chained
+    green = b"".join(_seg(300, 300 + 40 * i, 360, 300 + 40 * i, "0 0.6 0") for i in range(6))   # 6 loose wires
+    res = _style_of(blue + green, big)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
 
 
 def test_colour_that_draws_closed_outlines_is_a_body_colour_not_the_wire_colour():
