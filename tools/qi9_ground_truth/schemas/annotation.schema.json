@@ -69,7 +69,7 @@
               "required": ["reviewer_id", "decision"],
               "properties": {
                 "reviewer_id": {"type": "string", "minLength": 1},
-                "decision": {"enum": ["CONFIRM", "REJECT", "DISAGREE"]},
+                "decision": {"enum": ["CONFIRM", "REJECT", "DISAGREE", "UNKNOWN"]},
                 "note": {"type": "string"}
               }
             }
