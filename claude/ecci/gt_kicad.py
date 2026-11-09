@@ -201,8 +201,21 @@ def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[lis
     dup = {k for k, n in seen.items() if n > 1}
     pins = [GtPin(p.ref, p.number, p.x, p.y, None if (p.ref, p.number) in dup else p.net, p.hidden, p.lib_id)
             for p in pins]
+    # physical consistency: two visible pins at the same point are one electrical point in KiCad. If the netlist puts
+    # them on different nets, the computed position of one of those symbols is wrong (orientation we could not decide):
+    # drop every pin of the symbols involved from scoring instead of scoring against a bad reference.
+    at: dict[tuple[int, int], list[int]] = {}
+    for k, q in enumerate(pins):
+        if q.net and not q.hidden:
+            at.setdefault((round(q.x / 0.1), round(q.y / 0.1)), []).append(k)
+    bad_refs: set[str] = set()
+    for ks in at.values():
+        if len({pins[k].net for k in ks}) > 1:
+            bad_refs |= {pins[k].ref for k in ks}
+    if bad_refs:
+        pins = [GtPin(q.ref, q.number, q.x, q.y, None if q.ref in bad_refs else q.net, q.hidden, q.lib_id) for q in pins]
     return pins, {"calibration": cal, "order": order, "placed": len(sch["placed"]), "wires": len(sch["wires"]),
-                  "ambiguous_pins": len(dup), "ambiguous_instances": n_amb_inst}
+                  "ambiguous_pins": len(dup), "ambiguous_instances": n_amb_inst, "inconsistent_refs": len(bad_refs)}
 
 
 def embedded_library_text(sch_path: str) -> str:

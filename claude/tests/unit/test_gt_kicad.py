@@ -96,3 +96,19 @@ def test_embedded_library_round_trips_through_load_library(tmp_path):
     lib = load_library(str(out))
     assert "Device:R" in lib.symbols
     assert {p.number for p in lib.symbols["Device:R"].pins} == {"1", "2"}
+
+
+def test_coincident_pins_on_different_nets_drop_the_symbols_from_scoring(tmp_path):
+    s, x = files(tmp_path)
+    import pathlib
+    r1 = '(symbol (lib_id "Device:R") (at 50 50 90) (mirror x) (unit 1) (property "Reference" "R1" (at 0 0 0)))'
+    r2 = r1.replace('"R1"', '"R2"')
+    sp = pathlib.Path(s)
+    txt = sp.read_text()
+    assert r1 in txt
+    sp.write_text(txt.replace(r1, r1 + "\n " + r2))
+    # R2 sits exactly on R1 but the netlist puts its pin 1 on another net than R1 pin 1: physically impossible
+    pathlib.Path(x).write_text(XML.replace('<node ref="R1" pin="2"/>', '<node ref="R1" pin="2"/><node ref="R2" pin="1"/>'))
+    pins, info = gt_pins(s, x)
+    assert info["inconsistent_refs"] == 2
+    assert all(p.net is None for p in pins)
