@@ -77,6 +77,9 @@ def shortest_path(final_edges, a, b):
     return out[::-1]
 
 
+MAX_PAGE_PINS = 450
+
+
 def _grid(pts):
     return {(round(x / 0.5), round(y / 0.5)) for x, y in pts}
 
@@ -147,6 +150,8 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str) -> dic
     schs = [sch]
     pins, info = gt_pins(str(schs[0]), str(xml[0]))
     vis = [p for p in pins if not p.hidden and p.net]
+    if len(vis) > MAX_PAGE_PINS:      # pair metrics are O(n^2) with a path search per false positive
+        return {"project": name, "skipped": f"{len(vis)} scoreable pins on one page > {MAX_PAGE_PINS} (pair metric budget)"}
     with tempfile.TemporaryDirectory() as td:
         lib_path = pathlib.Path(td) / "embedded.kicad_sym"
         lib_path.write_text(embedded_library_text(str(schs[0])))
