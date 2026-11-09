@@ -130,6 +130,23 @@ def _proper_cross(a, b, c, d, eps: float) -> tuple[float, float] | None:
     return x, y
 
 
+def _inside_closed_path(point: tuple[float, float], pts: list[tuple[float, float]]) -> bool:
+    """Even-odd point-in-polygon test for flattened closed PDF paths."""
+    x, y = point
+    inside = False
+    if len(pts) < 3:
+        return False
+    j = len(pts) - 1
+    for i, (xi, yi) in enumerate(pts):
+        xj, yj = pts[j]
+        if (yi > y) != (yj > y):
+            cross_x = (xj - xi) * (y - yi) / (yj - yi) + xi
+            if x < cross_x:
+                inside = not inside
+        j = i
+    return inside
+
+
 def find_dots(pi: PageIngest, cls: PageClassification, prm: RulesParams = RulesParams(),
               clusters: list[ClusterResult] | None = None) -> dict:
     """Filled, round, small BODY primitives that touch no other BODY primitive (so they are not
@@ -138,13 +155,19 @@ def find_dots(pi: PageIngest, cls: PageClassification, prm: RulesParams = RulesP
     body = [p for p in pi.prims if cls.records[p.id].cls == LC_BODY and p.kind == "polyline"]
     cand = {p.id: _is_disc(p, W, H, prm) for p in body}
     cand = {i: d for i, d in cand.items() if d is not None}
-    # Filled circular artwork inside a resolved symbol body is not a schematic junction.
-    if clusters:
-        for pid, disc in list(cand.items()):
-            cx, cy = disc[0]
-            if any(cr.pins and cr.cluster.bbox[0] <= cx <= cr.cluster.bbox[2]
-                   and cr.cluster.bbox[1] <= cy <= cr.cluster.bbox[3] for cr in clusters):
-                cand.pop(pid)
+    # A filled disc inside another closed body path is symbol artwork, not a junction.
+    # This check is deliberately geometry-only and also works when adding the disc to the
+    # body cluster would otherwise prevent the symbol template from resolving.
+    for pid, disc in list(cand.items()):
+        center = disc[0]
+        if any(other.id != pid and other.line_closed and _inside_closed_path(center, other.pts)
+               for other in body):
+            cand.pop(pid)
+            continue
+        if clusters and any(cr.pins and cr.cluster.bbox[0] <= center[0] <= cr.cluster.bbox[2]
+                            and cr.cluster.bbox[1] <= center[1] <= cr.cluster.bbox[3]
+                            for cr in clusters):
+            cand.pop(pid)
     if not cand:
         return {}
     g = build_arrangement(body, prm.eps)
@@ -375,7 +398,8 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                     offenders[pid] = "wire crosses the symbol body"
                     break
         for c in cr.conflicts:
-            offenders.setdefault(c.wire_prim, "wire touches the symbol body away from any pin")
+            if c.wire_prim not in excluded_wire_prims:
+                offenders.setdefault(c.wire_prim, "wire touches the symbol body away from any pin")
         for pid, why in sorted(offenders.items()):
             for r in related:
                 cannot.append((f"w:{pid}", r, f"C4 cluster {cid}: {why}"))
