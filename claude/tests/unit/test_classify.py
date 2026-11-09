@@ -154,3 +154,13 @@ def test_colour_that_draws_closed_outlines_is_a_body_colour_not_the_wire_colour(
         c += _seg(20 + 60 * i, 300, 70 + 60 * i, 300, g)
     res = _style_of(c)
     assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_slanted_open_lines_in_the_wire_colour_do_not_disqualify_it():
+    g = "0 0.6 0"
+    c = b"".join(_seg(20 + 60 * i, 300, 70 + 60 * i, 300, g) for i in range(8))
+    c += b"".join(_seg(40 + 30 * i, 200, 45 + 30 * i, 205, g) for i in range(4))     # bus-entry-like diagonals
+    c += b"".join(_seg(20 + 30 * i, 100, 40 + 30 * i, 100, "0.5 0 0") for i in range(10))
+    c += "0.5 0 0 RG 0.72 w 100 150 14 20 re S 150 150 14 20 re S\n".encode()
+    res = _style_of(c)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)

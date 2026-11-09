@@ -244,11 +244,11 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
         min_len = params.style_min_mean_len_frac * diag_page
         big = {k: v for k, v in big.items()
                if sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) >= min_len} or big
-        # ... nor a colour that also draws closed or slanted outlines (symbol bodies): wires are open and axis-aligned
+        # ... nor a colour that also draws closed outlines (symbol bodies; slanted open lines such as bus entries do not count)
         if body_colours:
             clean = {k: v for k, v in big.items() if body_colours.get(k[1], 0) < params.style_body_marks}
             if clean and len(clean) < len(big):
-                notes.append(f"wire style: {len(big) - len(clean)} style(s) share a colour with closed/slanted outlines")
+                notes.append(f"wire style: {len(big) - len(clean)} style(s) share a colour with closed outlines")
                 big = clean
                 if len(big) == 1:
                     k = next(iter(big))
@@ -340,11 +340,11 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
     body_colours: dict = {}
     for p in pi.prims:
         if (p.kind == "polyline" and p.stroke and not p.fill and p.id not in text_ids
-                and p.prov.source == SRC_VECTOR and (p.line_closed or not is_manhattan(p, params.manhattan_tol_deg))):
+                and p.prov.source == SRC_VECTOR and p.line_closed):
             c = style_key(p, params.width_round)[1]
             body_colours[c] = body_colours.get(c, 0) + 1
     if body_colours:
-        notes.append("body-colour marks (closed/slanted outlines): " + ", ".join(
+        notes.append("body-colour marks (closed outlines): " + ", ".join(
             f"{c[1:]}={n}" if isinstance(c, tuple) else f"{c}={n}" for c, n in sorted(body_colours.items(), key=str)))
     mode, share = _choose_wire_style(pop, params, notes, diag_page, body_colours)
     no_wire = mode == AMBIGUOUS_STYLE
