@@ -8,6 +8,7 @@ A GT pair is positive iff KiCad's netlist puts both pins in one net. Only single
 projects are evaluated; hierarchical designs are reported as skipped.
 """
 import collections
+import signal
 import json
 import math
 import pathlib
@@ -78,6 +79,11 @@ def shortest_path(final_edges, a, b):
 
 
 MAX_PAGE_PINS = 450
+PAGE_SECONDS = 150            # wall-clock budget per page; a page over budget is reported, never silently dropped
+
+
+def _on_alarm(signum, frame):
+    raise TimeoutError(f"page exceeded {PAGE_SECONDS}s")
 
 
 def _grid(pts):
@@ -134,7 +140,13 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
             out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})"})
             continue
         try:
-            r = evaluate(pdir, k, schs[si], name)
+            print("GT_PAGE_START", name, flush=True)
+            signal.signal(signal.SIGALRM, _on_alarm)
+            signal.alarm(PAGE_SECONDS)
+            try:
+                r = evaluate(pdir, k, schs[si], name)
+            finally:
+                signal.alarm(0)
             r["sheet"] = str(schs[si].relative_to(pdir / "src"))
             r["map_score"] = score
         except Exception as e:  # noqa: BLE001
