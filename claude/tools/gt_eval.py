@@ -335,7 +335,12 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
             for c_ in clusters:
                 bb = c_.cluster.bbox
                 if bb[0] - 60 <= gp.x <= bb[2] + 60 and bb[1] - 60 <= gp.y <= bb[3] + 60:
-                    print("DUMP   nearby cluster", c_.resolution.status, len(c_.cluster.prim_ids), [round(v, 1) for v in bb])
+                    print("DUMP   nearby cluster", c_.resolution.status, len(c_.cluster.prim_ids), [round(v, 1) for v in bb],
+                          "syms", c_.resolution.symbols[:3], "note", c_.resolution.note[:60], "npins", len(c_.pins),
+                          "tips", [tuple(round(v, 1) for v in pn.tip) for pn in c_.pins[:3]])
+                    if c_.pins:
+                        same = [g_ for g_ in vis if g_.ref == gp.ref][:3]
+                        print("DUMP     gt pins of", gp.ref, [(g_.number, round(g_.x, 1), round(g_.y, 1)) for g_ in same])
             if near and sd_ok(gp):
                 from ecci.symbols import relaxations
                 by_r = {q.id: q for q in pi.prims}
