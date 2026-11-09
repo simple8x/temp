@@ -173,3 +173,60 @@ def test_detect_pins_is_repeatable_on_the_same_classification():
     a = detect_pins(pi, cls, syms)
     b = detect_pins(pi, cls, syms)
     assert [p.tip for cr in a for p in cr.pins] == [p.tip for cr in b for p in cr.pins]
+
+
+MULTI_UNIT = """(kicad_symbol_lib (version 20231120) (generator test)
+  (symbol "MU" (pin_names (offset 0))
+    (symbol "MU_0_1"
+      (rectangle (start -5.08 -7.62) (end 5.08 7.62) (stroke (width 0.254) (type default)) (fill (type background))))
+    (symbol "MU_1_1"
+      (pin input line (at -7.62 5.08 0) (length 2.54) (name "A") (number "1"))
+      (pin input line (at -7.62 2.54 0) (length 2.54) (name "B") (number "2")))
+    (symbol "MU_2_1"
+      (pin input line (at -7.62 -2.54 0) (length 2.54) (name "C") (number "3"))
+      (pin input line (at -7.62 -5.08 0) (length 2.54) (name "D") (number "4")))))
+"""
+
+
+def _multi_unit_lib(tmp_path):
+    f = tmp_path / "mu.kicad_sym"
+    f.write_text(MULTI_UNIT)
+    return load_library(str(f))
+
+
+def _draw_unit(lib, unit_name, with_pins=True):
+    from render_kicad import draw_symbol
+    return b"0 0.6 0 RG 0.45 w 10 190 m 40 190 l S\n0.5 0 0 RG\n" + draw_symbol(
+        lib.symbols[unit_name], "r0", 6.0, (150.0, 100.0), body_w=0.45, pin_w=0.45, pins=with_pins)
+
+
+def test_p8_units_of_one_part_are_told_apart_by_the_drawn_pin_lines(tmp_path):
+    lib = _multi_unit_lib(tmp_path)
+    assert set(lib.symbols) == {"MU", "MU#u2"}
+    for unit in ("MU", "MU#u2"):
+        pi = ingest_pdf(one_page(_draw_unit(lib, unit), size=(W, H))).pages[0]
+        res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
+        assert len(res) == 1
+        cr = res[0]
+        assert cr.resolution.status == "UNIQUE" and unit in cr.resolution.symbols
+        # a vertically mirrored other unit puts its pins at the same places: the numbers stay ambiguous (never guessed)
+        assert cr.resolution.id_state == "AMBIGUOUS" and all(len(p.numbers) == 2 for p in cr.pins)
+        assert len(cr.pins) == 2
+        # the lines picked the unit, so they are NOT a second independent source: pins stay candidates
+        assert all(p.pos_state == POS_CANDIDATE and len(p.evidence) == 1 and p.evidence[0].startswith("S1:") for p in cr.pins)
+
+
+def test_p8b_without_pin_lines_the_units_stay_ambiguous(tmp_path):
+    lib = _multi_unit_lib(tmp_path)
+    pi = ingest_pdf(one_page(_draw_unit(lib, "MU", with_pins=False), size=(W, H))).pages[0]
+    res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
+    assert len(res) == 1 and res[0].resolution.status == "DIFFERENT_TIP_SETS" and res[0].pins == []
+
+
+def test_p8c_pin_lines_of_the_wrong_unit_do_not_select_the_other_unit(tmp_path):
+    # body of MU drawn with the pin lines of NO unit (lines at unrelated places): still ambiguous, never guessed
+    lib = _multi_unit_lib(tmp_path)
+    ops = _draw_unit(lib, "MU", with_pins=False) + b"0.5 0 0 RG 0.45 w 120 140 m 100 140 l S 120 90 m 100 90 l S\n"
+    pi = ingest_pdf(one_page(ops, size=(W, H))).pages[0]
+    res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
+    assert res and all(r.resolution.status != "UNIQUE" for r in res)

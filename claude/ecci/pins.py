@@ -17,6 +17,7 @@ part of the matched body cluster, S1 already used it, so the pair stays dependen
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 
 from .classify import LC_WIRE, PageClassification
@@ -119,6 +120,55 @@ def _wire_segments(pi: PageIngest, cls: PageClassification, exclude: set[int]):
     return out
 
 
+def _part_stem(name: str) -> str:
+    """'SIM4X32_2' and 'SIM4X32#u2' are units of the part 'SIM4X32'."""
+    return re.sub(r"(#u\d+|_\d+)$", "", name)
+
+
+def _line_index(pi: PageIngest, cls: PageClassification, cell: float = 20.0):
+    """Grid over the end points of every open 2-point non-text line (pin lines are plotted as plain lines)."""
+    grid: dict[tuple[int, int], list[tuple[tuple[float, float], tuple[float, float]]]] = {}
+    for q in pi.prims:
+        if q.kind != "polyline" or q.line_closed or len(q.pts) != 2 or cls.records[q.id].cls == "TEXT":
+            continue
+        a, b = q.pts[0], q.pts[-1]
+        for end, far in ((a, b), (b, a)):
+            grid.setdefault((math.floor(end[0] / cell), math.floor(end[1] / cell)), []).append((end, far))
+    return grid, cell
+
+
+def _stub_supported(hit, lines, params: "PinParams") -> bool:
+    """True when EVERY pin of `hit` has a drawn pin line: one end at the tip, collinear with the pin axis, with a
+    length of 0.5 to 1.3 pin lengths (a bubble may shorten the line). Uses only measured lines, no library data
+    other than the predicted pin positions."""
+    grid, cell = lines
+    pins = [(hit.place(*p.tip), hit.place(*p.base)) for p in hit.symbol.pins]
+    if not pins:
+        return False
+    for tip, base in pins:
+        plen = math.hypot(tip[0] - base[0], tip[1] - base[1])
+        if plen <= 0:
+            return False
+        t2 = max(params.match.tau_abs, params.s2_rel * plen)
+        ux, uy = (base[0] - tip[0]) / plen, (base[1] - tip[1]) / plen
+        ok = False
+        gx, gy = math.floor(tip[0] / cell), math.floor(tip[1] / cell)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for end, far in grid.get((gx + dx, gy + dy), ()):
+                    if math.hypot(end[0] - tip[0], end[1] - tip[1]) > t2:
+                        continue
+                    vx, vy = far[0] - end[0], far[1] - end[1]
+                    ln = math.hypot(vx, vy)
+                    if not (0.5 * plen <= ln <= 1.3 * plen):
+                        continue
+                    if abs(vx * uy - vy * ux) <= t2 and vx * ux + vy * uy > 0:
+                        ok = True
+        if not ok:
+            return False
+    return True
+
+
 def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinParams = PinParams(),
                 eps: float = 0.02, exclude: frozenset = frozenset()) -> list[ClusterResult]:
     reg = cls.registry
@@ -126,6 +176,7 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
     syms = list(symbols)
     index = _SegIndex(_wire_segments(pi, cls, set()))
     prim_by_id = {q.id: q for q in pi.prims}
+    lines = None
     for cl in body_clusters(pi, cls, eps, params.cluster_gap_frac, exclude):
         hits = match_cluster(cl, syms, params.match) if syms else []
         stub_ids: tuple[int, ...] = ()
@@ -136,6 +187,17 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                     cl, stub_ids, hits = cl2, stubs2, hits2
                     break
         res = resolve(cl, hits, params.match)
+        stub_selected = False
+        if res.status == "DIFFERENT_TIP_SETS" and len({_part_stem(h.symbol.name) for h in res.hits}) == 1:
+            # units of ONE library part share a body and differ in their pins: the drawn pin lines pick the unit.
+            # The part is the same either way; the lines were used for the choice, so S2 is not independent.
+            if lines is None:
+                lines = _line_index(pi, cls)
+            sel = [h for h in res.hits if _stub_supported(h, lines, params)]
+            if sel and len(sel) < len(res.hits):
+                res2 = resolve(cl, sel, params.match)
+                if res2.status == "UNIQUE":
+                    res, hits, stub_selected = res2, sel, True
         cr = ClusterResult(cl, res)
         tau = tolerance(cl, params.match)
         body_ids = set(cl.prim_ids)
@@ -154,7 +216,7 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                 items = [s1.id]
                 plen = math.hypot(rp.tip[0] - rp.base[0], rp.tip[1] - rp.base[1])
                 explained.append((rp.base, max(params.match.tau_abs, params.s2_rel * plen)))
-                if plen > 0:
+                if plen > 0 and not stub_selected:
                     t2 = max(params.match.tau_abs, params.s2_rel * plen)
                     stub_segs = [(sid, 0, q.pts[0], q.pts[-1]) for sid in stub_ids for q in [prim_by_id[sid]]]
                     for pid, si, a, b in list(wires) + stub_segs:
