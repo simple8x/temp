@@ -61,7 +61,7 @@ def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("in
 
 def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFAULT,
                   gap_frac: float = 0.5, exclude: frozenset = frozenset(),
-                  min_gap_part_frac: float = 0.003, stub_aware: bool = True) -> list[Cluster]:
+                  min_gap_part_frac: float = 0.003, stub_aware: bool = True, bare_gap_frac: float | None = None) -> list[Cluster]:
     """Group BODY primitives into symbol-body clusters.
 
     Step 1: primitives that touch are one part. Step 2 (single link, repeated to a fixpoint):
@@ -71,6 +71,8 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
     neighbouring symbols stay apart because the wires between them are not BODY. gap_frac=0
     merges only touching or overlapping parts. Parts farther apart than the rule allows stay
     separate (a known limit, see docs)."""
+    if bare_gap_frac is None:                    # gap merging switched off (0) stays off for plates too
+        bare_gap_frac = max(gap_frac, 0.5) if gap_frac > 0 else 0.0
     prims = {p.id: p for p in pi.prims if cls.records[p.id].cls == LC_BODY and p.kind == "polyline"
              and p.id not in exclude}
     if not prims:
@@ -118,7 +120,7 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
             changed = False
             for ai, a in enumerate(order):
                 ba = boxes[a]
-                reach = ba[2] + gap_frac * _maxdim(ba)
+                reach = ba[2] + max(gap_frac, bare_gap_frac) * _maxdim(ba)
                 if _maxdim(ba) < min_part:
                     continue
                 for b in order[ai + 1:]:
@@ -129,7 +131,8 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
                         break
                     if (a in bare) != (b in bare):
                         continue
-                    if find(a) != find(b) and _gap(ba, bb) <= gap_frac * min(_maxdim(ba), _maxdim(bb)):
+                    gf = bare_gap_frac if (a in bare and b in bare) else gap_frac   # plates sit far apart relative to size
+                    if find(a) != find(b) and _gap(ba, bb) <= gf * min(_maxdim(ba), _maxdim(bb)):
                         ra, rb = find(a), find(b)
                         parent[max(ra, rb)] = min(ra, rb)
                         changed = True

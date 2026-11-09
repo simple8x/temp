@@ -73,7 +73,7 @@ class ClusterResult:
 @dataclass(frozen=True)
 class PinParams:
     match: MatchParams = MatchParams()
-    cluster_gap_frac: float = 0.5     # see symbols.body_clusters
+    cluster_gap_frac: float = 0.1     # see symbols.body_clusters; 0.5 chained whole KiCad sheets (gap sweep in CI), 0.1 does not (ASSUMPTION)
     s2_rel: float = 0.1               # endpoint tolerance as a fraction of the pin length
     contact_abs: float = 0.05
 
