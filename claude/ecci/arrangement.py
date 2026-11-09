@@ -375,5 +375,8 @@ def _shared_vertex(i: int, j: int, n: int, closed: bool) -> int | None:
 
 def independent_prims_at(graph: ArrangementGraph, node_id: int) -> frozenset[int]:
     """Distinct primitive ids contributing arms at a node (count THESE, not arms)."""
-    edges = {e.id: e for e in graph.edges}
+    edges = graph.__dict__.get("_edge_by_id")
+    if edges is None:               # built once per graph: rebuilding it per call made every page O(nodes x edges)
+        edges = {e.id: e for e in graph.edges}
+        object.__setattr__(graph, "_edge_by_id", edges)
     return frozenset(r.prim_id for eid in graph.nodes[node_id].edges for r in edges[eid].refs)

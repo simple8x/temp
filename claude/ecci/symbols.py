@@ -47,6 +47,7 @@ def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("in
     from .flatten import point_segment_distance
     out: set[int] = set()
     items = list(prims.items())
+    gk = {i: _geom_key(q) for i, q in items}          # once per primitive, not once per candidate pair
     for i, p in items:
         if len(p.pts) != 2 or p.line_closed:
             continue
@@ -56,7 +57,7 @@ def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("in
         if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > axis_tol:
             continue
         bb = _bbox(p)
-        near = [q for j, q in items if j != i and _geom_key(q) != _geom_key(p) and _gap(bb, _bbox(q)) <= eps + 0.5 * (p.stroke_w + q.stroke_w) and _maxdim(_bbox(q)) >= min_host]
+        near = [q for j, q in items if j != i and gk[j] != gk[i] and _gap(bb, _bbox(q)) <= eps + 0.5 * (p.stroke_w + q.stroke_w) and _maxdim(_bbox(q)) >= min_host]
         touch = [any(point_segment_distance(end, s0, s1) <= eps + 0.5 * (p.stroke_w + q.stroke_w)
                      for q in near for _, s0, s1 in q.segments()) for end in (a, b)]
         if touch[0] != touch[1]:
