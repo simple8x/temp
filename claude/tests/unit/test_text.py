@@ -255,3 +255,21 @@ def test_t20b_two_identical_capacitors_are_below_the_repeat_threshold():
     assert not any("identical copies" in n for n in cls.notes)
     five = page("".join(_cap(40 + 22 * k, 100) for k in range(5)).encode() + label)[1]
     assert any("identical copies" in n for n in five.notes)      # same scene with 5 copies: the rule is active
+
+
+def test_t21_big_closed_outline_below_frame_size_is_body_not_other():
+    # a large IC unit rectangle (about 60% of the page diagonal, not a frame) must be BODY so pin lines can cluster with it
+    from ecci.classify import LC_OTHER
+    ops = b"0.5 0 0 RG 0.45 w 60 20 150 150 re S\n"
+    pi = ingest_pdf(one_page(WIRES + ops, size=(W, H))).pages[0]
+    cls = classify_page(pi)
+    rect = [p for p in pi.prims if p.line_closed][0]
+    assert cls.records[rect.id].cls == LC_BODY and cls.records[rect.id].cls != LC_OTHER
+
+
+def test_t21b_big_open_line_stays_other():
+    from ecci.classify import LC_OTHER
+    pi = ingest_pdf(one_page(WIRES + b"0.5 0 0 RG 0.45 w 10 20 m 150 150 l S\n", size=(W, H))).pages[0]
+    cls = classify_page(pi)
+    seg = [p for p in pi.prims if not p.line_closed and len(p.pts) == 2 and abs(p.pts[0][0] - p.pts[1][0]) > 100][0]
+    assert cls.records[seg.id].cls == LC_OTHER

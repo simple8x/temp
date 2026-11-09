@@ -51,6 +51,7 @@ class ClassifyParams:
     style_min_mean_len_frac: float = 0.004   # mean line length / page diagonal below which a style is not a wire (ASSUMPTION)
     border_frac: float = 0.85          # bbox >= this fraction of page width AND height
     body_max_frac: float = 0.35        # BODY bbox diagonal <= this fraction of page diagonal
+    body_closed_max_frac: float = 0.8  # a CLOSED outline (big IC unit rectangle) may be this large (ASSUMPTION)
     min_population: int = 3            # wire style needs this many Manhattan open lines
     min_mode_share: float = 0.5        # ... and the modal style must hold this share
     width_round: int = 3
@@ -423,7 +424,7 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
             add("WIRE_SHAPE", {f"geom:{pid}"}, "open, stroke-only, axis-aligned polyline")
             if mode is not None:
                 add("WIRE_STYLE", {f"style:{pid}", pagestat}, "style equals the modal wire style")
-        elif math.hypot(bw, bh) <= params.body_max_frac * diag:
+        elif math.hypot(bw, bh) <= (params.body_closed_max_frac if p.line_closed else params.body_max_frac) * diag:
             cls = LC_BODY
             why = []
             if p.line_closed:
