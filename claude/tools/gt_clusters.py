@@ -58,4 +58,10 @@ for c in clusters:
         print("CL BIG cluster", c.cluster.id, len(c.cluster.prim_ids), "wire_style", cls.wire_style)
         for k, n in h.most_common(8):
             print("CL    ", n, k)
+from ecci.symbols import body_clusters  # noqa: E402
+from ecci.rules import off_colour_body  # noqa: E402
+for gf in (0.0, 0.1, 0.25, 0.5):
+    cc = body_clusters(pi, cls, gap_frac=gf, exclude=off_colour_body(pi, cls))
+    sizes = sorted((len(c.prim_ids) for c in cc), reverse=True)
+    print("CL GAP", gf, "clusters", len(cc), "largest", sizes[:5])
 print("CL SUMMARY", proj, "instances ok", ok, "fail", fails)
