@@ -1,1 +1,1 @@
-video,jetson-agx-thor-baseboard,vme-wren
+vme-wren#p3,video#p5

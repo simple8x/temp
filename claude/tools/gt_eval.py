@@ -327,7 +327,7 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
             print("DUMP", name, gp.ref, gp.lib_id, "pin", gp.number, "at", round(gp.x, 1), round(gp.y, 1),
                   "near_clusters", [(c.resolution.status, len(c.cluster.prim_ids)) for c in near][:3])
             for q in pi.prims:
-                if any(math.hypot(a - gp.x, b - gp.y) <= 14 for a, b in q.pts):
+                if any(math.hypot(a - gp.x, b - gp.y) <= 45 for a, b in q.pts) and cls.records[q.id].cls != "TEXT":
                     print("DUMP   prim", q.id, cls.records[q.id].cls, round(q.stroke_w, 2), getattr(q, "stroke_color", None), len(q.pts),
                           q.line_closed, [(round(a, 1), round(b, 1)) for a, b in q.pts][:5])
         if not near:
