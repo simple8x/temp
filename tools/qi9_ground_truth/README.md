@@ -39,7 +39,7 @@ does not display parser candidates unless the reviewer explicitly enables them.
 ## Open the offline review workspace
 
 Open `tools/qi9_ground_truth/review_app.html` in a modern browser (Chrome/Edge
-recommended). Select the generated review-pack folder using the folder picker.
+recommended). On desktop, select the generated review-pack folder. On Android, extract the CI ZIP and select all extracted pack files with the multi-file picker.
 No server, external library, account, or network request is required.
 
 1. Keep **Show parser candidates** unchecked for blind first-pass review.
