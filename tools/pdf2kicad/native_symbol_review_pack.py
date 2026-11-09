@@ -50,6 +50,12 @@ def main():
         result = discover_symbol_body_candidates(str(pdf_path), page_no, refs)
         page = doc[page_no - 1]
         mb = page.mediabox
+        page_width_points = float(mb.width)
+        page_height_points = float(mb.height)
+        scale = args.dpi / 72.0
+        clean_pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
+        clean_image_path = outdir / f"page_{page_no:02d}_source.png"
+        clean_pix.save(clean_image_path)
         page_rows = []
         for row in result["references"]:
             ref = row["reference"]
@@ -86,7 +92,11 @@ def main():
                 "schema": "qi9-manual-symbol-review-template/v1",
                 "source_sha256": digest,
                 "page": page_no,
-                "policy": "All labels are blank; candidate overlays are not ground truth.",
+                "page_size_points": [page_width_points, page_height_points],
+                "render_dpi": args.dpi,
+                "source_image": clean_image_path.name,
+                "candidate_overlay_image": f"page_{page_no:02d}_candidate_overlay.png",
+                "policy": "Clean source image is the default blind-review surface; candidate overlays are optional and are not ground truth.",
                 "references": page_rows,
             }, indent=2) + "\n", encoding="utf-8"
         )
@@ -96,6 +106,17 @@ def main():
         "schema": "qi9-symbol-review-pack/v1",
         "source_sha256": digest,
         "pages": pages,
+        "render_dpi": args.dpi,
+        "page_metadata": {
+            str(p): {
+                "page_size_points": [
+                    float(doc[p - 1].mediabox.width),
+                    float(doc[p - 1].mediabox.height)
+                ],
+                "source_image": f"page_{p:02d}_source.png",
+                "candidate_overlay_image": f"page_{p:02d}_candidate_overlay.png"
+            } for p in pages
+        },
         "reference_rows": len(review_rows),
         "reviewed_rows": 0,
         "manual_labels_written": 0,
