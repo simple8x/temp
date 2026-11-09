@@ -382,6 +382,23 @@ def _is_end(p, pt, tol: float) -> bool:
                math.hypot(pt[0] - p.pts[-1][0], pt[1] - p.pts[-1][1])) <= tol
 
 
+def off_colour_body(pi, cls, min_marks: int = 2) -> frozenset:
+    """BODY primitives in a colour that draws no symbol outline (e.g. bus lines and bus entries, which are
+    BODY by shape): they must not chain symbols together. Only applied when the page has body colours at all
+    (a page of capacitors alone has no closed outlines and keeps everything)."""
+    from .classify import LC_BODY, style_key
+    marks: dict = {}
+    for p in pi.prims:
+        if cls.records[p.id].cls == LC_BODY and p.line_closed:
+            c = style_key(p)[1]
+            marks[c] = marks.get(c, 0) + 1
+    good = {c for c, n in marks.items() if n >= min_marks}
+    if not good:
+        return frozenset()
+    return frozenset(p.id for p in pi.prims
+                     if cls.records[p.id].cls == LC_BODY and style_key(p)[1] not in good)
+
+
 def analyze_page(pi: PageIngest, symbols, prm: RulesParams = RulesParams(),
                  pin_params: PinParams = PinParams()):
     """Convenience pipeline for one page: classify -> pins -> candidate graph -> solve."""
@@ -389,6 +406,6 @@ def analyze_page(pi: PageIngest, symbols, prm: RulesParams = RulesParams(),
     cls = classify_page(pi)
     dots = find_dots(pi, cls, prm)
     clusters = detect_pins(pi, cls, list(symbols), pin_params, prm.eps,
-                           frozenset(v[2] for v in dots.values()))
+                           frozenset(v[2] for v in dots.values()) | off_colour_body(pi, cls))
     built = build_conn_graph(pi, cls, clusters, prm, dots)
     return cls, clusters, built, solve(built.graph)
