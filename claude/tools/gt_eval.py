@@ -8,6 +8,7 @@ A GT pair is positive iff KiCad's netlist puts both pins in one net. Only single
 projects are evaluated; hierarchical designs are reported as skipped.
 """
 import collections
+import concurrent.futures
 import os
 import signal
 import json
@@ -132,6 +133,8 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
     with pikepdf.open(pdf[0]) as p:
         npages = len(p.pages)
     if npages == 1 and len(schs) == 1:
+        if not wanted(pdir.name):
+            return []
         return [evaluate(pdir, 0, schs[0], pdir.name)]
     if npages > 80 or len(schs) > 80:
         return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
@@ -151,6 +154,8 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
     out = []
     for k, (si, score, second, top3) in sorted(mp.items()):
         name = f"{pdir.name}#p{k}"
+        if not wanted(name):
+            continue
         if si is None:
             out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})", "map_top3": top3})
             continue
@@ -169,6 +174,13 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
             r = {"project": name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
         out.append(r)
     return out
+
+
+ONLY = [x for x in os.environ.get("GT_ONLY", "").split(",") if x]
+
+
+def wanted(name: str) -> bool:
+    return not ONLY or any(name == o or name.split("#")[0] == o for o in ONLY)
 
 
 DUMP_LIB = os.environ.get("GT_DUMP_LIB", "")
@@ -344,14 +356,24 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
     }
 
 
+def _safe_project(d: pathlib.Path) -> list[dict]:
+    try:
+        return evaluate_project(d)
+    except Exception as e:  # noqa: BLE001  one project must never hide the others
+        return [{"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}]
+
+
 def main(root: str) -> int:
     tot = collections.Counter()
     miss_libs_tot = collections.Counter()
-    for d in sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir()):
-        try:
-            rs = evaluate_project(d)
-        except Exception as e:  # noqa: BLE001  one project must never hide the others
-            rs = [{"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}]
+    dirs = sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir() and wanted(p.name))
+    results = []
+    workers = max(1, int(os.environ.get("GT_WORKERS", os.cpu_count() or 1)))
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as ex:
+        futs = {d: ex.submit(_safe_project, d) for d in dirs}
+        for d in dirs:     # deterministic output order regardless of completion order
+            results.append(futs[d].result())
+    for rs in results:
         for r in rs:
             print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
             for k, v in (r.get("oracle", {}).get("split") or {}).items():

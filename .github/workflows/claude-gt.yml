@@ -11,7 +11,14 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Cache exported ground truth
+        id: gtcache
+        uses: actions/cache@v4
+        with:
+          path: gt_out
+          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh') }}
       - name: Install KiCad CLI
+        if: steps.gtcache.outputs.cache-hit != 'true'
         run: |
           sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
           sudo apt-get update -q
@@ -21,6 +28,7 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install pikepdf
       - name: Export PDFs and netlists
+        if: steps.gtcache.outputs.cache-hit != 'true'
         run: bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
       - name: Summary
         run: python claude/tools/gt_summary.py gt_out | tee gt_summary.log
@@ -31,23 +39,34 @@ jobs:
           python claude/tools/gt_profile.py gt_out video 1 2>&1 | tee -a gt_profile.log
       - name: Evaluate ECCI against KiCad ground truth
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
-        run: python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          # commit message tag "[only:proj#p1,other]" restricts the run to those projects/pages
+          only=$(printf '%s' "$MSG" | grep -o '\[only:[^]]*\]' | head -1 | sed 's/\[only://;s/\]//' || true)
+          echo "GT_ONLY='$only'"
+          GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
       - name: Misses by library symbol
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
       - name: Probe
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: |
           python claude/tools/gt_probe.py gt_out royer1 619.2 306 626.4 288 2>&1 | tee gt_probe.log
           python claude/tools/gt_probe.py gt_out smps-com 396 214 2>&1 | tee -a gt_probe.log
           python claude/tools/gt_probe.py gt_out 'sonde xilinx' 453.6 197 453.6 213 2>&1 | tee -a gt_probe.log
       - name: Cluster diagnostics
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: |
           python claude/tools/gt_clusters.py gt_out jetson-agx-thor-baseboard 2 C_100n_0402 2>&1 | tee gt_clusters.log
           python claude/tools/gt_clusters.py gt_out jetson-agx-thor-baseboard 2 TP_0.75mm 2>&1 | tee -a gt_clusters.log
           python claude/tools/gt_clusters.py gt_out multichannel_mixer 2 POT 2>&1 | tee -a gt_clusters.log
           python claude/tools/gt_clusters.py gt_out kit-dev-coldfire-xilinx_5213 2 MCF5213 2>&1 | tee -a gt_clusters.log
       - name: Style diagnostics
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: python claude/tools/gt_styles.py gt_out interf_u Q17ng "sonde xilinx" 2>&1 | tee gt_styles.log
       - name: Format discovery (first lines of one sheet and one netlist)
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: |
           f=$(find gt_out -name '*.kicad_sch' | sort | head -1); echo "== $f"; head -60 "$f"
           x=$(find gt_out -name '*.xml' | sort | head -1); echo "== $x"; head -80 "$x"
