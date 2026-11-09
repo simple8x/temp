@@ -188,6 +188,10 @@ DUMP_LIB = os.environ.get("GT_DUMP_LIB", "")
 DUMP_MAX = int(os.environ.get("GT_DUMP_MAX", "3"))
 
 
+def sd_ok(gp):
+    return True
+
+
 def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instance_path: str | None = None) -> dict:
     t0 = time.time()
     xml = sorted(pdir.glob("*.xml"))
@@ -332,6 +336,19 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
                 bb = c_.cluster.bbox
                 if bb[0] - 60 <= gp.x <= bb[2] + 60 and bb[1] - 60 <= gp.y <= bb[3] + 60:
                     print("DUMP   nearby cluster", c_.resolution.status, len(c_.cluster.prim_ids), [round(v, 1) for v in bb])
+            if near and sd_ok(gp):
+                from ecci.symbols import relaxations
+                by_r = {q.id: q for q in pi.prims}
+                sdr = lib.symbols.get(gp.lib_id.split(":")[-1]) or lib.symbols.get(gp.lib_id)
+                from ecci.template import diagnose_match as dm
+                for n_, (c_r, st_r) in enumerate(relaxations(near[0].cluster, by_r)):
+                    ln_ = dm(c_r, sdr)
+                    print("DUMP   relax", n_, ln_[0], "|", ln_[1][:90], "stubs", len(st_r))
+                    xs_ = sorted(c_r.prim_ids, key=lambda i_: min(a_[0] for a_ in by_r[i_].pts))
+                    for i_ in xs_[:2] + xs_[-2:]:
+                        q_ = by_r[i_]
+                        print("DUMP     rx", q_.id, round(q_.stroke_w, 2), getattr(q_, "stroke_color", None), len(q_.pts), q_.line_closed,
+                              [(round(a_, 1), round(b_, 1)) for a_, b_ in q_.pts][:2])
             if near:
                 from ecci.symbols import restrict_to_outline_style, strip_stubs
                 from ecci.template import diagnose_match
