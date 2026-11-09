@@ -23,7 +23,7 @@ from .classify import LC_WIRE, PageClassification
 from .evidence import EvidenceItem, decide_role
 from .flatten import point_segment_distance
 from .ir import PageIngest, SRC_VECTOR
-from .symbols import strip_stubs, Cluster, body_clusters
+from .symbols import Cluster, body_clusters, restrict_to_outline_style, strip_stubs
 from .template import MatchParams, Resolution, match_cluster, resolve, tolerance
 
 POS_CONFIRMED = "CONFIRMED"
@@ -135,6 +135,18 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                 hits2 = match_cluster(sp[0], syms, params.match)
                 if hits2:
                     cl, stub_ids, hits = sp[0], sp[1], hits2
+        if syms and not hits:                       # foreign-colour strokes (pin names, marks) inside the cluster
+            rs = restrict_to_outline_style(cl, prim_by_id)
+            if rs is not None:
+                hits2 = match_cluster(rs[0], syms, params.match)
+                cl2, stubs2 = rs[0], ()
+                if not hits2:
+                    sp2 = strip_stubs(rs[0], prim_by_id, eps)
+                    if sp2 is not None:
+                        hits2 = match_cluster(sp2[0], syms, params.match)
+                        cl2, stubs2 = sp2
+                if hits2:
+                    cl, stub_ids, hits = cl2, stubs2, hits2
         res = resolve(cl, hits, params.match)
         cr = ClusterResult(cl, res)
         tau = tolerance(cl, params.match)

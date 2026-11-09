@@ -273,3 +273,25 @@ def test_t21b_big_open_line_stays_other():
     cls = classify_page(pi)
     seg = [p for p in pi.prims if not p.line_closed and len(p.pts) == 2 and abs(p.pts[0][0] - p.pts[1][0]) > 100][0]
     assert cls.records[seg.id].cls == LC_OTHER
+
+
+def test_t22_foreign_colour_marks_inside_the_cluster_do_not_block_the_template():
+    # a pin-name mark in ANOTHER colour touching the body must not stop the template match; pins stay UNIQUE
+    syms = [v for k, v in LIB_FOR_T16.symbols.items() if k != "R_LONG"]
+    pi0 = ingest_pdf(one_page(_scene_with_r(), size=(300, 200))).pages[0]
+    r0 = detect_pins(pi0, classify_page(pi0), syms)
+    assert len(r0) == 1 and r0[0].resolution.status == "UNIQUE"
+    x0, y0, x1, y1 = r0[0].cluster.bbox
+    mark = f"0.7 0.2 0 RG {x0 + 0.5} {200 - y0 - 1.0} m {x1 - 0.5} {200 - y0 - 1.0} l S\n".encode()   # inside the body, other colour
+    pi = ingest_pdf(one_page(_scene_with_r(mark), size=(300, 200))).pages[0]
+    results = detect_pins(pi, classify_page(pi), syms)
+    ok = [r for r in results if r.resolution.status == "UNIQUE"]
+    assert len(ok) == 1 and len(ok[0].pins) == 2
+
+
+def test_t22b_restrict_needs_a_closed_outline():
+    from ecci.symbols import _rebuild, restrict_to_outline_style
+    pi = ingest_pdf(one_page(b"0.5 0 0 RG 0.45 w 10 10 m 40 10 l S 0 0.5 0 RG 10 20 m 40 20 l S\n", size=(100, 100))).pages[0]
+    by_id = {p.id: p for p in pi.prims}
+    cl = _rebuild(0, tuple(by_id), by_id)
+    assert restrict_to_outline_style(cl, by_id) is None
