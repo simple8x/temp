@@ -32,6 +32,8 @@ jobs:
       - name: Evaluate ECCI against KiCad ground truth
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
         run: python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
+      - name: Misses by library symbol
+        run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
       - name: Probe
         run: |
           python claude/tools/gt_probe.py gt_out royer1 619.2 306 626.4 288 2>&1 | tee gt_probe.log
