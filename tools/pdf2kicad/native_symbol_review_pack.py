@@ -101,22 +101,23 @@ def main():
             }, indent=2) + "\n", encoding="utf-8"
         )
 
+    page_metadata = {
+        str(p): {
+            "page_size_points": [
+                float(doc[p - 1].mediabox.width),
+                float(doc[p - 1].mediabox.height)
+            ],
+            "source_image": f"page_{p:02d}_source.png",
+            "candidate_overlay_image": f"page_{p:02d}_candidate_overlay.png"
+        } for p in pages
+    }
     doc.close()
     index = {
         "schema": "qi9-symbol-review-pack/v1",
         "source_sha256": digest,
         "pages": pages,
         "render_dpi": args.dpi,
-        "page_metadata": {
-            str(p): {
-                "page_size_points": [
-                    float(doc[p - 1].mediabox.width),
-                    float(doc[p - 1].mediabox.height)
-                ],
-                "source_image": f"page_{p:02d}_source.png",
-                "candidate_overlay_image": f"page_{p:02d}_candidate_overlay.png"
-            } for p in pages
-        },
+        "page_metadata": page_metadata,
         "reference_rows": len(review_rows),
         "reviewed_rows": 0,
         "manual_labels_written": 0,
