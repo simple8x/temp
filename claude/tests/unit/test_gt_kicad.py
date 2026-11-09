@@ -14,11 +14,15 @@ SCH = """(kicad_sch (version 20250610) (generator "eeschema") (paper "A4")
     (pin passive line (at 1 3.81 270) (length 1.27) (name "~" (effects (font (size 1 1)))) (number "1" (effects (font (size 1 1)))))
     (pin passive line (at 0 -3.81 90) (length 1.27) (hide yes) (name "~" (effects (font (size 1 1)))) (number "2" (effects (font (size 1 1)))))))
   (symbol "power:GND" (symbol "GND_1_1" (pin power_in line (at 0 0 270) (length 0) (name "GND") (number "1")))))
- (symbol (lib_id "Device:R") (at 50 50 90) (mirror x) (unit 1) (property "Reference" "R1" (at 0 0 0)))
- (symbol (lib_id "power:GND") (at 60 60 0) (property "Reference" "#PWR01" (at 0 0 0)))
+ (symbol (lib_id "Device:R") (at 50 50 90) (mirror x) (unit 1)
+  (property "Reference" "R2" (at 0 0 0)) (uuid "placed-r")
+  (instances (project "a" (path "/root" (reference "R1") (unit 1)))
+             (project "other" (path "/other-root" (reference "R2") (unit 1)))))
+ (symbol (lib_id "power:GND") (at 60 60 0) (property "Reference" "#PWR01" (at 0 0 0))
+  (uuid "placed-pwr") (instances (project "a" (path "/root" (reference "#PWR01") (unit 1)))))
  (wire (pts (xy 1 1) (xy 2 2))))
 """
-XML = """<export><nets>
+XML = """<export><design><source>/tmp/a.kicad_sch</source></design><nets>
  <net code="1" name="/A"><node ref="R1" pin="1"/><node ref="#PWR01" pin="1"/></net>
  <net code="2" name="/B"><node ref="R1" pin="2"/></net></nets></export>"""
 
@@ -41,6 +45,7 @@ def test_pins_hidden_flag_power_skipped_and_net_attached(tmp_path):
     assert sorted(p.number for p in pins) == ["1", "2"]            # power symbol skipped
     by = {p.number: p for p in pins}
     assert by["1"].net == "/A" and by["2"].net == "/B"
+    assert {p.ref for p in pins} == {"R1"}  # instance ref overrides visible property R2
     assert by["2"].hidden and not by["1"].hidden
     assert info["placed"] == 2 and info["order"] in ("MR", "RM")
 
