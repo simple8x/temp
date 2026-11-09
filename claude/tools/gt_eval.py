@@ -327,6 +327,11 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
             dump_n[dl] += 1
             print("DUMP", name, gp.ref, gp.lib_id, "pin", gp.number, "at", round(gp.x, 1), round(gp.y, 1),
                   "near_clusters", [(c.resolution.status, len(c.cluster.prim_ids)) for c in near][:3])
+            print("DUMP   notes", [n[:110] for n in cls.notes][:5])
+            for c_ in clusters:
+                bb = c_.cluster.bbox
+                if bb[0] - 60 <= gp.x <= bb[2] + 60 and bb[1] - 60 <= gp.y <= bb[3] + 60:
+                    print("DUMP   nearby cluster", c_.resolution.status, len(c_.cluster.prim_ids), [round(v, 1) for v in bb])
             if near:
                 from ecci.symbols import restrict_to_outline_style, strip_stubs
                 from ecci.template import diagnose_match
