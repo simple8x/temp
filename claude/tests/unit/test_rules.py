@@ -191,11 +191,14 @@ def test_c4_wire_like_symbol_stroke_between_two_body_boundary_points_is_blocked(
     bridge = line(150 - body_half_width, 100, 150 + body_half_width, 100)
     pi, cls, clusters, built, res = run(r_content() + bridge)
     pins = [o.id for o in built.graph.objects if o.kind == "PIN"]
-    bridge_wire = wid(pi, 150 - body_half_width, 100)
-    got = {(a, b) for a, b, _ in built.graph.constraints.cannot_link}
+    bridge_prim = next(p for p in pi.prims
+                       if abs(p.pts[0][0] - (150 - body_half_width)) < 0.2
+                       and abs(p.pts[-1][0] - (150 + body_half_width)) < 0.2)
     assert pins
-    assert {(bridge_wire, p) for p in pins} <= got
-    assert all(res.pair_status(bridge_wire, p) != VERIFIED for p in pins)
+    assert bridge_prim.id in built.excluded_wire_prims
+    assert not any(o.id == f"w:{bridge_prim.id}" for o in built.graph.objects)
+    assert not any(e.a == f"w:{bridge_prim.id}" or e.b == f"w:{bridge_prim.id}"
+                   for e in built.graph.edges)
 
 
 def test_tr5_gap_bridged_at_inferred_only_within_gmax_and_unblocked():
@@ -294,3 +297,10 @@ def test_aspect_gate_alone_rejects_an_ellipse():
     assert edges_by_rule(built, "TR2") == []
     _, _, built2, _ = analyze_page(pi, LIB.symbols.values(), RulesParams(dot_roundness=10.0, dot_aspect=0.1))
     assert edges_by_rule(built2, "TR2")          # positive control: with the gate relaxed it IS taken for a dot
+
+
+def test_filled_disc_inside_resolved_symbol_body_is_not_a_junction():
+    pi, cls, clusters, built, res = run(r_content() + disc(150, 100, 0.5))
+    assert clusters
+    assert built.dots == {}
+    assert edges_by_rule(built, "TR2") == []
