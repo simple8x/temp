@@ -297,6 +297,7 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
     n_local_pins = sum(1 for gp in vis if comp_of(gp.x, gp.y) is not None)
     n_local_found = sum(1 for k in used_gt if comp_of(vis[k].x, vis[k].y) is not None)
     miss = collections.Counter()
+    miss_lib = collections.Counter()
     for k, gp in enumerate(vis):
         if k in used_gt or comp_of(gp.x, gp.y) is None:
             continue
@@ -304,16 +305,18 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
                 and c.cluster.bbox[1] - 4 <= gp.y <= c.cluster.bbox[3] + 4]
         if not near:
             miss["no_cluster"] += 1
+            miss_lib["no_cluster:" + gp.lib_id] += 1
         else:
             near.sort(key=lambda c: (c.cluster.bbox[2] - c.cluster.bbox[0]) * (c.cluster.bbox[3] - c.cluster.bbox[1]))
             c = near[0]
             big = len(c.cluster.prim_ids) > 150
             miss[("giant_" if big else "") + c.resolution.status] += 1
+            miss_lib[("giant_" if big else "") + c.resolution.status + ":" + gp.lib_id] += 1
     nets = res.nets
     return {
         "project": name, "seconds": round(time.time() - t0, 1), "gt": info,
         "gt_pins": len(pins), "gt_pins_visible_with_net": len(vis),
-        "oracle_attached_pins": len(attached), "local_pins": n_local_pins, "local_pins_found": n_local_found, "miss_reasons": dict(miss), "detected_pins": len(tips), "detected_matched_gt": len(matched),
+        "oracle_attached_pins": len(attached), "local_pins": n_local_pins, "local_pins_found": n_local_found, "miss_reasons": dict(miss), "miss_libs": dict(miss_lib), "detected_pins": len(tips), "detected_matched_gt": len(matched),
         "prims": len(pi.prims), "wire_objects": sum(1 for o in g.objects if o.kind == "WIRE"),
         "edges": dict(collections.Counter(e.rule for e in g.edges)), "sites": len(g.sites),
         "dots": len(built.dots), "nets": len(nets), "open_nets": sum(n.closure == "OPEN" for n in nets),
@@ -329,6 +332,7 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
 
 def main(root: str) -> int:
     tot = collections.Counter()
+    miss_libs_tot = collections.Counter()
     for d in sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir()):
         try:
             rs = evaluate_project(d)
@@ -340,6 +344,8 @@ def main(root: str) -> int:
                 tot["split_" + k] += v
             for k, v in (r.get("detected", {}).get("split") or {}).items():
                 tot["dsplit_" + k] += v
+            for k, v in (r.get("miss_libs") or {}).items():
+                miss_libs_tot[k] += v
             for k, v in (r.get("miss_reasons") or {}).items():
                 tot["miss_" + k] += v
             tot["local_pins"] += r.get("local_pins", 0)
@@ -361,6 +367,8 @@ def main(root: str) -> int:
                      "precision_V": round(tpv / max(1, tpv + fpv), 4), "recall_V": round(tpv / pos, 4),
                      "precision_VI": round((tpv + tpi) / max(1, tpv + tpi + fpv + fpi), 4),
                      "recall_VI": round((tpv + tpi) / pos, 4), "FP_V": fpv, "FP_I": fpi}
+    for k, v in miss_libs_tot.most_common(45):
+        print("MISSLIB", v, k)
     sp = {k[6:]: v for k, v in tot.items() if k.startswith("split_")}
     for kind in ("local", "nonlocal"):
         n = max(1, sp.get(kind + "_pos", 0))
