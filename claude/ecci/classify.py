@@ -54,6 +54,9 @@ class ClassifyParams:
     min_mode_share: float = 0.5        # ... and the modal style must hold this share
     width_round: int = 3
     glyph_max_diag_frac: float = 0.03  # glyph component bbox diagonal <= this x page diagonal
+    glyph_min_strokes: int = 4         # prims in a component to be judged by its stroke structure (ASSUMPTION)
+    glyph_stroke_share: float = 0.8    # share of those prims that must be tiny 2-point strokes (ASSUMPTION)
+    glyph_seg_max_frac: float = 0.003  # tiny = length <= this x page diagonal (ASSUMPTION)
     glyph_min_row: int = 3             # components needed to call a group a text row
     row_gap_frac: float = 2.0          # max horizontal gap between row neighbours, x taller height
     row_height_ratio: float = 4.0      # neighbour heights must be within this factor
@@ -303,10 +306,20 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
             continue
         cand_box[ci] = box
     row_size, row_id = _text_rows(cand_box, params) if cand_box else ({}, {})
-    text_comps = set(row_size)
+    # second, row-independent kind of text: a small component built from many tiny 2-point strokes
+    # (a lone glyph or a short label such as "R2" never forms a row of >= glyph_min_row components)
+    seg_max = params.glyph_seg_max_frac * diag_page
+    stroke_comps: set[int] = set()
+    for ci in cand_box:
+        ps = [by_id[i] for i in comps[ci]]
+        short = [q for q in ps if len(q.pts) == 2 and not q.line_closed
+                 and math.dist(q.pts[0], q.pts[-1]) <= seg_max]
+        if len(ps) >= params.glyph_min_strokes and len(short) >= params.glyph_stroke_share * len(ps):
+            stroke_comps.add(ci)
+    text_comps = set(row_size) | stroke_comps
     text_ids = {i for ci in text_comps for i in comps[ci]}
     if text_comps:
-        nrows = len({row_id[c] for c in text_comps})
+        nrows = len({row_id[c] for c in text_comps if c in row_id})
         notes.append(f"text: {len(text_comps)} glyph components in {nrows} rows, "
                      f"{len(text_ids)} primitives excluded from wire/body classes")
 
@@ -338,8 +351,12 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
             ci = comp_of[pid]
             add("GLYPH_SHAPE", {f"size:{page}:{ci}", f"contact:{page}:{ci}"},
                 "small connected component that touches no other primitive")
-            add("GLYPH_ROW", {f"row:{page}:{row_id[ci]}"},
-                f"member of a text row of {row_size[ci]} similar aligned components")
+            if ci in row_size:
+                add("GLYPH_ROW", {f"row:{page}:{row_id[ci]}"},
+                    f"member of a text row of {row_size[ci]} similar aligned components")
+            if ci in stroke_comps:
+                add("GLYPH_STROKES", {f"strokes:{page}:{ci}"},
+                    "component made of many tiny 2-point strokes")
             dec = decide_role(ev, reg)
             records[pid] = ClassRecord(pid, LC_TEXT, dec.status, tuple(ev), tuple(reasons))
             continue

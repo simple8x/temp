@@ -131,3 +131,14 @@ def test_ambiguous_structure_yields_no_wire_at_all():
     res = _style_of(c)
     if res.wire_style is None:
         assert not any(r.cls == LC_WIRE for r in res.records.values())
+
+
+def test_lone_glyph_of_many_tiny_strokes_is_text_but_a_rectangle_is_not():
+    # an isolated 'R'-like blob of 6 short diagonal strokes (no row of neighbours) and a 14 pt rectangle
+    glyph = b"".join(f"0 0.4 0.4 RG 0.43 w {200 + 0.5 * i} {100 + 0.6 * (i % 2)} m "
+                     f"{200.5 + 0.5 * i} {100 + 0.6 * ((i + 1) % 2)} l S\n".encode() for i in range(6))
+    body = b"0.5 0 0 RG 0.72 w 300 100 14 20 re S\n"
+    res = _style_of(glyph + body)
+    cls = {r.cls for r in res.records.values()}
+    assert sum(r.cls == "TEXT" for r in res.records.values()) == 6
+    assert "BODY" in cls or "OTHER" in cls

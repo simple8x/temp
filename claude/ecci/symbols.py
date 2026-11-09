@@ -51,9 +51,9 @@ def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("in
         if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > axis_tol:
             continue
         bb = _bbox(p)
-        near = [q for j, q in items if j != i and _gap(bb, _bbox(q)) <= eps and _maxdim(_bbox(q)) >= min_host]
-        touch = [any(point_segment_distance(end, s0, s1) <= eps for q in near for _, s0, s1 in q.segments())
-                 for end in (a, b)]
+        near = [q for j, q in items if j != i and _gap(bb, _bbox(q)) <= eps + 0.5 * (p.stroke_w + q.stroke_w) and _maxdim(_bbox(q)) >= min_host]
+        touch = [any(point_segment_distance(end, s0, s1) <= eps + 0.5 * (p.stroke_w + q.stroke_w)
+                     for q in near for _, s0, s1 in q.segments()) for end in (a, b)]
         if touch[0] != touch[1]:
             out.add(i)
     return out
@@ -140,7 +140,7 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
             sp = all_prims[sid]
             hit = None
             for i in sorted(prims):
-                if any(point_segment_distance(e, s0, s1) <= eps for e in (sp.pts[0], sp.pts[-1])
+                if any(point_segment_distance(e, s0, s1) <= eps + 0.5 * (sp.stroke_w + prims[i].stroke_w) for e in (sp.pts[0], sp.pts[-1])
                        for _, s0, s1 in prims[i].segments()):
                     hit = owner[i]
                     break
@@ -189,7 +189,7 @@ def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: fl
             continue
         touch = []
         for end in (a, b):
-            touch.append(any(point_segment_distance(end, s0, s1) <= eps
+            touch.append(any(point_segment_distance(end, s0, s1) <= eps + 0.5 * (p.stroke_w + by_id[j].stroke_w)
                              for j in ids if j != i for _, s0, s1 in by_id[j].segments()))
         if touch[0] != touch[1]:
             stubs.append(i)

@@ -106,3 +106,20 @@ def test_cluster_count_never_increases_with_gap_frac(rects):
     pi, cls = page(content)
     counts = [len(body_clusters(pi, cls, gap_frac=g)) for g in (0.0, 0.25, 0.5, 1.0, 2.0)]
     assert counts == sorted(counts, reverse=True)
+
+
+def test_stub_contact_counts_stroke_width_capacitor_pin_not_touching_plate_centreline():
+    from ecci.symbols import find_stubs
+    cap = (b"1.44 w 83 85.8 m 94.6 85.8 l S 83 90.2 m 94.6 90.2 l S "
+           b"0.432 w 88.8 77.2 m 88.8 85.1 l S 88.8 90.9 m 88.8 98.8 l S")      # pin ends 0.7 pt from a plate line
+    pi, cls = page(cap)
+    prims = {p.id: p for p in pi.prims if p.stroke and p.id >= 3}
+    stubs = find_stubs(prims, 0.02)
+    assert len(stubs) == 2 and all(prims[i].stroke_w < 1.0 for i in stubs)
+
+
+def test_diagonal_arrow_shaft_is_not_a_stub():
+    from ecci.symbols import find_stubs
+    pi, cls = page(b"0.45 w 100 100 m 108 108 l S 106 108 m 108 108 l 108 106 l S")
+    prims = {p.id: p for p in pi.prims if p.stroke and p.id >= 3}
+    assert find_stubs(prims, 0.02, min_host=0.0) == set()
