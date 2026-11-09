@@ -273,19 +273,47 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
     tips = sorted(built.pin_tips.items())
     cand = sorted(((math.hypot(t[0] - gp.x, t[1] - gp.y), pi_, oid) for pi_, gp in enumerate(vis) for oid, t in tips
                    if math.hypot(t[0] - gp.x, t[1] - gp.y) <= TOL_PIN))
-    used_gt, used_obj, matched = set(), set(), []
+    used_gt, used_obj, matched, matched_comp = set(), set(), [], []
     for d, gi, oid in cand:
         if gi in used_gt or oid in used_obj:
             continue
         used_gt.add(gi)
         used_obj.add(oid)
         matched.append((oid, vis[gi].net))
+        matched_comp.append(comp_of(vis[gi].x, vis[gi].y))
     detected = pair_metrics(matched, lambda a, b: res.pair_status(a, b))
+    dloc = collections.Counter()
+    for i in range(len(matched)):
+        for j in range(i + 1, len(matched)):
+            if matched[i][1] != matched[j][1]:
+                continue
+            kind = "local" if matched_comp[i] is not None and matched_comp[i] == matched_comp[j] else "nonlocal"
+            st = res.pair_status(matched[i][0], matched[j][0])
+            dloc[kind + "_pos"] += 1
+            dloc[kind + "_V"] += st == "VERIFIED"
+            dloc[kind + "_VI"] += st in LEVELS
+    detected["split"] = dict(dloc)
+    # pins of the GT that sit on a wire component (the ones a reader can follow) and whether we found them
+    n_local_pins = sum(1 for gp in vis if comp_of(gp.x, gp.y) is not None)
+    n_local_found = sum(1 for k in used_gt if comp_of(vis[k].x, vis[k].y) is not None)
+    miss = collections.Counter()
+    for k, gp in enumerate(vis):
+        if k in used_gt or comp_of(gp.x, gp.y) is None:
+            continue
+        near = [c for c in clusters if c.cluster.bbox[0] - 4 <= gp.x <= c.cluster.bbox[2] + 4
+                and c.cluster.bbox[1] - 4 <= gp.y <= c.cluster.bbox[3] + 4]
+        if not near:
+            miss["no_cluster"] += 1
+        else:
+            near.sort(key=lambda c: (c.cluster.bbox[2] - c.cluster.bbox[0]) * (c.cluster.bbox[3] - c.cluster.bbox[1]))
+            c = near[0]
+            big = len(c.cluster.prim_ids) > 150
+            miss[("giant_" if big else "") + c.resolution.status] += 1
     nets = res.nets
     return {
         "project": name, "seconds": round(time.time() - t0, 1), "gt": info,
         "gt_pins": len(pins), "gt_pins_visible_with_net": len(vis),
-        "oracle_attached_pins": len(attached), "detected_pins": len(tips), "detected_matched_gt": len(matched),
+        "oracle_attached_pins": len(attached), "local_pins": n_local_pins, "local_pins_found": n_local_found, "miss_reasons": dict(miss), "detected_pins": len(tips), "detected_matched_gt": len(matched),
         "prims": len(pi.prims), "wire_objects": sum(1 for o in g.objects if o.kind == "WIRE"),
         "edges": dict(collections.Counter(e.rule for e in g.edges)), "sites": len(g.sites),
         "dots": len(built.dots), "nets": len(nets), "open_nets": sum(n.closure == "OPEN" for n in nets),
@@ -310,6 +338,12 @@ def main(root: str) -> int:
             print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
             for k, v in (r.get("oracle", {}).get("split") or {}).items():
                 tot["split_" + k] += v
+            for k, v in (r.get("detected", {}).get("split") or {}).items():
+                tot["dsplit_" + k] += v
+            for k, v in (r.get("miss_reasons") or {}).items():
+                tot["miss_" + k] += v
+            tot["local_pins"] += r.get("local_pins", 0)
+            tot["local_pins_found"] += r.get("local_pins_found", 0)
             for mode in ("oracle", "detected"):
                 m = r.get(mode)
                 if m:
@@ -332,6 +366,13 @@ def main(root: str) -> int:
         n = max(1, sp.get(kind + "_pos", 0))
         out["oracle_" + kind] = {"pos": sp.get(kind + "_pos", 0), "recall_V": round(sp.get(kind + "_V", 0) / n, 4),
                                  "recall_VI": round(sp.get(kind + "_VI", 0) / n, 4)}
+    dsp = {k[7:]: v for k, v in tot.items() if k.startswith("dsplit_")}
+    n = max(1, dsp.get("local_pos", 0))
+    out["detected_local"] = {"pos": dsp.get("local_pos", 0), "recall_V": round(dsp.get("local_V", 0) / n, 4),
+                             "recall_VI": round(dsp.get("local_VI", 0) / n, 4),
+                             "pin_recall": round(tot["local_pins_found"] / max(1, tot["local_pins"]), 4),
+                             "pins": tot["local_pins"],
+                             "misses": {k[5:]: v for k, v in tot.items() if k.startswith("miss_")}}
     print("GT_TOTAL " + json.dumps(out, sort_keys=True))
     return 0
 
