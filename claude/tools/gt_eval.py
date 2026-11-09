@@ -327,6 +327,19 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
             dump_n[dl] += 1
             print("DUMP", name, gp.ref, gp.lib_id, "pin", gp.number, "at", round(gp.x, 1), round(gp.y, 1),
                   "near_clusters", [(c.resolution.status, len(c.cluster.prim_ids)) for c in near][:3])
+            if near:
+                from ecci.symbols import restrict_to_outline_style, strip_stubs
+                from ecci.template import diagnose_match
+                by_id_d = {q.id: q for q in pi.prims}
+                cl_d = near[0].cluster
+                sd = lib.symbols.get(gp.lib_id.split(":")[-1]) or lib.symbols.get(gp.lib_id)
+                for tag, c_ in (("raw", cl_d), ("restricted", (restrict_to_outline_style(cl_d, by_id_d) or (None,))[0]),
+                                ("stripped", (strip_stubs(cl_d, by_id_d) or (None,))[0])):
+                    if c_ is None or sd is None:
+                        print("DUMP   diag", tag, "n/a", "lib_known", sd is not None)
+                        continue
+                    for ln in diagnose_match(c_, sd)[:6]:
+                        print("DUMP   diag", tag, ln)
             for q in pi.prims:
                 if any(math.hypot(a - gp.x, b - gp.y) <= 45 for a, b in q.pts) and cls.records[q.id].cls != "TEXT":
                     print("DUMP   prim", q.id, cls.records[q.id].cls, round(q.stroke_w, 2), getattr(q, "stroke_color", None), len(q.pts),

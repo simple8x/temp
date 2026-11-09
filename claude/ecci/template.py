@@ -183,3 +183,35 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
         pins.append(ResolvedPin(tip0, base0, tuple(sorted(nums))))
     return Resolution(tuple(hits), "UNIQUE", "CONFIRMED" if agree else "AMBIGUOUS", tuple(pins), names,
                       "" if agree else "symmetric template: pin numbers cannot be assigned from geometry alone")
+
+
+def diagnose_match(cl: Cluster, sym: SymbolDef, params: MatchParams = MatchParams()) -> list[str]:
+    """Read-only diagnostics: for every orientation, the first stage that rejects `sym` for `cl` and its residual."""
+    tau = tolerance(cl, params)
+    cw, ch = cl.bbox[2] - cl.bbox[0], cl.bbox[3] - cl.bbox[1]
+    tsegs = sym.segments()
+    out = [f"cluster {cw:.1f}x{ch:.1f} prims={len(cl.prim_ids)} segs={len(cl.segs)} tau={tau:.3f}; template segs={len(tsegs)}"]
+    allpts = [p for sg in tsegs for p in sg]
+    for oi, m in enumerate(D4):
+        pts = [_tf(m, p) for p in allpts]
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+        tw, th = x1 - x0, y1 - y0
+        if tw <= DIM_EPS or th <= DIM_EPS:
+            out.append(f"o{oi}: degenerate template box")
+            continue
+        sx, sy = cw / tw, ch / th
+        s = 0.5 * (sx + sy)
+        if abs(sx - sy) > params.scale_isotropy * s:
+            out.append(f"o{oi}: scale mismatch sx={sx:.3f} sy={sy:.3f} (template box {tw:.2f}x{th:.2f})")
+            continue
+        tx, ty = cl.bbox[0] - s * x0, cl.bbox[1] - s * y0
+        segs_t = [((s * _tf(m, a)[0] + tx, s * _tf(m, a)[1] + ty), (s * _tf(m, b)[0] + tx, s * _tf(m, b)[1] + ty))
+                  for a, b in tsegs]
+        bad_v = [v for v in cl.verts if min(point_segment_distance(v, a, b) for a, b in segs_t) > tau]
+        r1 = max(min(point_segment_distance(v, a, b) for a, b in segs_t) for v in cl.verts)
+        r3a = max(min(point_segment_distance((a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])), c, d) for c, d in cl.segs)
+                  for a, b in segs_t for f in (0.17, 0.33, 0.5, 0.67, 0.83))
+        r3b = max(min(point_segment_distance((0.5 * (c[0] + d[0]), 0.5 * (c[1] + d[1])), a, b) for a, b in segs_t) for c, d in cl.segs)
+        out.append(f"o{oi}: s={s:.3f} r1={r1:.2f} (bad verts {len(bad_v)}) r3_template_on_cluster={r3a:.2f} r3_cluster_on_template={r3b:.2f}")
+    return out
