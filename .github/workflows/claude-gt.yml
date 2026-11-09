@@ -2,6 +2,9 @@ name: claude-gt
 # M4.0: independent ground truth. KiCad renders PDFs and computes netlists from open-source schematics.
 on:
   workflow_dispatch:
+  push:
+    branches: [claude, m4/gt-dataset-hardening]
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/ecci/rules.py', 'claude/ecci/gt_kicad.py', 'claude/tests/unit/test_rules.py', 'claude/tests/unit/test_gt_kicad.py']
 jobs:
   export:
     runs-on: ubuntu-24.04
@@ -20,7 +23,7 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install pikepdf pytest
       - name: Regression test symbol-body bridge handling
-        run: PYTHONPATH=claude:claude/tests pytest -q claude/tests/unit/test_rules.py
+        run: PYTHONPATH=claude:claude/tests pytest -q claude/tests/unit/test_rules.py claude/tests/unit/test_gt_kicad.py
       - name: Export PDFs and netlists
         run: bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
       - name: Summary
