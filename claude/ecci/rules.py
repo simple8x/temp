@@ -108,7 +108,16 @@ def _bridges_body_boundary(a, b, cluster, tol: float) -> bool:
         return False
     da = min((point_segment_distance(a, c, d) for c, d in cluster.segs), default=math.inf)
     db = min((point_segment_distance(b, c, d) for c, d in cluster.segs), default=math.inf)
-    return da <= tol and db <= tol
+    if da <= tol and db <= tol:
+        return True
+
+    # Some PDF symbol outlines are fragmented or omit a side from the resolved cluster's
+    # segment list. A stroke wholly spanning the resolved body from one bbox boundary to
+    # another is still symbol artwork; do not let it become a conductive wire.
+    def bbox_boundary_distance(p):
+        return min(abs(p[0] - bx0), abs(p[0] - bx1), abs(p[1] - by0), abs(p[1] - by1))
+
+    return bbox_boundary_distance(a) <= tol and bbox_boundary_distance(b) <= tol
 
 
 def _proper_cross(a, b, c, d, eps: float) -> tuple[float, float] | None:

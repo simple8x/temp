@@ -3,7 +3,7 @@ They cannot prove the coordinate convention (that would be circular); `calibrate
 KiCad output in CI and its counts are printed in the gt_eval log."""
 import math
 
-from ecci.gt_kicad import MM_TO_PT, _place, calibrate, embedded_library_text, gt_pins, parse_netlist_xml, read_sch
+from ecci.gt_kicad import MM_TO_PT, _instance_reference, _place, calibrate, embedded_library_text, gt_pins, parse_netlist_xml, read_sch
 from ecci.kicad_lib import load_library
 
 SCH = """(kicad_sch (version 20250610) (generator "eeschema") (paper "A4")
@@ -84,3 +84,14 @@ def test_embedded_library_round_trips_through_load_library(tmp_path):
     lib = load_library(str(out))
     assert "Device:R" in lib.symbols
     assert {p.number for p in lib.symbols["Device:R"].pins} == {"1", "2"}
+
+
+def test_instance_reference_resolves_legacy_project_name_only_via_netlist_refs(tmp_path):
+    s, x = files(tmp_path)
+    legacy_xml = tmp_path / "legacy.xml"
+    legacy_xml.write_text(XML.replace("/tmp/a.kicad_sch", "/tmp/legacy.kicad_sch"))
+    pins, info = gt_pins(s, str(legacy_xml))
+    assert info["project_name"] == "legacy"
+    assert {p.ref for p in pins} == {"R1"}
+    # The visible property says R2 and another project instance also says R2.
+    # Only R1 is present in this export's netlist, so it is the sole admissible identity.

@@ -86,21 +86,41 @@ def _place(px: float, py: float, at: tuple[float, float, float], mirror: str | N
     return X + qx, Y - qy
 
 
-def _instance_reference(sym: list, project_name: str) -> str:
-    """Resolve the symbol reference for the exact project exported by KiCad."""
+def _instance_reference(sym: list, project_name: str, expected_refs: set[str] | None = None) -> str:
+    """Resolve a placed reference without trusting the visible property text.
+
+    Prefer an exact project-instance match. Some KiCad demo sheets are reused in another
+    project and retain an empty or historical instance project name; in that case the
+    exported netlist is an independent allow-list. Accept only one unique instance reference
+    that actually occurs in that netlist. Never fall back to the display property.
+    """
     instances = child(sym, "instances")
-    refs = set()
+    all_refs: set[str] = set()
+    exact_refs: set[str] = set()
     if instances is not None:
         for project in children(instances, "project"):
-            if len(project) < 2 or str(project[1]) != project_name:
+            if len(project) < 2:
                 continue
+            project_refs = set()
             for path_node in children(project, "path"):
                 ref = child(path_node, "reference")
                 if ref is not None and len(ref) > 1:
-                    refs.add(str(ref[1]))
-    if len(refs) != 1:
-        raise ValueError(f"expected one instance reference for project {project_name!r}; found {sorted(refs)}")
-    return next(iter(refs))
+                    value = str(ref[1])
+                    project_refs.add(value)
+                    all_refs.add(value)
+            if str(project[1]) == project_name:
+                exact_refs.update(project_refs)
+    if exact_refs:
+        if len(exact_refs) != 1:
+            raise ValueError(f"ambiguous instance references for project {project_name!r}: {sorted(exact_refs)}")
+        return next(iter(exact_refs))
+    candidates = all_refs & expected_refs if expected_refs is not None else set()
+    if len(candidates) == 1:
+        return next(iter(candidates))
+    raise ValueError(
+        f"cannot uniquely resolve instance reference for project {project_name!r}; "
+        f"netlist-matched candidates={sorted(candidates)}, all instance refs={sorted(all_refs)}"
+    )
 
 
 def _project_name_from_netlist(xml_path: str) -> str:
@@ -111,7 +131,7 @@ def _project_name_from_netlist(xml_path: str) -> str:
     return Path(source.text.strip()).stem
 
 
-def read_sch(path: str, project_name: str | None = None) -> dict:
+def read_sch(path: str, project_name: str | None = None, expected_refs: set[str] | None = None) -> dict:
     tree = parse(Path(path).read_text(encoding="utf-8", errors="replace"))
     if not tree or tree[0] != "kicad_sch":
         raise ValueError("not a kicad_sch file")
@@ -129,7 +149,7 @@ def read_sch(path: str, project_name: str | None = None) -> dict:
         for p in children(sym, "property"):
             if len(p) > 2 and p[1] == "Reference":
                 display_ref = str(p[2])
-        ref = _instance_reference(sym, project_name) if project_name is not None else display_ref
+        ref = _instance_reference(sym, project_name, expected_refs) if project_name is not None else display_ref
         mir = child(sym, "mirror")
         unit = child(sym, "unit")
         conv = child(sym, "convert")
@@ -169,10 +189,11 @@ def calibrate(sch: dict) -> dict[str, int]:
 
 def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[list[GtPin], dict]:
     project_name = _project_name_from_netlist(xml_path)
-    sch = read_sch(sch_path, project_name=project_name)
+    nets = parse_netlist_xml(xml_path)
+    expected_refs = {ref for ref, _pin in nets}
+    sch = read_sch(sch_path, project_name=project_name, expected_refs=expected_refs)
     cal = calibrate(sch)
     order = order or ("MR" if cal["MR"] >= cal["RM"] else "RM")
-    nets = parse_netlist_xml(xml_path)
     pins: list[GtPin] = []
     for sp in sch["placed"]:
         ref = sp["ref"] or ""

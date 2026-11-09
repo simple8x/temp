@@ -304,3 +304,16 @@ def test_filled_disc_inside_resolved_symbol_body_is_not_a_junction():
     assert clusters
     assert built.dots == {}
     assert edges_by_rule(built, "TR2") == []
+
+
+def test_symbol_stroke_between_bbox_boundaries_is_quarantined_when_outline_is_fragmented():
+    from types import SimpleNamespace
+    from ecci.rules import _bridges_body_boundary
+
+    # Resolved body bbox is complete, but its segmented outline omitted top/bottom edges.
+    # A same-style stroke crossing the body from top to bottom must not enter the wire graph.
+    cluster = SimpleNamespace(
+        bbox=(10.0, 10.0, 20.0, 20.0),
+        segs=[((10.0, 10.0), (10.0, 20.0)), ((20.0, 10.0), (20.0, 20.0))],
+    )
+    assert _bridges_body_boundary((15.0, 10.0), (15.0, 20.0), cluster, 0.25)
