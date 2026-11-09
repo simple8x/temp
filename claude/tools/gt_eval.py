@@ -180,7 +180,8 @@ ONLY = [x for x in os.environ.get("GT_ONLY", "").split(",") if x]
 
 
 def wanted(name: str) -> bool:
-    return not ONLY or any(name == o or name.split("#")[0] == o for o in ONLY)
+    base = name.split("#")[0]
+    return not ONLY or any(name == o or (base == o) or (name == base and o.split("#")[0] == base) for o in ONLY)
 
 
 DUMP_LIB = os.environ.get("GT_DUMP_LIB", "")
