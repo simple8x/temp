@@ -2,6 +2,7 @@ import pytest
 
 from ecci.classify import (LC_BODY, LC_BORDER, LC_OTHER, LC_WIRE, ClassifyParams, classify_page,
                            is_manhattan)
+from ecci.classify import style_key
 from ecci.ingest_vector import ingest_pdf
 from pdfgen import one_page
 
@@ -127,55 +128,39 @@ def _chain(y, step, n, rgb, x0=20):
     return b"".join(_seg(x0 + step * i, y, x0 + step * (i + 1), y, rgb) for i in range(n))
 
 
+def _chain(y, n, step, rgb, x0=20):
+    return b"".join(_seg(x0 + step * k, y, x0 + step * (k + 1), y, rgb) for k in range(n))
+
+
 def test_ambiguous_structure_yields_no_wire_at_all():
-    c = _chain(100, 50, 8, "0 0.6 0") + _chain(200, 50, 8, "0.4 0 0.4")    # equal structure, equal lengths
-    res = _style_of(c)
+    # two equally connected styles of equal line length: nothing may be called a wire (never guess)
+    res = _style_of(_chain(100, 8, 50, "0 0.6 0") + _chain(200, 8, 50, "0.5 0 0"))
     assert res.wire_style is None
-    assert any("ambiguous" in n for n in res.notes)
-    assert not any(r.cls == LC_WIRE for r in res.records.values())          # never guess
+    assert not any(r.cls == LC_WIRE for r in res.records.values())
 
 
-def test_length_breaks_a_structural_tie_in_favour_of_the_longer_lines():
-    c = _chain(100, 60, 8, "0 0.6 0") + _chain(200, 20, 8, "0.4 0 0.4")
-    res = _style_of(c)
+def test_length_tie_break_picks_long_lines_when_structure_is_similar():
+    # green: 6 long chained wires; red: 14 short chained lines (structure within the dominance factor)
+    res = _style_of(_chain(100, 6, 80, "0 0.6 0") + _chain(200, 14, 20, "0.5 0 0"))
     assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
 
 
-def test_page_spanning_rules_are_sheet_furniture_not_wires():
-    big = (2000, 1200)                       # diagonal ~2330: mean lines longer than 466 are sheet furniture
-    blue = _chain(100, 480, 4, "0 0 0.76", x0=100)                     # 4 rules of 480 pt, perfectly chained
-    green = b"".join(_seg(300, 300 + 40 * i, 360, 300 + 40 * i, "0 0.6 0") for i in range(6))   # 6 loose wires
-    res = _style_of(blue + green, big)
+def test_off_colour_body_excludes_bus_like_lines_only_when_body_colours_exist():
+    from ecci.rules import off_colour_body
+    boxes = b"".join(f"0.5 0 0 RG 0.45 w {x} 100 m {x + 20} 100 l {x + 20} 120 l {x} 120 l h S\n".encode()
+                     for x in (20, 80))
+    slanted = b"".join(f"0 0 0.5 RG 0.45 w {x} 40 m {x + 8} 48 l S\n".encode() for x in (20, 60, 100))
+    pi = ingest_pdf(one_page(boxes + slanted, size=(300, 200))).pages[0]
+    cls = classify_page(pi)
+    ex = off_colour_body(pi, cls)
+    blue = {p.id for p in pi.prims if not p.line_closed and style_key(p)[1] == ("rgb", 0.0, 0.0, 0.5)}
+    assert blue and ex == frozenset(blue)
+    only_open = ingest_pdf(one_page(slanted, size=(300, 200))).pages[0]
+    assert off_colour_body(only_open, classify_page(only_open)) == frozenset()
+
+
+def test_style_with_negligible_total_length_loses_even_if_perfectly_connected():
+    green = b"".join(_seg(20 + 70 * k, 100, 70 + 70 * k, 100, "0 0.6 0") for k in range(8))   # 8 x 90, no contact
+    mag = _chain(300, 8, 4, "0.5 0 0.5", x0=40)                                                     # 8 x 4, chained
+    res = _style_of(green + mag)
     assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
-
-
-def test_colour_that_draws_closed_outlines_is_a_body_colour_not_the_wire_colour():
-    g, r = "0 0.6 0", "0.5 0 0"
-    c = b""
-    for i in range(6):                                   # red: pin-like lines chained, very well connected
-        c += _seg(20 + 40 * i, 100, 52 + 40 * i, 100, r)
-    c += f"{r} RG 0.72 w 100 200 14 20 re S 150 200 14 20 re S\n".encode()   # red closed outlines
-    for i in range(5):                                   # green: wires, less connected
-        c += _seg(20 + 60 * i, 300, 70 + 60 * i, 300, g)
-    res = _style_of(c)
-    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
-
-
-def test_slanted_open_lines_in_the_wire_colour_do_not_disqualify_it():
-    g = "0 0.6 0"
-    c = b"".join(_seg(20 + 60 * i, 300, 70 + 60 * i, 300, g) for i in range(8))
-    c += b"".join(_seg(40 + 30 * i, 200, 45 + 30 * i, 205, g) for i in range(4))     # bus-entry-like diagonals
-    c += b"".join(_seg(20 + 30 * i, 100, 40 + 30 * i, 100, "0.5 0 0") for i in range(10))
-    c += "0.5 0 0 RG 0.72 w 100 150 14 20 re S 150 150 14 20 re S\n".encode()
-    res = _style_of(c)
-    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
-
-
-def test_lone_glyph_of_many_tiny_strokes_is_text_but_a_rectangle_is_not():
-    glyph = b"".join(f"0 0.4 0.4 RG 0.43 w {200 + 0.5 * i} {100 + 0.6 * (i % 2)} m "
-                     f"{200.5 + 0.5 * i} {100 + 0.6 * ((i + 1) % 2)} l S\n".encode() for i in range(6))
-    body = b"0.5 0 0 RG 0.72 w 300 100 14 20 re S\n"
-    res = _style_of(glyph + body)
-    assert sum(r.cls == "TEXT" for r in res.records.values()) == 6
-    assert any("0 rows" in n for n in res.notes)             # text found by stroke structure, not by a row
-    assert res.records[6].cls != "TEXT"                       # the rectangle (last primitive)

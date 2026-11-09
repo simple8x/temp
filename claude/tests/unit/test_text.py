@@ -157,3 +157,19 @@ def test_t15_vertical_text_row_is_text_too():
     pi = ingest_pdf(one_page(content, size=(300, 300))).pages[0]
     cls = classify_page(pi)
     assert any(r.cls == LC_TEXT for r in cls.records.values())
+
+
+LIB_FOR_T16 = load_library(str(Path(__file__).resolve().parents[1] / "fixtures" / "lib_min.kicad_sym"))
+
+
+def test_t16_pin_lines_in_body_style_still_match_and_confirm_pins():
+    # KiCad draws pin lines in the body colour and width: the pin lines land in the body cluster
+    sym = LIB_FOR_T16.symbols["R"]
+    wires = "".join(f"{x} 40 m {x + 60} 40 l S\n" for x in range(10, 280, 70))
+    content = (b"0 0.6 0 RG 0.45 w " + wires.encode() + b"0.5 0 0 RG\n"
+               + draw_symbol(sym, "r0", 3.0, (100.0, 105.0), body_w=0.45, pin_w=0.45))
+    pi = ingest_pdf(one_page(content, size=(300, 200))).pages[0]
+    syms = [v for k, v in LIB_FOR_T16.symbols.items() if k != "R_LONG"]
+    results = detect_pins(pi, classify_page(pi), syms)
+    assert len(results) == 1 and results[0].resolution.status == "UNIQUE"
+    assert len(results[0].pins) == 2 and all(p.pos_state == "CONFIRMED" for p in results[0].pins)
