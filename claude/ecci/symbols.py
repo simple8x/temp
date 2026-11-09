@@ -303,7 +303,7 @@ def strip_decor(cl: Cluster, by_id: dict, max_frac: float = 0.05, min_pts: int =
     dropped = tuple(i for i in cl.prim_ids if by_id[i].line_closed and len(by_id[i].pts) >= min_pts
                     and _maxdim(_bbox(by_id[i])) <= max_frac * big)
     rest = tuple(i for i in cl.prim_ids if i not in set(dropped))
-    if not dropped or len(rest) < 2:
+    if not dropped or not rest:
         return None
     return _rebuild(cl.id, rest, by_id), dropped
 
@@ -337,13 +337,16 @@ def relaxations(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_prims: i
     for base, _ in variants_src:
         if base is not cl:
             yield base, ()
+        sp1 = strip_stubs(base, by_id, eps)
+        if sp1 is not None and base is not cl:
+            yield sp1[0], sp1[1]
+        if sp1 is not None:                       # bubbles are removed AFTER the stubs: a pin line hanging on a bubble
+            dc1 = strip_decor(sp1[0], by_id)      # touches the bubble, which would be gone for the stub test otherwise
+            if dc1 is not None:
+                yield dc1[0], sp1[1]
         dc = strip_decor(base, by_id)
-        cur = dc[0] if dc is not None else None
-        if cur is not None:
-            yield cur, ()
-        for c in (base, cur):
-            if c is None:
-                continue
-            sp2 = strip_stubs(c, by_id, eps)
+        if dc is not None:
+            yield dc[0], ()
+            sp2 = strip_stubs(dc[0], by_id, eps)
             if sp2 is not None:
                 yield sp2[0], sp2[1]
