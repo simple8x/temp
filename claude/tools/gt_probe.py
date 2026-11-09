@@ -10,7 +10,7 @@ from ecci.ingest_vector import ingest_pdf  # noqa: E402
 
 root, proj = pathlib.Path(sys.argv[1]), sys.argv[2]
 pts = [(float(sys.argv[i]), float(sys.argv[i + 1])) for i in range(3, len(sys.argv) - 1, 2)]
-rad = 6.0
+rad = 9.0
 pdf = sorted((root / proj).glob("*.pdf"))[0]
 pi = ingest_pdf(str(pdf), pages=[0]).pages[0]
 cls = classify_page(pi)
