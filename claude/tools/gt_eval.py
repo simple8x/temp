@@ -185,6 +185,9 @@ def evaluate(pdir: pathlib.Path) -> dict:
         "quarantined": len(res.quarantined), "library_symbols": len(lib.symbols),
         "library_warnings": len(lib.warnings), "oracle": oracle, "detected": detected,
         "oracle_fp_rules": dict(fp_rules), "oracle_fp_verified_detail": fp_v_detail, "oracle_fp_inferred_detail": fp_i_detail,
+        "cluster_status": dict(collections.Counter(c.resolution.status for c in clusters)),
+        "clusters": len(clusters), "wire_style": str(cls.wire_style), "style_notes": [n for n in cls.notes if "wire style" in n],
+        "library_names_sample": sorted(lib.symbols)[:3],
         "dot_radii": sorted(round(v[1], 2) for v in built.dots.values())[:8],
     }
 
