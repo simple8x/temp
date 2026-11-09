@@ -90,7 +90,7 @@ def validate(document: object, expected_sha256: str | None = None) -> list[str]:
                 errors.append(f"{prefix}.reviewers[{j}].reviewer_id is required")
             else:
                 reviewer_ids.append(rid)
-            if reviewer.get("decision") not in {"CONFIRM", "REJECT", "DISAGREE"}:
+            if reviewer.get("decision") not in {"CONFIRM", "REJECT", "DISAGREE", "UNKNOWN"}:
                 errors.append(f"{prefix}.reviewers[{j}].decision is invalid")
         if len(reviewer_ids) != len(set(reviewer_ids)):
             errors.append(f"{prefix}: reviewer IDs must be unique per annotation")
@@ -113,7 +113,7 @@ def validate(document: object, expected_sha256: str | None = None) -> list[str]:
                 and isinstance(r.get("reviewer_id"), str) and r.get("reviewer_id")
             }
             if len(confirmed) < 2 or len(confirmed) != len(reviewer_ids):
-                errors.append(f"{prefix}: VERIFIED requires two distinct reviewers and unanimous CONFIRM decisions")
+                errors.append(f"{prefix}: VERIFIED requires two distinct confirming reviewers and unanimous CONFIRM decisions")
         if status == "REVIEWED_PENDING_SECOND_REVIEW" and not reviewers:
             errors.append(f"{prefix}: pending review requires at least one reviewer")
         if row.get("kind") == "CONNECTIVITY" and status == "VERIFIED":
