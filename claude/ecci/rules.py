@@ -129,13 +129,21 @@ def _proper_cross(a, b, c, d, eps: float) -> tuple[float, float] | None:
     return x, y
 
 
-def find_dots(pi: PageIngest, cls: PageClassification, prm: RulesParams = RulesParams()) -> dict:
+def find_dots(pi: PageIngest, cls: PageClassification, prm: RulesParams = RulesParams(),
+              clusters: list[ClusterResult] | None = None) -> dict:
     """Filled, round, small BODY primitives that touch no other BODY primitive (so they are not
     part of a symbol: TC-X3). Returns dot object id -> (centre, radius, prim id)."""
     W, H = pi.geom.width, pi.geom.height
     body = [p for p in pi.prims if cls.records[p.id].cls == LC_BODY and p.kind == "polyline"]
     cand = {p.id: _is_disc(p, W, H, prm) for p in body}
     cand = {i: d for i, d in cand.items() if d is not None}
+    # Filled circular artwork inside a resolved symbol body is not a schematic junction.
+    if clusters:
+        for pid, disc in list(cand.items()):
+            cx, cy = disc[0]
+            if any(cr.pins and cr.cluster.bbox[0] <= cx <= cr.cluster.bbox[2]
+                   and cr.cluster.bbox[1] <= cy <= cr.cluster.bbox[3] for cr in clusters):
+                cand.pop(pid)
     if not cand:
         return {}
     g = build_arrangement(body, prm.eps)
@@ -165,6 +173,22 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
 
     # ---- wire objects
     wire_ids = sorted(i for i, r in cls.records.items() if r.cls == LC_WIRE)
+    excluded_wire_prims: dict[int, str] = {}
+    # Same-style symbol strokes can look exactly like wires. Quarantine a primitive only
+    # when every segment bridges two resolved body-boundary points through the body.
+    for cr in clusters:
+        if not cr.pins:
+            continue
+        for pid in wire_ids:
+            p = by_id[pid]
+            segs = list(p.segments())
+            if p.kind == "polyline" and not p.line_closed and segs:
+                tol = max(prm.eps, 0.5 * p.stroke_w)
+                if all(_bridges_body_boundary(a, b, cr.cluster, tol) for _, a, b in segs):
+                    excluded_wire_prims[pid] = f"symbol-body bridge in resolved cluster {cr.cluster.id}"
+    wire_ids = [pid for pid in wire_ids if pid not in excluded_wire_prims]
+    if excluded_wire_prims:
+        notes.append(f"excluded {len(excluded_wire_prims)} symbol-internal wire-like primitives from topology")
     wrole = {i: _wire_role(cls, i) for i in wire_ids}
     for i in wire_ids:
         objects.append(Obj(f"w:{i}", "WIRE"))
@@ -392,7 +416,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                    "no-connect markers not detected: C5 inactive on PDFs",
                    "sheet-scope, power symbols and hierarchical labels not modelled"]
     return BuildResult(ConnGraph(objects, edges, sites, Constraints(cannot_link=tuple(cannot))),
-                       notes, unsupported, dot_info, obj_prims, pin_tips)
+                       notes, unsupported, dot_info, obj_prims, pin_tips, excluded_wire_prims)
 
 
 def _is_end(p, pt, tol: float) -> bool:
@@ -407,7 +431,9 @@ def analyze_page(pi: PageIngest, symbols, prm: RulesParams = RulesParams(),
     """Convenience pipeline for one page: classify -> pins -> candidate graph -> solve."""
     from .solver import solve
     cls = classify_page(pi)
-    dots = find_dots(pi, cls, prm)
+    # Resolve symbol bodies before classifying circular marks as junction dots.
+    clusters = detect_pins(pi, cls, list(symbols), pin_params, prm.eps, frozenset())
+    dots = find_dots(pi, cls, prm, clusters)
     clusters = detect_pins(pi, cls, list(symbols), pin_params, prm.eps,
                            frozenset(v[2] for v in dots.values()))
     built = build_conn_graph(pi, cls, clusters, prm, dots)
