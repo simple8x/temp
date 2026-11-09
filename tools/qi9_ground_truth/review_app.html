@@ -48,7 +48,9 @@ details{margin:10px 0}hr{border:0;border-top:1px solid #e2e8f0;margin:12px 0}
 <aside class="panel">
   <label>1. Load review pack folder</label>
   <input id="folder" type="file" webkitdirectory directory multiple>
-  <div id="status">Select the folder produced by native_symbol_review_pack.py.</div>
+  <p class="muted">Desktop: choose the review-pack folder. Android: extract the ZIP, then select the pack files below.</p>
+  <input id="packFiles" type="file" multiple accept=".json,.png">
+  <div id="status">Select the folder (desktop) or all extracted pack files (Android).</div>
   <label>Annotation type</label>
   <select id="kind">
     <option value="SYMBOL_BOUNDARY">Symbol boundary</option>
@@ -155,15 +157,17 @@ async function loadPage(){
  $("add").disabled=false;renderCandidates();refreshList();draw();
  setStatus("Loaded page "+page+" · source SHA256 "+index.source_sha256+" · clean PDF render is active.");
 }
-$("folder").addEventListener("change",async ev=>{
- files.clear();for(const f of ev.target.files)files.set(f.webkitRelativePath||f.name,f);
+async function acceptPackFiles(fileList){
+ files.clear();for(const f of fileList)files.set(f.webkitRelativePath||f.name,f);
  const entry=[...files].find(([p])=>p.endsWith("manual_review_index.json"));
- if(!entry){setStatus("manual_review_index.json not found. Select the generated review-pack folder.");return;}
+ if(!entry){setStatus("manual_review_index.json not found. Select the generated review-pack folder or all extracted pack files.");return;}
  try{index=await readJson(entry[1]);if(index.schema!=="qi9-symbol-review-pack/v1")throw new Error("Unexpected review pack schema");
  $("pageSelect").innerHTML=pages().map(p=>"<option value='"+p+"'>Page "+p+"</option>").join("");
  $("pageSelect").value=pages()[0];await loadPage();}
  catch(e){setStatus("Cannot load review pack: "+e.message);}
-});
+}
+$("folder").addEventListener("change",ev=>acceptPackFiles(ev.target.files));
+$("packFiles").addEventListener("change",ev=>acceptPackFiles(ev.target.files));
 $("pageSelect").addEventListener("change",loadPage);
 $("prev").addEventListener("click",()=>{const i=pages().indexOf(page);if(i>0){$("pageSelect").value=pages()[i-1];loadPage();}});
 $("next").addEventListener("click",()=>{const i=pages().indexOf(page);if(i>=0&&i<pages().length-1){$("pageSelect").value=pages()[i+1];loadPage();}});
