@@ -187,3 +187,47 @@ def test_t17_duplicated_pin_lines_do_not_hide_the_stubs():
     syms = [v for k, v in LIB_FOR_T16.symbols.items() if k != "R_LONG"]
     results = detect_pins(pi, classify_page(pi), syms)
     assert len(results) == 1 and results[0].resolution.status == "UNIQUE" and len(results[0].pins) == 2
+
+
+def _scene_with_r(extra_ops: bytes = b""):
+    sym = LIB_FOR_T16.symbols["R"]
+    wires = "".join(f"{x} 40 m {x + 60} 40 l S\n" for x in range(10, 280, 70))
+    return (b"0 0.6 0 RG 0.45 w " + wires.encode() + b"0.5 0 0 RG\n"
+            + draw_symbol(sym, "r0", 3.0, (100.0, 105.0), body_w=0.45, pin_w=0.45) + extra_ops)
+
+
+def test_t18_symbol_hanging_on_a_pin_tip_does_not_hide_the_stub_or_join_the_cluster():
+    # a power-flag like arrow (3 strokes) touches the free end of one pin line: the pin line is still a stub
+    syms = [v for k, v in LIB_FOR_T16.symbols.items() if k != "R_LONG"]
+    pi0 = ingest_pdf(one_page(_scene_with_r(), size=(300, 200))).pages[0]
+    r0 = detect_pins(pi0, classify_page(pi0), syms)
+    assert len(r0) == 1 and r0[0].resolution.status == "UNIQUE"
+    tx, ty_page = min(r0[0].pins, key=lambda p: p.tip[1]).tip
+    ty = 200.0 - ty_page                                   # page coordinates are y-down, the stream is y-up
+    arrow = f"{tx - 2} {ty + 2} m {tx} {ty} l S {tx + 2} {ty + 2} m {tx} {ty} l S {tx} {ty} m {tx} {ty + 6} l S\n".encode()
+    pi = ingest_pdf(one_page(_scene_with_r(arrow), size=(300, 200))).pages[0]
+    results = detect_pins(pi, classify_page(pi), syms)
+    ok = [r for r in results if r.resolution.status == "UNIQUE"]
+    assert len(ok) == 1 and len(ok[0].pins) == 2
+
+
+def test_t19b_double_plotted_capacitor_plates_still_merge_as_plates():
+    from ecci.symbols import body_clusters
+    plate = lambda y: f"0.5 0 0 RG 1.0 w 100 {y} m 112 {y + 3} l S\n"  # noqa: E731  (slanted: BODY, not a wire)
+    wires = "0 0.6 0 RG 0.45 w " + "".join(f"{x} 40 m {x + 60} 40 l S\n" for x in range(10, 280, 70))
+    ops = (wires + plate(100) * 2 + plate(108) * 2).encode()           # each plate plotted twice, 5pt apart
+    pi = ingest_pdf(one_page(ops, size=(300, 200))).pages[0]
+    cl = body_clusters(pi, classify_page(pi), gap_frac=0.1)   # the value the pipeline uses
+    assert len(cl) == 1 and len(cl[0].prim_ids) == 4
+
+
+def test_t19_circle_with_an_inner_stroke_is_one_cluster_even_when_plotted_twice():
+    # fill + stroke plot the same circle twice; the inner bar floats inside it (containment merges, bare line allowed)
+    import math as _m
+    pts = [(150 + 7 * _m.cos(2 * _m.pi * k / 32), 100 + 7 * _m.sin(2 * _m.pi * k / 32)) for k in range(32)]
+    ring = ("0.5 0 0 RG 0.72 w " + f"{pts[0][0]} {pts[0][1]} m " + " ".join(f"{x} {y} l" for x, y in pts[1:]) + " h S\n")
+    bar = "0.43 w 146 98 m 154 102 l S\n"
+    from ecci.symbols import body_clusters
+    pi = ingest_pdf(one_page((ring + ring + bar).encode(), size=(300, 200))).pages[0]
+    cl = body_clusters(pi, classify_page(pi))
+    assert len(cl) == 1 and len(cl[0].prim_ids) == 3

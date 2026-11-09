@@ -48,6 +48,51 @@ def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("in
     out: set[int] = set()
     items = list(prims.items())
     gk = {i: _geom_key(q) for i, q in items}          # once per primitive, not once per candidate pair
+    cell = 20.0
+    grid: dict[tuple[int, int], list[int]] = {}
+    for i, q in items:
+        bq = _bbox(q)
+        for cx in range(int(bq[0] // cell), int(bq[2] // cell) + 1):
+            for cy in range(int(bq[1] // cell), int(bq[3] // cell) + 1):
+                grid.setdefault((cx, cy), []).append(i)
+
+    def nbrs(i: int, bb) -> list[int]:
+        got: set[int] = set()
+        for cx in range(int((bb[0] - 2) // cell), int((bb[2] + 2) // cell) + 1):
+            for cy in range(int((bb[1] - 2) // cell), int((bb[3] + 2) // cell) + 1):
+                got.update(grid.get((cx, cy), ()))
+        got.discard(i)
+        return [j for j in sorted(got) if _gap(bb, _bbox(prims[j])) <= eps + 0.5 * (prims[i].stroke_w + prims[j].stroke_w)]
+
+    def touching(j: int) -> list[int]:
+        qj = prims[j]
+        res_ = []
+        for k in nbrs(j, _bbox(qj)):
+            qk = prims[k]
+            tol = eps + 0.5 * (qj.stroke_w + qk.stroke_w)
+            if any(point_segment_distance(v, s0, s1) <= tol for v in qj.pts for _, s0, s1 in qk.segments()) or \
+               any(point_segment_distance(v, s0, s1) <= tol for v in qk.pts for _, s0, s1 in qj.segments()):
+                res_.append(k)
+        return res_
+
+    def dangling(i: int, far: list[int], near: list[int], cap: int = 60) -> bool:
+        """True when the primitives touched at the far end form a group of <= cap primitives that never reaches
+        anything touched at the near end except through primitive i: i is a bridge between the body and that group."""
+        seen = set(far)
+        stack = list(far)
+        near_set = set(near)
+        while stack:
+            j = stack.pop()
+            if j in near_set:
+                return False
+            for k in touching(j):
+                if k != i and k not in seen:
+                    seen.add(k)
+                    if len(seen) > cap:
+                        return False
+                    stack.append(k)
+        return not (seen & near_set)
+
     for i, p in items:
         if len(p.pts) != 2 or p.line_closed:
             continue
@@ -57,11 +102,21 @@ def find_stubs(prims: dict, eps: float = EPS_DEFAULT, max_len: float = float("in
         if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > axis_tol:
             continue
         bb = _bbox(p)
-        near = [q for j, q in items if j != i and gk[j] != gk[i] and _gap(bb, _bbox(q)) <= eps + 0.5 * (p.stroke_w + q.stroke_w) and _maxdim(_bbox(q)) >= min_host]
-        touch = [any(point_segment_distance(end, s0, s1) <= eps + 0.5 * (p.stroke_w + q.stroke_w)
-                     for q in near for _, s0, s1 in q.segments()) for end in (a, b)]
-        if touch[0] != touch[1]:
+        tol_i = eps + 0.5 * p.stroke_w
+        touched = ([], [])
+        for j in nbrs(i, bb):
+            q = prims[j]
+            if gk[j] == gk[i] or _maxdim(_bbox(q)) < min_host:
+                continue
+            tol = eps + 0.5 * (p.stroke_w + q.stroke_w)
+            for k, end in enumerate((a, b)):
+                if any(point_segment_distance(end, s0, s1) <= tol for _, s0, s1 in q.segments()):
+                    touched[k].append(j)
+        t0, t1 = bool(touched[0]), bool(touched[1])
+        if t0 != t1:
             out.add(i)
+        elif t0 and t1 and (dangling(i, touched[1], touched[0]) or dangling(i, touched[0], touched[1])):
+            out.add(i)          # one end carries a hanging group (a power symbol on the pin tip), not the body
     return out
 
 
@@ -120,8 +175,9 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
                                max(b[2] for b in bs), max(b[3] for b in bs))
             # a part that is a single bare 2-vertex line (pin line, plate, glyph stroke) merges by proximity only
             # with another bare line (capacitor plates), never with a larger part. Otherwise rows of pins/strokes chain a whole sheet together.
-            bare = {r for r, ids in groups.items() if len(ids) == 1 and len(prims[ids[0]].pts) == 2
-                    and not prims[ids[0]].line_closed}
+            bare = {r for r, ids in groups.items()
+                    if all(len(prims[i].pts) == 2 and not prims[i].line_closed for i in ids)
+                    and len({_geom_key(prims[i]) for i in ids}) == 1}      # a line, possibly plotted twice
             order = sorted(boxes, key=lambda r: boxes[r][0])
             changed = False
             for ai, a in enumerate(order):
@@ -135,8 +191,8 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
                         continue
                     if bb[0] > reach:             # sorted by x0: no later part can be within reach
                         break
-                    if (a in bare) != (b in bare):
-                        continue
+                    if (a in bare) != (b in bare) and _gap(ba, bb) > 0:
+                        continue                  # a bare line joins a larger part only when inside/overlapping it
                     gf = bare_gap_frac if (a in bare and b in bare) else gap_frac   # plates sit far apart relative to size
                     if find(a) != find(b) and _gap(ba, bb) <= gf * min(_maxdim(ba), _maxdim(bb)):
                         ra, rb = find(a), find(b)
@@ -153,12 +209,13 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
         owner = {i: r for r, ids in groups.items() for i in ids}
         for sid in sorted(stubs):
             sp = all_prims[sid]
-            hit = None
+            hit, hit_size = None, -1.0
             for i in sorted(prims):
                 if any(point_segment_distance(e, s0, s1) <= eps + 0.5 * (sp.stroke_w + prims[i].stroke_w) for e in (sp.pts[0], sp.pts[-1])
                        for _, s0, s1 in prims[i].segments()):
-                    hit = owner[i]
-                    break
+                    size = sum(_maxdim(_bbox(all_prims[k])) for k in groups[owner[i]])   # prefer the body over a hanging symbol
+                    if size > hit_size:
+                        hit, hit_size = owner[i], size
             if hit is None:
                 groups[("stub", sid)] = [sid]
             else:
