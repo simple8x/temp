@@ -123,6 +123,12 @@ def _instance_reference(sym: list, project_name: str, expected_refs: set[str] | 
     )
 
 
+def _component_refs_from_netlist(xml_path: str) -> set[str]:
+    """All exported component references, including components with no connected pins."""
+    root = ET.parse(xml_path).getroot()
+    return {str(comp.get("ref")) for comp in root.iter("comp") if comp.get("ref")}
+
+
 def _project_name_from_netlist(xml_path: str) -> str:
     root = ET.parse(xml_path).getroot()
     source = root.find("./design/source")
@@ -149,7 +155,13 @@ def read_sch(path: str, project_name: str | None = None, expected_refs: set[str]
         for p in children(sym, "property"):
             if len(p) > 2 and p[1] == "Reference":
                 display_ref = str(p[2])
-        ref = _instance_reference(sym, project_name, expected_refs) if project_name is not None else display_ref
+        # Power symbols are deliberately excluded from the pin oracle and often have no
+        # ordinary component reference in the exported netlist.
+        lib_id = str(lib_id_n[1])
+        if project_name is None or lib_id.startswith("power:"):
+            ref = display_ref
+        else:
+            ref = _instance_reference(sym, project_name, expected_refs)
         mir = child(sym, "mirror")
         unit = child(sym, "unit")
         conv = child(sym, "convert")
@@ -190,7 +202,7 @@ def calibrate(sch: dict) -> dict[str, int]:
 def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[list[GtPin], dict]:
     project_name = _project_name_from_netlist(xml_path)
     nets = parse_netlist_xml(xml_path)
-    expected_refs = {ref for ref, _pin in nets}
+    expected_refs = _component_refs_from_netlist(xml_path) | {ref for ref, _pin in nets}
     sch = read_sch(sch_path, project_name=project_name, expected_refs=expected_refs)
     cal = calibrate(sch)
     order = order or ("MR" if cal["MR"] >= cal["RM"] else "RM")

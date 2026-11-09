@@ -23,7 +23,7 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install pikepdf pytest
       - name: Regression test symbol-body bridge handling
-        run: PYTHONPATH=claude:claude/tests pytest -q claude/tests/unit/test_rules.py claude/tests/unit/test_gt_kicad.py
+        run: PYTHONPATH=claude:claude/tests pytest -q claude/tests/unit/test_rules.py claude/tests/unit/test_gt_kicad.py claude/tests/unit/test_pins.py
       - name: Export PDFs and netlists
         run: bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
       - name: Summary
