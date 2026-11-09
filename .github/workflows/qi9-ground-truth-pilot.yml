@@ -35,6 +35,8 @@ jobs:
           python tools/pdf2kicad/native_symbol_review_pack.py \
             --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
             --pages 5-11 --outdir qi9-review-pack --dpi 100
+      - name: Include offline review app in the pack
+        run: cp tools/qi9_ground_truth/review_app.html qi9-review-pack/review_app.html
       - name: Upload QI9 review pack
         if: always()
         uses: actions/upload-artifact@v4
