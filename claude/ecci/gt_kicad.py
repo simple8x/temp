@@ -86,7 +86,32 @@ def _place(px: float, py: float, at: tuple[float, float, float], mirror: str | N
     return X + qx, Y - qy
 
 
-def read_sch(path: str) -> dict:
+def _instance_reference(sym: list, project_name: str) -> str:
+    """Resolve the symbol reference for the exact project exported by KiCad."""
+    instances = child(sym, "instances")
+    refs = set()
+    if instances is not None:
+        for project in children(instances, "project"):
+            if len(project) < 2 or str(project[1]) != project_name:
+                continue
+            for path_node in children(project, "path"):
+                ref = child(path_node, "reference")
+                if ref is not None and len(ref) > 1:
+                    refs.add(str(ref[1]))
+    if len(refs) != 1:
+        raise ValueError(f"expected one instance reference for project {project_name!r}; found {sorted(refs)}")
+    return next(iter(refs))
+
+
+def _project_name_from_netlist(xml_path: str) -> str:
+    root = ET.parse(xml_path).getroot()
+    source = root.find("./design/source")
+    if source is None or not (source.text or "").strip():
+        raise ValueError("KiCad netlist has no design/source; refusing property-reference fallback")
+    return Path(source.text.strip()).stem
+
+
+def read_sch(path: str, project_name: str | None = None) -> dict:
     tree = parse(Path(path).read_text(encoding="utf-8", errors="replace"))
     if not tree or tree[0] != "kicad_sch":
         raise ValueError("not a kicad_sch file")
@@ -100,10 +125,11 @@ def read_sch(path: str) -> dict:
         at = child(sym, "at")
         if lib_id_n is None or at is None:
             continue
-        ref = None
+        display_ref = None
         for p in children(sym, "property"):
             if len(p) > 2 and p[1] == "Reference":
-                ref = str(p[2])
+                display_ref = str(p[2])
+        ref = _instance_reference(sym, project_name) if project_name is not None else display_ref
         mir = child(sym, "mirror")
         unit = child(sym, "unit")
         conv = child(sym, "convert")
@@ -112,7 +138,7 @@ def read_sch(path: str) -> dict:
                        "at": (num(at[1]), num(at[2]), num(at[3]) if len(at) > 3 else 0.0),
                        "mirror": str(mir[1]) if mir and len(mir) > 1 else None,
                        "unit": int(unit[1]) if unit else 1, "convert": int(conv[1]) if conv else 1,
-                       "ref": ref})
+                       "ref": ref, "display_ref": display_ref})
     wires = []
     for w in children(tree, "wire"):
         pts = child(w, "pts")
@@ -142,7 +168,8 @@ def calibrate(sch: dict) -> dict[str, int]:
 
 
 def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[list[GtPin], dict]:
-    sch = read_sch(sch_path)
+    project_name = _project_name_from_netlist(xml_path)
+    sch = read_sch(sch_path, project_name=project_name)
     cal = calibrate(sch)
     order = order or ("MR" if cal["MR"] >= cal["RM"] else "RM")
     nets = parse_netlist_xml(xml_path)
@@ -158,7 +185,7 @@ def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[lis
             x, y = _place(p["x"], p["y"], sp["at"], sp["mirror"], order)
             pins.append(GtPin(ref, p["number"], x * MM_TO_PT, y * MM_TO_PT, nets.get((ref, p["number"])),
                               p["hide"], sp["lib_id"]))
-    return pins, {"calibration": cal, "order": order, "placed": len(sch["placed"]), "wires": len(sch["wires"])}
+    return pins, {"calibration": cal, "order": order, "placed": len(sch["placed"]), "wires": len(sch["wires"]), "project_name": project_name}
 
 
 def embedded_library_text(sch_path: str) -> str:
