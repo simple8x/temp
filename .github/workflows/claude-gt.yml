@@ -30,7 +30,7 @@ jobs:
         run: |
           python claude/tools/gt_probe.py gt_out royer1 619.2 306 626.4 288 2>&1 | tee gt_probe.log
           python claude/tools/gt_probe.py gt_out smps-com 396 214 2>&1 | tee -a gt_probe.log
-          python claude/tools/gt_probe.py gt_out rectifier 414 288 388.8 288 2>&1 | tee -a gt_probe.log
+          python claude/tools/gt_probe.py gt_out 'sonde xilinx' 453.6 197 453.6 213 2>&1 | tee -a gt_probe.log
       - name: Cluster diagnostics
         run: |
           for p in interf_u mult_vca810 up-down-c sonde\ xilinx; do python claude/tools/gt_clusters.py gt_out "$p" 6 2>&1 | tee -a gt_clusters.log; done
