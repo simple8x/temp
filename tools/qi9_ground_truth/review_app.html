@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QI9 Ground Truth Review</title>
+<style>
+:root{font:14px/1.45 system-ui,sans-serif;color:#17202a;background:#f4f6f8}
+*{box-sizing:border-box}body{margin:0}header{background:#17202a;color:#fff;padding:14px 18px}
+header h1{font-size:18px;margin:0 0 4px}header p{margin:0;color:#cbd5df}
+main{max-width:1500px;margin:auto;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
+section,.panel{background:#fff;border:1px solid #d8dee5;border-radius:9px;padding:12px;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+label{display:block;font-weight:600;margin:7px 0 3px}input,select,textarea,button{font:inherit;padding:7px;border:1px solid #b8c2cc;border-radius:6px;max-width:100%}
+input[type=file]{width:100%}input[type=text],textarea,select{width:100%}textarea{min-height:58px}
+button{background:#edf2f7;cursor:pointer}button.primary{background:#174ea6;color:white;border-color:#174ea6}
+button:disabled{opacity:.45;cursor:not-allowed}.muted{color:#64748b;font-size:12px}
+#canvasWrap{overflow:auto;background:#e9edf2;border:1px solid #cbd5e1;min-height:240px;text-align:center}
+canvas{display:block;max-width:100%;height:auto;margin:auto;touch-action:none}
+#status{padding:8px;background:#eef4ff;border-radius:6px;margin:8px 0;overflow-wrap:anywhere}
+#candidateList{max-height:180px;overflow:auto;border:1px solid #e2e8f0;padding:6px}
+#candidateList button{display:block;width:100%;text-align:left;margin:3px 0}
+#annotations{max-height:270px;overflow:auto;padding:0;list-style:none}
+#annotations li{border:1px solid #e2e8f0;border-radius:6px;margin:5px 0;padding:7px;cursor:pointer}
+#annotations li.active{border:2px solid #2563eb;background:#eff6ff}
+.pill{display:inline-block;font-size:11px;border-radius:99px;background:#e2e8f0;padding:2px 7px;margin-left:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+details{margin:10px 0}hr{border:0;border-top:1px solid #e2e8f0;margin:12px 0}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:8px}.panel{order:2}}
+</style>
+</head>
+<body>
+<header><h1>QI9 Ground Truth Review</h1><p>Offline annotation workspace · parser candidates are optional hints, never ground truth</p></header>
+<main>
+<section>
+  <div class="toolbar">
+    <button id="prev">◀ Page</button><select id="pageSelect" aria-label="Page"></select><button id="next">Page ▶</button>
+    <label style="display:flex;align-items:center;gap:5px;margin:0;font-weight:400"><input id="showCandidates" type="checkbox"> Show parser candidates (may bias review)</label>
+  </div>
+  <div id="canvasWrap"><canvas id="canvas"></canvas></div>
+  <p class="muted">Choose a geometry tool, then draw on the PDF. Coordinates are converted from rendered pixels to page-local PDF points.</p>
+  <div class="toolbar">
+    <label style="margin:0">Geometry <select id="tool" style="width:auto"><option value="rect">Rectangle</option><option value="point">Point</option><option value="line">Line</option></select></label>
+    <button id="clearDraft">Clear draft geometry</button>
+  </div>
+  <details><summary>Optional parser candidate list (closed by default)</summary><div id="candidateList">Load a review pack first.</div></details>
+</section>
+<aside class="panel">
+  <label>1. Load review pack folder</label>
+  <input id="folder" type="file" webkitdirectory directory multiple>
+  <div id="status">Select the folder produced by native_symbol_review_pack.py.</div>
+  <label>Annotation type</label>
+  <select id="kind">
+    <option value="SYMBOL_BOUNDARY">Symbol boundary</option>
+    <option value="PIN_IDENTITY">Pin identity</option>
+    <option value="WIRE_SEGMENT">Wire segment</option>
+    <option value="JUNCTION">Junction</option>
+    <option value="NET_LABEL">Net label</option>
+    <option value="CONNECTIVITY">Connectivity assertion</option>
+  </select>
+  <div class="grid2">
+    <div><label>Reference (if known)</label><input id="reference" type="text" placeholder="e.g. U5"></div>
+    <div><label>Pin number</label><input id="pin" type="text" placeholder="e.g. 1"></div>
+  </div>
+  <label>Reviewer ID</label><input id="reviewer" type="text" placeholder="Use a stable reviewer identifier">
+  <label>Decision for new annotation</label>
+  <select id="decision"><option value="CONFIRM">Confirm observation</option><option value="DISAGREE">Disagree / conflict</option><option value="REJECT">Reject candidate</option><option value="UNKNOWN">Insufficient evidence</option></select>
+  <label>Evidence note</label><textarea id="note" placeholder="Describe what is visible in the original PDF; do not infer missing topology."></textarea>
+  <div id="connectivityFields" hidden>
+    <label>From annotation</label><select id="fromEndpoint"></select>
+    <label>To annotation</label><select id="toEndpoint"></select>
+    <label>Relationship</label><select id="predicate"><option value="CONNECTED_TO">Connected to</option><option value="SEPARATE_FROM">Separate from</option></select>
+  </div>
+  <button id="add" class="primary" style="width:100%;margin-top:10px" disabled>Add annotation</button>
+  <hr>
+  <label>2. Annotations on this page <span id="count" class="pill">0</span></label>
+  <ul id="annotations"></ul>
+  <div class="grid2">
+    <button id="addReview" disabled>Add review to selected</button>
+    <button id="delete" disabled>Delete selected</button>
+  </div>
+  <p class="muted">A second distinct reviewer is required for VERIFIED. A disagreement becomes CONFLICT. This tool does not decide electrical connectivity.</p>
+  <button id="export" class="primary" style="width:100%" disabled>Export page annotations JSON</button>
+  <button id="exportAll" style="width:100%;margin-top:6px" disabled>Export all reviewed pages</button>
+</aside>
+</main>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const canvas=$("canvas"),ctx=canvas.getContext("2d");
+let files=new Map(),index=null,page=0,template=null,baseImage=null,overlayImage=null;
+let annotationsByPage={},selectedId=null,draft=null,dragStart=null,dragCurrent=null;
+const pages=()=>index?.pages||[];
+const pageKey=()=>String(page);
+const anns=()=>annotationsByPage[pageKey()]||(annotationsByPage[pageKey()]=[]);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function fileByName(name){if(!name)return null;for(const [p,f] of files){if(p.endsWith("/"+name)||p===name)return f;}return null;}
+function readJson(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>{try{resolve(JSON.parse(r.result));}catch(e){reject(e)}};r.onerror=reject;r.readAsText(file);});}
+function imageFrom(file){return new Promise((resolve,reject)=>{if(!file){reject(new Error("Image not found in selected folder"));return;}const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error("Cannot decode "+file.name));img.src=URL.createObjectURL(file);});}
+function setStatus(s){$("status").textContent=s;}
+function pageMeta(){return index?.page_metadata?.[String(page)]||{};}
+function pointScale(){return (template?.render_dpi||index?.render_dpi||100)/72;}
+function pdfPoint(x,y){const k=pointScale();return [+(x/k).toFixed(3),+(y/k).toFixed(3)];}
+function canvasPoint(ev){const r=canvas.getBoundingClientRect();return [(ev.clientX-r.left)*canvas.width/r.width,(ev.clientY-r.top)*canvas.height/r.height];}
+function draw(){
+ if(!baseImage)return;
+ const img=$("showCandidates").checked&&overlayImage?overlayImage:baseImage;
+ canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+ ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0);
+ const k=pointScale();
+ // Review annotations only; candidates are not drawn unless the explicit toggle is on.
+ for(const a of anns()){
+   const g=a.geometry||{};ctx.strokeStyle=a.annotation_id===selectedId?"#2563eb":"#d97706";ctx.lineWidth=2;
+   if(g.bbox){const [x0,y0,x1,y1]=g.bbox.map(v=>v*k);ctx.strokeRect(x0,y0,x1-x0,y1-y0);}
+   if(g.point){const x=g.point[0]*k,y=g.point[1]*k;ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.stroke();}
+   if(g.points?.length){ctx.beginPath();g.points.forEach((p,i)=>i?ctx.lineTo(p[0]*k,p[1]*k):ctx.moveTo(p[0]*k,p[1]*k));ctx.stroke();}
+ }
+ if(draft){ctx.strokeStyle="#0f766e";ctx.lineWidth=2;ctx.setLineDash([6,4]);if(draft.bbox){const b=draft.bbox;ctx.strokeRect(b[0]*k,b[1]*k,(b[2]-b[0])*k,(b[3]-b[1])*k);}if(draft.point){ctx.beginPath();ctx.arc(draft.point[0]*k,draft.point[1]*k,6,0,Math.PI*2);ctx.stroke();}if(draft.points){ctx.beginPath();draft.points.forEach((p,i)=>i?ctx.lineTo(p[0]*k,p[1]*k):ctx.moveTo(p[0]*k,p[1]*k));ctx.stroke();}ctx.setLineDash([]);}
+ if(dragStart&&dragCurrent){ctx.strokeStyle="#0f766e";ctx.setLineDash([5,4]);ctx.strokeRect(Math.min(dragStart[0],dragCurrent[0]),Math.min(dragStart[1],dragCurrent[1]),Math.abs(dragCurrent[0]-dragStart[0]),Math.abs(dragCurrent[1]-dragStart[1]));ctx.setLineDash([]);}
+}
+function refreshList(){
+ const list=$("annotations");list.innerHTML="";
+ for(const a of anns()){
+  const li=document.createElement("li");li.className=a.annotation_id===selectedId?"active":"";
+  const ref=a.subject?.reference||a.subject?.id||a.annotation_id;
+  li.innerHTML="<strong>"+esc(ref)+"</strong> · "+esc(a.kind)+" <span class='pill'>"+esc(a.status)+"</span><br><span class='muted'>"+esc(a.reviewers?.length||0)+" review(s) · "+esc(a.evidence?.length||0)+" evidence item(s)</span>";
+  li.addEventListener("click",()=>{selectedId=a.annotation_id;refreshList();draw();$("addReview").disabled=false;$("delete").disabled=false;});
+  list.appendChild(li);
+ }
+ $("count").textContent=String(anns().length);
+ const opts=anns().map(a=>({id:a.annotation_id,label:(a.subject?.reference||a.subject?.id||a.annotation_id)+" ["+a.annotation_id+"]"}));
+ for(const id of ["fromEndpoint","toEndpoint"]){const el=$(id),old=el.value;el.innerHTML=opts.map(o=>"<option value='"+esc(o.id)+"'>"+esc(o.label)+"</option>").join("");if(opts.some(o=>o.id===old))el.value=old;}
+ $("addReview").disabled=!selectedId;$("delete").disabled=!selectedId;
+ $("export").disabled=!index;$("exportAll").disabled=!index;
+}
+function renderCandidates(){
+ const box=$("candidateList");box.innerHTML="";
+ const refs=template?.references||[];
+ if(!refs.length){box.textContent="No reference candidates in this page template.";return;}
+ for(const r of refs){const b=document.createElement("button");b.textContent=r.reference+" · "+(r.best_candidate_path_id||"no candidate")+" · "+r.candidate_count+" candidate(s)";b.addEventListener("click",()=>{$("reference").value=r.reference;draft=r.best_candidate_bbox?{bbox:r.best_candidate_bbox.slice()}:null;draw();});box.appendChild(b);}
+}
+async function loadPage(){
+ if(!index)return;
+ page=Number($("pageSelect").value||pages()[0]);selectedId=null;draft=null;dragStart=null;dragCurrent=null;
+ const meta=pageMeta(),templateFile=fileByName("page_"+String(page).padStart(2,"0")+"_review_template.json");
+ if(!templateFile){setStatus("Missing review template for page "+page);return;}
+ template=await readJson(templateFile);
+ const sourceName=template.source_image||meta.source_image||("page_"+String(page).padStart(2,"0")+"_source.png");
+ const overlayName=template.candidate_overlay_image||meta.candidate_overlay_image||("page_"+String(page).padStart(2,"0")+"_candidate_overlay.png");
+ try{baseImage=await imageFrom(fileByName(sourceName));}catch(e){setStatus(e.message);return;}
+ try{overlayImage=await imageFrom(fileByName(overlayName));}catch(e){overlayImage=null;}
+ const key=pageKey(),saved=localStorage.getItem("qi9-review:"+index.source_sha256+":"+key);
+ if(!annotationsByPage[key]&&saved){try{annotationsByPage[key]=JSON.parse(saved);}catch{}}
+ $("add").disabled=false;renderCandidates();refreshList();draw();
+ setStatus("Loaded page "+page+" · source SHA256 "+index.source_sha256+" · clean PDF render is active.");
+}
+$("folder").addEventListener("change",async ev=>{
+ files.clear();for(const f of ev.target.files)files.set(f.webkitRelativePath||f.name,f);
+ const entry=[...files].find(([p])=>p.endsWith("manual_review_index.json"));
+ if(!entry){setStatus("manual_review_index.json not found. Select the generated review-pack folder.");return;}
+ try{index=await readJson(entry[1]);if(index.schema!=="qi9-symbol-review-pack/v1")throw new Error("Unexpected review pack schema");
+ $("pageSelect").innerHTML=pages().map(p=>"<option value='"+p+"'>Page "+p+"</option>").join("");
+ $("pageSelect").value=pages()[0];await loadPage();}
+ catch(e){setStatus("Cannot load review pack: "+e.message);}
+});
+$("pageSelect").addEventListener("change",loadPage);
+$("prev").addEventListener("click",()=>{const i=pages().indexOf(page);if(i>0){$("pageSelect").value=pages()[i-1];loadPage();}});
+$("next").addEventListener("click",()=>{const i=pages().indexOf(page);if(i>=0&&i<pages().length-1){$("pageSelect").value=pages()[i+1];loadPage();}});
+$("showCandidates").addEventListener("change",draw);
+$("kind").addEventListener("change",()=>{$("connectivityFields").hidden=$("kind").value!=="CONNECTIVITY";});
+$("canvas").addEventListener("pointerdown",ev=>{if(!baseImage)return;canvas.setPointerCapture(ev.pointerId);dragStart=canvasPoint(ev);dragCurrent=dragStart;});
+$("canvas").addEventListener("pointermove",ev=>{if(!dragStart)return;dragCurrent=canvasPoint(ev);draw();});
+$("canvas").addEventListener("pointerup",ev=>{
+ if(!dragStart)return;const end=canvasPoint(ev),start=dragStart;dragStart=null;dragCurrent=null;
+ const tool=$("tool").value,k=pointScale(),a=pdfPoint(start[0],start[1]),b=pdfPoint(end[0],end[1]);
+ if(tool==="point")draft={point:a};
+ else if(tool==="line")draft={points:[a,b]};
+ else draft={bbox:[Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])]};
+ draw();
+});
+$("clearDraft").addEventListener("click",()=>{draft=null;draw();});
+function decisionStatus(decision,kind,predicate){if(decision==="DISAGREE")return "CONFLICT";if(decision==="REJECT")return "REJECTED";if(decision==="UNKNOWN")return "UNKNOWN";return "REVIEWED_PENDING_SECOND_REVIEW";}
+function persist(){localStorage.setItem("qi9-review:"+index.source_sha256+":"+pageKey(),JSON.stringify(anns()));}
+$("add").addEventListener("click",()=>{
+ if(!index)return;const reviewer=$("reviewer").value.trim();if(!reviewer){setStatus("Enter a stable reviewer ID first.");return;}
+ const kind=$("kind").value,decision=$("decision").value,now=Date.now();
+ const id="p"+page+"-ann-"+(anns().length+1)+"-"+now.toString(36);
+ const row={annotation_id:id,kind,status:decisionStatus(decision,kind),subject:{type:kind.toLowerCase(),id,reference:$("reference").value.trim()||undefined,pin_number:$("pin").value.trim()||undefined},evidence:[{source_type:"PDF_RENDER",source_id:template.source_image,page,note:$("note").value.trim()}],reviewers:[{reviewer_id:reviewer,decision,note:$("note").value.trim()}]};
+ if(draft)row.geometry=JSON.parse(JSON.stringify(draft));
+ if(kind==="CONNECTIVITY"){
+  const from=$("fromEndpoint").value,to=$("toEndpoint").value;
+  if(!from||!to||from===to){setStatus("Connectivity requires two different existing annotation endpoints.");return;}
+  const predicate=$("predicate").value;row.assertion={from_annotation_id:from,to_annotation_id:to,predicate};
+  row.status="REVIEWED_PENDING_SECOND_REVIEW";
+ }
+ anns().push(row);selectedId=id;draft=null;persist();refreshList();draw();
+ setStatus("Added "+id+" as "+row.status+". This is a review record, not an electrical sign-off.");
+});
+$("addReview").addEventListener("click",()=>{
+ const reviewer=$("reviewer").value.trim();if(!reviewer){setStatus("Enter a reviewer ID first.");return;}
+ const row=anns().find(a=>a.annotation_id===selectedId);if(!row)return;
+ if((row.reviewers||[]).some(r=>r.reviewer_id===reviewer)){setStatus("This reviewer ID has already reviewed the selected annotation.");return;}
+ const decision=$("decision").value,note=$("note").value.trim();row.reviewers.push({reviewer_id:reviewer,decision,note});
+ const decisions=row.reviewers.map(r=>r.decision),confirms=new Set(row.reviewers.filter(r=>r.decision==="CONFIRM").map(r=>r.reviewer_id)).size;
+ if(decisions.includes("DISAGREE"))row.status="CONFLICT";
+ else if(decisions.includes("REJECT"))row.status="CONFLICT";
+ else if(decisions.includes("UNKNOWN"))row.status="UNKNOWN";
+ else if(confirms>=2){row.status=row.kind==="CONNECTIVITY"?(row.assertion.predicate==="CONNECTED_TO"?"VERIFIED_CONNECTED":"VERIFIED_SEPARATE"):"VERIFIED";}
+ else row.status="REVIEWED_PENDING_SECOND_REVIEW";
+ persist();refreshList();draw();setStatus("Review recorded. Current status: "+row.status+".");
+});
+$("delete").addEventListener("click",()=>{annotationsByPage[pageKey()]=anns().filter(a=>a.annotation_id!==selectedId);selectedId=null;persist();refreshList();draw();});
+function download(name,obj){const blob=new Blob([JSON.stringify(obj,null,2)+"\n"],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function payload(p,rows){return {schema:"qi9-ground-truth-annotation/v1",source_pdf_sha256:index.source_sha256,page:p,coordinate_system:"pdf_points_origin_top_left",annotations:rows};}
+$("export").addEventListener("click",()=>{persist();download("page"+String(page).padStart(2,"0")+".annotations.json",payload(page,anns()));});
+$("exportAll").addEventListener("click",()=>{for(const p of pages()){const saved=localStorage.getItem("qi9-review:"+index.source_sha256+":"+p);if(saved){try{annotationsByPage[String(p)]=JSON.parse(saved);}catch{}}}download("qi9-ground-truth-annotations.json",{schema:"qi9-ground-truth-review-export/v1",source_pdf_sha256:index.source_sha256,pages:pages().map(p=>payload(p,annotationsByPage[String(p)]||[]))});});
+})();
+</script>
+</body>
+</html>
