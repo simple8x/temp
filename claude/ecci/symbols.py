@@ -110,6 +110,10 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
                 bs = [_bbox(prims[i]) for i in ids]
                 boxes[root] = (min(b[0] for b in bs), min(b[1] for b in bs),
                                max(b[2] for b in bs), max(b[3] for b in bs))
+            # a part that is a single bare 2-vertex line (pin line, plate, glyph stroke) merges by proximity only
+            # with another bare line (capacitor plates), never with a larger part. Otherwise rows of pins/strokes chain a whole sheet together.
+            bare = {r for r, ids in groups.items() if len(ids) == 1 and len(prims[ids[0]].pts) == 2
+                    and not prims[ids[0]].line_closed}
             order = sorted(boxes, key=lambda r: boxes[r][0])
             changed = False
             for ai, a in enumerate(order):
@@ -123,6 +127,8 @@ def body_clusters(pi: PageIngest, cls: PageClassification, eps: float = EPS_DEFA
                         continue
                     if bb[0] > reach:             # sorted by x0: no later part can be within reach
                         break
+                    if (a in bare) != (b in bare):
+                        continue
                     if find(a) != find(b) and _gap(ba, bb) <= gap_frac * min(_maxdim(ba), _maxdim(bb)):
                         ra, rb = find(a), find(b)
                         parent[max(ra, rb)] = min(ra, rb)
