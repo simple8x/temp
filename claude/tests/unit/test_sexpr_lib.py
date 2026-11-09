@@ -64,9 +64,18 @@ def test_broken_symbol_is_skipped_with_warning_not_crash(tmp_path):
     assert set(lib.symbols) == {"OK"} and any("BAD" in w for w in lib.warnings)
 
 
-def test_extra_units_are_reported(tmp_path):
+MULTI = ('(kicad_symbol_lib (symbol "M" (symbol "M_0_1" (rectangle (start 0 0) (end 1 1)))'
+         ' (symbol "M_1_1" (pin passive line (at 0 0 0) (length 1) (name "a") (number "1")))'
+         ' (symbol "M_2_1" (pin passive line (at 0 2 0) (length 1) (name "b") (number "9")))'
+         ' (symbol "M_2_2" (pin passive line (at 5 5 0) (length 1) (name "c") (number "7")))))')
+
+
+def test_each_unit_is_its_own_template_sharing_the_common_graphics(tmp_path):
     f = tmp_path / "l.kicad_sym"
-    f.write_text('(kicad_symbol_lib (symbol "M" (symbol "M_0_1" (rectangle (start 0 0) (end 1 1)))'
-                 ' (symbol "M_2_1" (pin passive line (at 0 0 0) (length 1) (name "a") (number "9")))))')
+    f.write_text(MULTI)
     lib = load_library(str(f))
-    assert lib.symbols["M"].pins == () and any("units ['2']" in w for w in lib.warnings)
+    assert set(lib.symbols) == {"M", "M#u2"}
+    assert [p.number for p in lib.symbols["M"].pins] == ["1"]
+    assert [p.number for p in lib.symbols["M#u2"].pins] == ["9"]       # De Morgan style 2 pin "7" not included
+    assert len(lib.symbols["M"].body) == len(lib.symbols["M#u2"].body) == 1
+    assert any("De Morgan" in w for w in lib.warnings)

@@ -122,22 +122,23 @@ def _arc(a: tuple[float, float], m: tuple[float, float], b: tuple[float, float])
     return BodyPath(pts, False, True)
 
 
-def _read_symbol(node: list, lib_token: str) -> SymbolDef:
+def _read_symbol(node: list, lib_token: str) -> list[SymbolDef]:
+    """One SymbolDef per electrical unit. Unit 0 (common graphics/pins) is added to every unit; the De Morgan
+    alternative style (style >= 2) is skipped. Unit 1 (or the only unit) keeps the plain symbol name, the other
+    units are named '<name>#u<k>', so a template match says WHICH unit of the part was drawn."""
     name = str(node[1])
-    pins: list[PinDef] = []
-    body: list[BodyPath] = []
+    per_unit: dict[str, tuple[list[PinDef], list[BodyPath]]] = {}
     warns: list[str] = []
-    units_seen: set[str] = set()
     for sub in children(node, "symbol"):
-        subname = str(sub[1])
-        parts = subname.rsplit("_", 2)
-        if len(parts) == 3 and parts[1].isdigit():
-            unit = parts[1]
+        parts = str(sub[1]).rsplit("_", 2)
+        if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
+            unit, style = parts[1], int(parts[2])
         else:
-            unit = "0"
-        units_seen.add(unit)
-        if unit not in ("0", "1"):
+            unit, style = "0", 0
+        if style >= 2:
+            warns.append(f"{name}: De Morgan style {style} of unit {unit} ignored")
             continue
+        pins, body = per_unit.setdefault(unit, ([], []))
         for g in sub:
             if not isinstance(g, list) or not g:
                 continue
@@ -148,7 +149,6 @@ def _read_symbol(node: list, lib_token: str) -> SymbolDef:
             elif h == "polyline":
                 pts = _pts(g)
                 if len(pts) >= 2:
-                    fill = child(g, "fill")
                     body.append(BodyPath(pts, len(pts) >= 4 and pts[0] == pts[-1]))
             elif h == "circle":
                 cx, cy = _xy(child(g, "center"))
@@ -161,17 +161,21 @@ def _read_symbol(node: list, lib_token: str) -> SymbolDef:
                     number=str(child(g, "number")[1]), name=str(child(g, "name")[1]),
                     x=num(at[1]), y=num(at[2]), angle=num(at[3]) if len(at) > 3 else 0.0,
                     length=num(child(g, "length")[1])))
-    extra = sorted(u for u in units_seen if u not in ("0", "1"))
-    if extra:
-        warns.append(f"{name}: units {extra} ignored (only common unit 0 and unit 1 are read)")
-    # closed polylines repeating the first point: drop the duplicate end point
-    fixed = []
-    for b in body:
-        if b.closed and len(b.pts) >= 2 and b.pts[0] == b.pts[-1]:
-            fixed.append(BodyPath(b.pts[:-1], True, b.smooth))
-        else:
-            fixed.append(b)
-    return SymbolDef(name, tuple(pins), tuple(fixed), lib_token, tuple(warns))
+    common_pins, common_body = per_unit.get("0", ([], []))
+    units = sorted((u for u in per_unit if u != "0"), key=int) or ["0"]
+    out: list[SymbolDef] = []
+    for u in units:
+        pins, body = per_unit.get(u, ([], []))
+        allp, allb = list(common_pins) + (list(pins) if u != "0" else []), list(common_body) + (list(body) if u != "0" else [])
+        fixed = []
+        for b in allb:                  # closed polylines repeating the first point: drop the duplicate end point
+            if b.closed and len(b.pts) >= 2 and b.pts[0] == b.pts[-1]:
+                fixed.append(BodyPath(b.pts[:-1], True, b.smooth))
+            else:
+                fixed.append(b)
+        nm = name if u in ("0", units[0]) else f"{name}#u{u}"
+        out.append(SymbolDef(nm, tuple(allp), tuple(fixed), lib_token, tuple(warns)))
+    return out
 
 
 def load_library(path: str) -> Library:
@@ -190,13 +194,15 @@ def load_library(path: str) -> Library:
     token = f"lib:{path.replace(chr(92), '/').rsplit('/', 1)[-1]}@{sha[:12]}"
     for sym in children(tree, "symbol"):
         try:
-            sd = _read_symbol(sym, token)
+            sds = _read_symbol(sym, token)
         except (SexprError, TypeError, IndexError) as e:
             lib.warnings.append(f"symbol {sym[1] if len(sym) > 1 else '?'} skipped: {type(e).__name__}: {e}")
             continue
-        if not sd.body:
-            lib.warnings.append(f"symbol {sd.name} skipped: no body graphics")
-            continue
-        lib.symbols[sd.name] = sd
-        lib.warnings.extend(sd.warnings)
+        for k, sd in enumerate(sds):
+            if not sd.body:
+                lib.warnings.append(f"symbol {sd.name} skipped: no body graphics")
+                continue
+            lib.symbols[sd.name] = sd
+            if k == 0:
+                lib.warnings.extend(sd.warnings)
     return lib
