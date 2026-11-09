@@ -53,6 +53,7 @@ class BuildResult:
     dots: dict = field(default_factory=dict)          # dot object id -> (centre, radius, attached node or None)
     obj_prims: dict = field(default_factory=dict)     # object id -> tuple of prim ids (traceability, I8)
     pin_tips: dict = field(default_factory=dict)      # pin object id -> tip (normalized page space)
+    excluded_wire_prims: dict = field(default_factory=dict)  # symbol-owned strokes excluded from topology
 
 
 def _role(obj: str, kind: str, status: str, items, weak: bool) -> RoleRef:
