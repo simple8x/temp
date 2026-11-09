@@ -173,3 +173,21 @@ def test_detect_pins_is_repeatable_on_the_same_classification():
     a = detect_pins(pi, cls, syms)
     b = detect_pins(pi, cls, syms)
     assert [p.tip for cr in a for p in cr.pins] == [p.tip for cr in b for p in cr.pins]
+
+
+def test_evidence_ids_remain_stable_when_cluster_ordinals_shift_between_passes():
+    # The second pass excludes the first body's geometry, which renumbers the surviving
+    # cluster. Evidence IDs must still be keyed by source primitive identity, not ordinal.
+    content = (
+        b"0.9 w 120 90 60 20 re S 0.45 w 120 100 m 100 100 l S 180 100 m 200 100 l S "
+        b"0.9 w 220 90 60 20 re S 0.45 w 220 100 m 200 100 l S 280 100 m 300 100 l S"
+    )
+    pi = ingest_pdf(one_page(WIRES + content, size=(W, H))).pages[0]
+    cls = classify_page(pi)
+    syms = list(LIB.symbols.values())
+    first = detect_pins(pi, cls, syms)
+    assert len(first) == 2
+    excluded = frozenset(first[0].cluster.prim_ids)
+    second = detect_pins(pi, cls, syms, exclude=excluded)
+    assert len(second) == 1
+    assert second[0].cluster.prim_ids == first[1].cluster.prim_ids

@@ -131,6 +131,9 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
         cr = ClusterResult(cl, res)
         tau = tolerance(cl, params.match)
         body_ids = set(cl.prim_ids)
+        # Cluster ordinals are not stable when a second pass excludes junction-dot primitives.
+        # Evidence identity must follow the source geometry, not that transient ordinal.
+        cluster_key = ".".join(str(i) for i in sorted(body_ids))
         diag = math.hypot(cl.bbox[2] - cl.bbox[0], cl.bbox[3] - cl.bbox[1])
         # pins are at most about one body diagonal long; contacts are within a stroke width
         wires = [w for w in index.query(cl.bbox, max(2.0 * diag, 5.0)) if w[0] not in body_ids]
@@ -141,7 +144,7 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
             lib_tokens = {h.symbol.lib_token for h in res.hits}
             for k, rp in enumerate(res.pins):
                 base_lineage = set(lib_tokens) | {f"geom:{i}" for i in cl.prim_ids}
-                s1 = EvidenceItem(f"S1:{cl.id}:{k}", "TEMPLATE_PIN", SRC_VECTOR, frozenset(base_lineage))
+                s1 = EvidenceItem(f"S1:{cluster_key}:{k}", "TEMPLATE_PIN", SRC_VECTOR, frozenset(base_lineage))
                 _add(reg, s1)
                 items = [s1.id]
                 plen = math.hypot(rp.tip[0] - rp.base[0], rp.tip[1] - rp.base[1])
@@ -154,7 +157,7 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                         rev = math.hypot(b[0] - rp.base[0], b[1] - rp.base[1]) <= t2 and \
                             math.hypot(a[0] - rp.tip[0], a[1] - rp.tip[1]) <= t2
                         if fwd or rev:
-                            s2 = EvidenceItem(f"S2:{cl.id}:{k}", "MEASURED_STUB", SRC_VECTOR,
+                            s2 = EvidenceItem(f"S2:{cluster_key}:{k}", "MEASURED_STUB", SRC_VECTOR,
                                               frozenset({f"geom:{pid}"}))
                             _add(reg, s2)
                             items.append(s2.id)
@@ -176,7 +179,7 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                 if res.status == "UNIQUE" and res.pins:
                     cr.conflicts.append(PinConflict(cl.id, "UNEXPECTED_CONTACT", end, pid))
                 else:
-                    eid = f"S3:{cl.id}:{pid}:{si}:{ei}"
+                    eid = f"S3:{cluster_key}:{pid}:{si}:{ei}"
                     _add(reg, EvidenceItem(eid, "TERMINAL_CONTACT", SRC_VECTOR,
                                            frozenset({f"geom:{pid}"} | {f"geom:{i}" for i in cl.prim_ids})))
                     cr.unresolved.append(UnresolvedTerminal(cl.id, end, pid, far, eid))
