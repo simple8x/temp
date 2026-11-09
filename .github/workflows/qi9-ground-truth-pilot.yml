@@ -1,0 +1,47 @@
+name: qi9-ground-truth-pilot
+
+on:
+  push:
+    branches: [feat/qi9-ground-truth-pilot]
+    paths:
+      - "tools/qi9_ground_truth/**"
+      - "tools/pdf2kicad/native_symbol_review_pack.py"
+      - ".github/workflows/qi9-ground-truth-pilot.yml"
+  pull_request:
+    paths:
+      - "tools/qi9_ground_truth/**"
+      - ".github/workflows/qi9-ground-truth-pilot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  annotation-validator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install bounded PDF review dependencies
+        run: python -m pip install "PyMuPDF==1.26.7" "numpy==2.2.6"
+      - name: Run annotation validator and review-app contract tests
+        run: |
+          cd tools/qi9_ground_truth
+          python -m unittest discover -s tests -v
+      - name: Generate clean blind-review pack for QI9 schematic pages 5-11
+        run: |
+          python tools/pdf2kicad/native_symbol_review_pack.py \
+            --pdf "QI9-2604-A01_G3-G4_PAGE6_REFINEMENT/source/[QI9-2604-A01] Module IO.pdf" \
+            --pages 5-11 --outdir qi9-review-pack --dpi 100
+      - name: Include offline review app in the pack
+        run: cp tools/qi9_ground_truth/review_app.html qi9-review-pack/review_app.html
+      - name: Upload QI9 review pack
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qi9-ground-truth-review-pack
+          path: qi9-review-pack/**
+          if-no-files-found: error
+          retention-days: 7

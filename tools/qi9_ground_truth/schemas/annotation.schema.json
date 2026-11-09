@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simple8x.github.io/temp/qi9-ground-truth-annotation-v1.schema.json",
+  "title": "QI9 Ground Truth Annotation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source_pdf_sha256", "page", "coordinate_system", "annotations"],
+  "properties": {
+    "schema": {"const": "qi9-ground-truth-annotation/v1"},
+    "source_pdf_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "page": {"type": "integer", "minimum": 1},
+    "coordinate_system": {"const": "pdf_points_origin_top_left"},
+    "annotations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["annotation_id", "kind", "status", "subject", "evidence", "reviewers"],
+        "properties": {
+          "annotation_id": {"type": "string", "minLength": 1},
+          "kind": {"enum": ["SYMBOL_BOUNDARY", "PIN_IDENTITY", "WIRE_SEGMENT", "JUNCTION", "NET_LABEL", "CONNECTIVITY"]},
+          "status": {"enum": ["NOT_REVIEWED", "REVIEWED_PENDING_SECOND_REVIEW", "VERIFIED", "VERIFIED_CONNECTED", "VERIFIED_SEPARATE", "UNKNOWN", "CONFLICT", "REJECTED"]},
+          "subject": {
+            "type": "object",
+            "required": ["type", "id"],
+            "properties": {
+              "type": {"type": "string", "minLength": 1},
+              "id": {"type": "string", "minLength": 1},
+              "reference": {"type": "string"},
+              "pin_number": {"type": "string"}
+            }
+          },
+          "geometry": {
+            "type": "object",
+            "properties": {
+              "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+              "point": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+              "points": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}, "minItems": 2},
+              "pdf_object_ids": {"type": "array", "items": {"type": "string"}}
+            }
+          },
+          "assertion": {
+            "type": "object",
+            "required": ["from_annotation_id", "to_annotation_id", "predicate"],
+            "properties": {
+              "from_annotation_id": {"type": "string"},
+              "to_annotation_id": {"type": "string"},
+              "predicate": {"enum": ["CONNECTED_TO", "SEPARATE_FROM", "BELONGS_TO", "TOUCHES"]}
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["source_type", "source_id"],
+              "properties": {
+                "source_type": {"enum": ["PDF_VECTOR", "PDF_TEXT", "PDF_RENDER", "REVIEW_NOTE", "EXTERNAL_REFERENCE"]},
+                "source_id": {"type": "string", "minLength": 1},
+                "page": {"type": "integer", "minimum": 1},
+                "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                "note": {"type": "string"}
+              }
+            }
+          },
+          "reviewers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["reviewer_id", "decision"],
+              "properties": {
+                "reviewer_id": {"type": "string", "minLength": 1},
+                "decision": {"enum": ["CONFIRM", "REJECT", "DISAGREE", "UNKNOWN"]},
+                "note": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
