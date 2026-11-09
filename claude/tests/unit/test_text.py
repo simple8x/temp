@@ -289,14 +289,6 @@ def test_t22_foreign_colour_marks_inside_the_cluster_do_not_block_the_template()
     assert len(ok) == 1 and len(ok[0].pins) == 2
 
 
-def test_t22b_restrict_needs_a_closed_outline():
-    from ecci.symbols import _rebuild, restrict_to_outline_style
-    pi = ingest_pdf(one_page(b"0.5 0 0 RG 0.45 w 10 10 m 40 10 l S 0 0.5 0 RG 10 20 m 40 20 l S\n", size=(100, 100))).pages[0]
-    by_id = {p.id: p for p in pi.prims}
-    cl = _rebuild(0, tuple(by_id), by_id)
-    assert restrict_to_outline_style(cl, by_id) is None
-
-
 def _circle(cx, cy, r, n=16):
     import math as _m
     pts = [(cx + r * _m.cos(2 * _m.pi * k / n), cy + r * _m.sin(2 * _m.pi * k / n)) for k in range(n)]

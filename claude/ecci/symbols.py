@@ -274,27 +274,6 @@ def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: fl
     return _rebuild(cl.id, rest, by_id), tuple(stubs)
 
 
-def restrict_to_outline_style(cl: Cluster, by_id: dict):
-    """Keep only the primitives drawn in the style (colour and width) of the cluster's largest closed outline.
-    Plotters draw pin names, numbers and clock marks in another colour than the body; they are not part of the
-    template. Returns (reduced cluster, dropped prim ids) or None when there is no closed outline, nothing
-    would be dropped, or too little would remain. Pure geometry; the template still decides."""
-    closed = [i for i in cl.prim_ids if by_id[i].line_closed]
-    if not closed:
-        return None
-
-    def area(i: int) -> float:
-        b = _bbox(by_id[i])
-        return (b[2] - b[0]) * (b[3] - b[1])
-    ref = max(closed, key=area)
-    key = (by_id[ref].stroke_color, round(by_id[ref].stroke_w, 2))
-    keep = tuple(i for i in cl.prim_ids if (by_id[i].stroke_color, round(by_id[i].stroke_w, 2)) == key)
-    dropped = tuple(i for i in cl.prim_ids if i not in set(keep))
-    if not dropped or len(keep) < 2:
-        return None
-    return _rebuild(cl.id, keep, by_id), dropped
-
-
 def strip_decor(cl: Cluster, by_id: dict, max_frac: float = 0.05, min_pts: int = 8):
     """Drop small closed round marks (inversion bubbles, dots) from a cluster. Library templates model the body
     outline only; the template still decides whether the reduced cluster is a symbol. Returns (cluster, dropped)

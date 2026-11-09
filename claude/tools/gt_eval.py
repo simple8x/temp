@@ -355,12 +355,12 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
                         print("DUMP     rx", q_.id, round(q_.stroke_w, 2), getattr(q_, "stroke_color", None), len(q_.pts), q_.line_closed,
                               [(round(a_, 1), round(b_, 1)) for a_, b_ in q_.pts][:2])
             if near:
-                from ecci.symbols import restrict_to_outline_style, strip_stubs
+                from ecci.symbols import strip_stubs
                 from ecci.template import diagnose_match
                 by_id_d = {q.id: q for q in pi.prims}
                 cl_d = near[0].cluster
                 sd = lib.symbols.get(gp.lib_id.split(":")[-1]) or lib.symbols.get(gp.lib_id)
-                for tag, c_ in (("raw", cl_d), ("restricted", (restrict_to_outline_style(cl_d, by_id_d) or (None,))[0]),
+                for tag, c_ in (("raw", cl_d),
                                 ("stripped", (strip_stubs(cl_d, by_id_d) or (None,))[0])):
                     if c_ is None or sd is None:
                         print("DUMP   diag", tag, "n/a", "lib_known", sd is not None)

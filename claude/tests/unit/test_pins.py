@@ -230,3 +230,19 @@ def test_p8c_pin_lines_of_the_wrong_unit_do_not_select_the_other_unit(tmp_path):
     pi = ingest_pdf(one_page(ops, size=(W, H))).pages[0]
     res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
     assert res and all(r.resolution.status != "UNIQUE" for r in res)
+
+
+def test_p8d_pin_lines_of_the_wrong_length_do_not_select_a_unit(tmp_path):
+    from render_kicad import ORIENTS, place
+    lib = _multi_unit_lib(tmp_path)
+    sym = lib.symbols["MU"]
+    m = ORIENTS["r0"]
+    ops = _draw_unit(lib, "MU", with_pins=False)
+    for pin in sym.pins:                               # lines at the right tips but only 20% of the pin length
+        tip = place(m, 6.0, (150.0, 100.0), *pin.tip)
+        base = place(m, 6.0, (150.0, 100.0), *pin.base)
+        end = (tip[0] + 0.2 * (base[0] - tip[0]), tip[1] + 0.2 * (base[1] - tip[1]))
+        ops += f"{tip[0]:.3f} {tip[1]:.3f} m {end[0]:.3f} {end[1]:.3f} l S\n".encode()
+    pi = ingest_pdf(one_page(ops, size=(W, H))).pages[0]
+    res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
+    assert len(res) == 1 and res[0].resolution.status == "DIFFERENT_TIP_SETS"
