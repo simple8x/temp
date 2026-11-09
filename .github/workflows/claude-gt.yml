@@ -31,7 +31,7 @@ jobs:
           python claude/tools/gt_profile.py gt_out video 1 2>&1 | tee -a gt_profile.log
       - name: Evaluate ECCI against KiCad ground truth
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
-        run: GT_DUMP_LIB=C_100n_0402 GT_DUMP_MAX=1 python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
+        run: python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
       - name: Misses by library symbol
         run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
       - name: Probe

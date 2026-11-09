@@ -231,3 +231,27 @@ def test_t19_circle_with_an_inner_stroke_is_one_cluster_even_when_plotted_twice(
     pi = ingest_pdf(one_page((ring + ring + bar).encode(), size=(300, 200))).pages[0]
     cl = body_clusters(pi, classify_page(pi))
     assert len(cl) == 1 and len(cl[0].prim_ids) == 3
+
+
+def _cap(x, y):
+    # capacitor: two plates + two pin lines, all separate short strokes in the wire style, vertical axis
+    return (f"{x - 4} {y + 1.5} m {x + 4} {y + 1.5} l S {x - 4} {y - 1.5} m {x + 4} {y - 1.5} l S "
+            f"{x} {y + 1.5} m {x} {y + 7} l S {x} {y - 1.5} m {x} {y - 7} l S\n")
+
+
+def test_t20_row_of_identical_capacitors_is_not_text():
+    caps = "".join(_cap(40 + 22 * k, 100) for k in range(5)).encode()
+    label = text_content("RED", 20, 60, 3) + text_content("ELHTI", 20, 50, 3) + text_content("DETH", 20, 40, 3)
+    pi, cls = page(caps + label)
+    assert LC_TEXT not in classes_in_box(pi, cls, (30, 85, 160, 115))      # y-down: caps sit around y=100
+    assert any(r.cls == LC_TEXT for r in cls.records.values())             # genuine text is still text
+
+
+def test_t20b_two_identical_capacitors_are_below_the_repeat_threshold():
+    # only 2 copies: the repeat rule must not fire (documented ASSUMPTION threshold = 3)
+    caps = (_cap(40, 100) + _cap(62, 100)).encode()
+    label = text_content("RED", 20, 60, 3) + text_content("ELHTI", 20, 50, 3) + text_content("DETH", 20, 40, 3)
+    pi, cls = page(caps + label)
+    assert not any("identical copies" in n for n in cls.notes)
+    five = page("".join(_cap(40 + 22 * k, 100) for k in range(5)).encode() + label)[1]
+    assert any("identical copies" in n for n in five.notes)      # same scene with 5 copies: the rule is active

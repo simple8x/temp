@@ -59,6 +59,9 @@ class ClassifyParams:
     glyph_stroke_share: float = 0.8    # share of those prims that must be tiny 2-point strokes (ASSUMPTION)
     glyph_seg_max_frac: float = 0.003  # tiny = length <= this x page diagonal (ASSUMPTION)
     glyph_min_row: int = 3             # components needed to call a group a text row
+    repeat_min_copies: int = 3         # identical oversized components that cannot be glyphs (ASSUMPTION)
+    repeat_size_factor: float = 1.5    # "oversized" = longer side > this x median candidate side (ASSUMPTION)
+    repeat_min_prims: int = 2
     row_gap_frac: float = 2.0          # max horizontal gap between row neighbours, x taller height
     row_height_ratio: float = 4.0      # neighbour heights must be within this factor
     row_band_frac: float = 0.25        # vertical tolerance for alignment, x taller height
@@ -316,6 +319,21 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
         if math.hypot(box[2] - box[0], box[3] - box[1]) > params.glyph_max_diag_frac * diag_page:
             continue
         cand_box[ci] = box
+    # a row of identical, clearly larger-than-text components (decoupling capacitors in a line) is not text
+    if cand_box:
+        sides = sorted(max(b[2] - b[0], b[3] - b[1]) for b in cand_box.values())
+        med = sides[len(sides) // 2]
+        sig_of: dict[int, tuple] = {}
+        for ci, box in cand_box.items():
+            if len(comps[ci]) < params.repeat_min_prims or max(box[2] - box[0], box[3] - box[1]) <= params.repeat_size_factor * med:
+                continue
+            sig_of[ci] = tuple(sorted(tuple((round(q[0] - box[0], 1), round(q[1] - box[1], 1)) for q in by_id[i].pts)
+                                      for i in comps[ci]))
+        cnt = Counter(sig_of.values())
+        for ci, sg in sig_of.items():
+            if cnt[sg] >= params.repeat_min_copies:
+                del cand_box[ci]
+                notes.append(f"component {ci} excluded from text: {cnt[sg]} identical copies, larger than glyphs")
     row_size, row_id = _text_rows(cand_box, params) if cand_box else ({}, {})
     if cand_box:
         # vertical text (rotated 90 deg, e.g. pin names on left/right pins): same test on transposed boxes
