@@ -21,7 +21,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import pikepdf  # noqa: E402
 
-from ecci.gt_kicad import embedded_library_text, gt_pins, wire_component_index  # noqa: E402
+from ecci.gt_kicad import embedded_library_text, find_root, gt_pins, hierarchy, wire_component_index  # noqa: E402
 from ecci.ingest_vector import ingest_pdf  # noqa: E402
 from ecci.kicad_lib import load_library  # noqa: E402
 from ecci.rules import analyze_page  # noqa: E402
@@ -135,6 +135,18 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
     if npages > 80 or len(schs) > 80:
         return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
     mp = map_pages_to_sheets(str(pdf[0]), schs, npages)
+    inst = {}
+    try:      # repeated sheets: pages follow the depth-first sheet order; trust it only if EVERY page agrees with geometry
+        root = find_root([str(x) for x in schs], str(pdir / "src"))
+        hier = hierarchy(str(root)) if root else []
+        geo_top = {k: pathlib.Path(v[3][0][0]).name for k, v in mp.items()}
+        if len(hier) == npages and all(hier[k][1].name == geo_top[k] and mp[k][1] >= 0.8 for k in range(npages)):
+            for k in range(npages):
+                si = next(i for i, x in enumerate(schs) if x == hier[k][1])
+                inst[k] = hier[k][0]
+                mp[k] = (si, mp[k][1], mp[k][2], mp[k][3])
+    except Exception as e:  # noqa: BLE001
+        print("GT_HIER_FAIL", pdir.name, type(e).__name__, e, flush=True)
     out = []
     for k, (si, score, second, top3) in sorted(mp.items()):
         name = f"{pdir.name}#p{k}"
@@ -146,10 +158,11 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
             signal.signal(signal.SIGALRM, _on_alarm)
             signal.alarm(PAGE_SECONDS)
             try:
-                r = evaluate(pdir, k, schs[si], name)
+                r = evaluate(pdir, k, schs[si], name, inst.get(k))
             finally:
                 signal.alarm(0)
             r["sheet"] = str(schs[si].relative_to(pdir / "src"))
+            r["instance"] = inst.get(k)
             r["map_score"] = score
         except Exception as e:  # noqa: BLE001
             r = {"project": name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
@@ -157,12 +170,12 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
     return out
 
 
-def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str) -> dict:
+def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instance_path: str | None = None) -> dict:
     t0 = time.time()
     xml = sorted(pdir.glob("*.xml"))
     pdf = sorted(pdir.glob("*.pdf"))
     schs = [sch]
-    pins, info = gt_pins(str(schs[0]), str(xml[0]))
+    pins, info = gt_pins(str(schs[0]), str(xml[0]), instance_path=instance_path)
     vis = [p for p in pins if not p.hidden and p.net]
     if len(vis) > MAX_PAGE_PINS:      # pair metrics are O(n^2) with a path search per false positive
         return {"project": name, "skipped": f"{len(vis)} scoreable pins on one page > {MAX_PAGE_PINS} (pair metric budget)"}

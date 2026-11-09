@@ -125,3 +125,24 @@ def test_wire_components_join_end_to_end_and_t_touches_but_not_crossings(tmp_pat
     assert at(0, 0) == at(10, 10) == at(5, -5) is not None
     assert at(20, -3) != at(17, 0) and at(20, -3) is not None and at(17, 0) is not None
     assert at(40, 40) is None
+
+
+def test_hierarchy_lists_every_instance_of_a_repeated_sheet_in_depth_first_order(tmp_path):
+    from ecci.gt_kicad import find_root, hierarchy, read_sch
+    (tmp_path / "top.kicad_pro").write_text("{}")
+    (tmp_path / "top.kicad_sch").write_text(
+        '(kicad_sch (uuid "R0") (sheet (uuid "S1") (property "Sheetfile" "ch.kicad_sch"))'
+        ' (sheet (uuid "S2") (property "Sheetfile" "ch.kicad_sch")))')
+    (tmp_path / "ch.kicad_sch").write_text(
+        '(kicad_sch (uuid "C0") (symbol (lib_id "Device:R") (at 1 1 0) (unit 1)'
+        ' (instances (project "p" (path "/R0/S1" (reference "R1") (unit 1)) (path "/R0/S2" (reference "R2") (unit 1))))))')
+    files = [str(tmp_path / "top.kicad_sch"), str(tmp_path / "ch.kicad_sch")]
+    root = find_root(files, str(tmp_path))
+    assert root.name == "top.kicad_sch"
+    assert [(p, f.name) for p, f in hierarchy(str(root))] == [
+        ("/R0", "top.kicad_sch"), ("/R0/S1", "ch.kicad_sch"), ("/R0/S2", "ch.kicad_sch")]
+    ch = str(tmp_path / "ch.kicad_sch")
+    assert read_sch(ch, "/R0/S2")["placed"][0]["ref"] == "R2"
+    assert read_sch(ch, "/R0/S1")["placed"][0]["ref"] == "R1"
+    assert read_sch(ch)["placed"][0]["multi_instance"] is True              # without a path it is ambiguous
+    assert read_sch(ch, "/R0/S9")["placed"][0]["multi_instance"] is True    # unknown instance: excluded, never guessed

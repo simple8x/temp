@@ -86,7 +86,7 @@ def _place(px: float, py: float, at: tuple[float, float, float], mirror: str | N
     return X + qx, Y - qy
 
 
-def read_sch(path: str) -> dict:
+def read_sch(path: str, instance_path: str | None = None) -> dict:
     tree = parse(Path(path).read_text(encoding="utf-8", errors="replace"))
     if not tree or tree[0] != "kicad_sch":
         raise ValueError("not a kicad_sch file")
@@ -111,11 +111,13 @@ def read_sch(path: str) -> dict:
         for pr in (children(inst, "project") if inst else []):
             for pa in children(pr, "path"):
                 rn = child(pa, "reference")
-                if rn is not None and len(rn) > 1:
+                if rn is not None and len(rn) > 1 and (instance_path is None or str(pa[1]) == instance_path):
                     inst_refs.append(str(rn[1]))
         multi_inst = len(set(inst_refs)) > 1
         if len(set(inst_refs)) == 1:
             ref = inst_refs[0]
+        elif instance_path is not None:          # no record for this instance: the reference is unknown
+            ref, multi_inst = None, True
         mir = child(sym, "mirror")
         unit = child(sym, "unit")
         conv = child(sym, "convert")
@@ -167,8 +169,8 @@ def _order_for_instance(sp: dict, pins_def: list, ends: set, default: str) -> tu
     return ("MR" if ha > hb else "RM"), 1
 
 
-def gt_pins(sch_path: str, xml_path: str, order: str | None = None) -> tuple[list[GtPin], dict]:
-    sch = read_sch(sch_path)
+def gt_pins(sch_path: str, xml_path: str, order: str | None = None, instance_path: str | None = None) -> tuple[list[GtPin], dict]:
+    sch = read_sch(sch_path, instance_path)
     cal = calibrate(sch)
     order = order or ("MR" if cal["MR"] >= cal["RM"] else "RM")
     nets = parse_netlist_xml(xml_path)
@@ -280,3 +282,47 @@ def wire_component_index(sch_path: str):
         return None
 
     return comp_of
+
+
+def hierarchy(root_sch: str) -> list[tuple[str, Path]]:
+    """Sheet instances in depth-first order from the root: [(instance_path, file), ...], root first.
+    instance_path is '/<root uuid>/<sheet uuid>/...' exactly as KiCad writes it in symbol instance records."""
+    root = Path(root_sch)
+    out: list[tuple[str, Path]] = []
+
+    def walk(f: Path, path: str, depth: int) -> None:
+        out.append((path, f))
+        if depth > 12:
+            return
+        tree = parse(f.read_text(encoding="utf-8", errors="replace"))
+        for sh in children(tree, "sheet"):
+            u = child(sh, "uuid")
+            fn = None
+            for pr in children(sh, "property"):
+                if len(pr) > 2 and str(pr[1]) in ("Sheetfile", "Sheet file"):
+                    fn = str(pr[2])
+            if u is None or fn is None or not (f.parent / fn).exists():
+                continue
+            walk(f.parent / fn, path + "/" + str(u[1]), depth + 1)
+
+    tree = parse(root.read_text(encoding="utf-8", errors="replace"))
+    ru = child(tree, "uuid")
+    walk(root, "/" + (str(ru[1]) if ru else ""), 0)
+    return out
+
+
+def find_root(schs: list, project_dir: str) -> Path | None:
+    """The root schematic: the one named like the .kicad_pro file, else the only one nobody includes."""
+    d = Path(project_dir)
+    pros = sorted(d.rglob("*.kicad_pro"))
+    names = {Path(x).name: Path(x) for x in schs}
+    if pros and (pros[0].stem + ".kicad_sch") in names:
+        return names[pros[0].stem + ".kicad_sch"]
+    included = set()
+    for f in schs:
+        for sh in children(parse(Path(f).read_text(encoding="utf-8", errors="replace")), "sheet"):
+            for pr in children(sh, "property"):
+                if len(pr) > 2 and str(pr[1]) in ("Sheetfile", "Sheet file"):
+                    included.add(str(pr[2]))
+    roots = [Path(f) for f in schs if Path(f).name not in included]
+    return roots[0] if len(roots) == 1 else None
