@@ -14,7 +14,7 @@ for proj in sys.argv[2:]:
     pdf = sorted((root / proj).glob("*.pdf"))[0]
     pi = ingest_pdf(str(pdf), pages=[0]).pages[0]
     cls = classify_page(pi)
-    print("STYLES", proj, "chosen", cls.wire_style, "|", "; ".join(cls.notes)[:300])
+    print("STYLES", proj, "chosen", cls.wire_style, "|", "; ".join(cls.notes)[:700])
     pop = [p for p in pi.prims if p.kind == "polyline" and p.stroke and not p.fill and not p.line_closed
            and is_manhattan(p, 0.5) and cls.records[p.id].cls not in ("TEXT",)]
     g = collections.defaultdict(list)

@@ -34,7 +34,7 @@ jobs:
       - name: Cluster diagnostics
         run: python claude/tools/gt_diag.py gt_out Q17ng interf_u 'sonde xilinx' power_supply rectifier 2>&1 | tee gt_diag.log
       - name: Style diagnostics
-        run: python claude/tools/gt_styles.py gt_out royer1 ibis rectifier 2>&1 | tee gt_styles.log
+        run: python claude/tools/gt_styles.py gt_out interf_u Q17ng "sonde xilinx" 2>&1 | tee gt_styles.log
       - name: Format discovery (first lines of one sheet and one netlist)
         run: |
           f=$(find gt_out -name '*.kicad_sch' | sort | head -1); echo "== $f"; head -60 "$f"

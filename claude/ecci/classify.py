@@ -343,6 +343,9 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
                 and p.prov.source == SRC_VECTOR and (p.line_closed or not is_manhattan(p, params.manhattan_tol_deg))):
             c = style_key(p, params.width_round)[1]
             body_colours[c] = body_colours.get(c, 0) + 1
+    if body_colours:
+        notes.append("body-colour marks (closed/slanted outlines): " + ", ".join(
+            f"{c[1:]}={n}" if isinstance(c, tuple) else f"{c}={n}" for c, n in sorted(body_colours.items(), key=str)))
     mode, share = _choose_wire_style(pop, params, notes, diag_page, body_colours)
     no_wire = mode == AMBIGUOUS_STYLE
     if no_wire:
