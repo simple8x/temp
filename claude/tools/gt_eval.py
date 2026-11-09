@@ -205,7 +205,10 @@ def evaluate(pdir: pathlib.Path) -> dict:
         "prims": len(pi.prims), "wire_objects": sum(1 for o in g.objects if o.kind == "WIRE"),
         "edges": dict(collections.Counter(e.rule for e in g.edges)), "sites": len(g.sites),
         "dots": len(built.dots), "nets": len(nets), "open_nets": sum(n.closure == "OPEN" for n in nets),
-        "quarantined": len(res.quarantined), "library_symbols": len(lib.symbols),
+        "quarantined": len(res.quarantined),
+        "excluded_internal_symbol_wires": len(built.excluded_wire_prims),
+        "excluded_internal_symbol_wire_ids": sorted(built.excluded_wire_prims),
+        "library_symbols": len(lib.symbols),
         "library_warnings": len(lib.warnings), "oracle": oracle, "detected": detected,
         "oracle_fp_rules": dict(fp_rules), "oracle_fp_verified_detail": fp_v_detail,
     }
