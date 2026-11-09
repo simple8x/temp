@@ -169,3 +169,13 @@ def test_slanted_open_lines_in_the_wire_colour_do_not_disqualify_it():
     c += "0.5 0 0 RG 0.72 w 100 150 14 20 re S 150 150 14 20 re S\n".encode()
     res = _style_of(c)
     assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_lone_glyph_of_many_tiny_strokes_is_text_but_a_rectangle_is_not():
+    glyph = b"".join(f"0 0.4 0.4 RG 0.43 w {200 + 0.5 * i} {100 + 0.6 * (i % 2)} m "
+                     f"{200.5 + 0.5 * i} {100 + 0.6 * ((i + 1) % 2)} l S\n".encode() for i in range(6))
+    body = b"0.5 0 0 RG 0.72 w 300 100 14 20 re S\n"
+    res = _style_of(glyph + body)
+    assert sum(r.cls == "TEXT" for r in res.records.values()) == 6
+    assert any("0 rows" in n for n in res.notes)             # text found by stroke structure, not by a row
+    assert res.records[6].cls != "TEXT"                       # the rectangle (last primitive)

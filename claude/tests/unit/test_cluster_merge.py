@@ -123,3 +123,10 @@ def test_diagonal_arrow_shaft_is_not_a_stub():
     pi, cls = page(b"0.45 w 100 100 m 108 108 l S 106 108 m 108 108 l 108 106 l S")
     prims = {p.id: p for p in pi.prims if p.stroke and p.id >= 3}
     assert find_stubs(prims, 0.02, min_host=0.0) == set()
+
+
+def test_merge_distance_is_set_by_the_smaller_part_not_the_larger():
+    big = b"0.9 w 100 100 40 40 re S"
+    small = b"0.9 w 146 100 m 149 100 l 149 103 l S"          # 3 pt part (above the glyph limit), 6 pt from the body
+    pi, cls = page(big + small)
+    assert len(body_clusters(pi, cls)) == 2                    # 6 > 0.5 x 3; a 'larger part' rule (20) would merge
