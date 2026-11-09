@@ -48,6 +48,11 @@ for (ref, lid), ps in sorted(byref.items()):
             print("CL    cluster", c.cluster.id, c.resolution.status, "prims", len(c.cluster.prim_ids),
                   "segs", len(c.cluster.segs), "bbox", [round(v, 1) for v in c.cluster.bbox],
                   "stripped", None if sp is None else (len(sp[1]), len(sp[0].segs)))
+        if fails <= 2:
+            for c in cand[:2]:
+                for i in c.cluster.prim_ids:
+                    q = by_id[i]
+                    print("CL      prim", i, cls.records[i].cls, round(q.stroke_w, 2), [(round(a, 1), round(b, 1)) for a, b in q.pts][:5])
         if not cand:
             print("CL    no cluster near", round(cx, 1), round(cy, 1))
 from ecci.classify import style_key  # noqa: E402
