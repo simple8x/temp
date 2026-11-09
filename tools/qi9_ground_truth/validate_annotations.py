@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -79,6 +80,30 @@ def validate(document: object, expected_sha256: str | None = None) -> list[str]:
             reviewers = []
 
         status = row.get("status")
+        reviewer_ids = []
+        for j, reviewer in enumerate(reviewers):
+            if not isinstance(reviewer, dict):
+                errors.append(f"{prefix}.reviewers[{j}] must be an object")
+                continue
+            rid = reviewer.get("reviewer_id")
+            if not isinstance(rid, str) or not rid:
+                errors.append(f"{prefix}.reviewers[{j}].reviewer_id is required")
+            else:
+                reviewer_ids.append(rid)
+            if reviewer.get("decision") not in {"CONFIRM", "REJECT", "DISAGREE"}:
+                errors.append(f"{prefix}.reviewers[{j}].decision is invalid")
+        if len(reviewer_ids) != len(set(reviewer_ids)):
+            errors.append(f"{prefix}: reviewer IDs must be unique per annotation")
+
+        for j, item in enumerate(evidence):
+            if not isinstance(item, dict):
+                errors.append(f"{prefix}.evidence[{j}] must be an object")
+                continue
+            if item.get("source_type") not in {"PDF_VECTOR", "PDF_TEXT", "PDF_RENDER", "REVIEW_NOTE", "EXTERNAL_REFERENCE"}:
+                errors.append(f"{prefix}.evidence[{j}].source_type is invalid")
+            if not isinstance(item.get("source_id"), str) or not item.get("source_id"):
+                errors.append(f"{prefix}.evidence[{j}].source_id is required")
+
         if status in CONFIRMATION_STATUSES:
             if not evidence:
                 errors.append(f"{prefix}: confirmed fact requires source evidence")
@@ -87,8 +112,35 @@ def validate(document: object, expected_sha256: str | None = None) -> list[str]:
                 if isinstance(r, dict) and r.get("decision") == "CONFIRM"
                 and isinstance(r.get("reviewer_id"), str) and r.get("reviewer_id")
             }
-            if len(confirmed) < 2:
-                errors.append(f"{prefix}: VERIFIED requires two distinct confirming reviewers")
+            if len(confirmed) < 2 or len(confirmed) != len(reviewer_ids):
+                errors.append(f"{prefix}: VERIFIED requires two distinct reviewers and unanimous CONFIRM decisions")
+        if status == "REVIEWED_PENDING_SECOND_REVIEW" and not reviewers:
+            errors.append(f"{prefix}: pending review requires at least one reviewer")
+        if row.get("kind") == "CONNECTIVITY" and status == "VERIFIED":
+            errors.append(f"{prefix}: connectivity must use VERIFIED_CONNECTED or VERIFIED_SEPARATE")
+        if row.get("kind") != "CONNECTIVITY" and status in {"VERIFIED_CONNECTED", "VERIFIED_SEPARATE"}:
+            errors.append(f"{prefix}: connectivity status requires kind CONNECTIVITY")
+
+        geometry = row.get("geometry")
+        if geometry is not None:
+            if not isinstance(geometry, dict):
+                errors.append(f"{prefix}.geometry must be an object")
+            else:
+                for field, size in (("bbox", 4), ("point", 2)):
+                    values = geometry.get(field)
+                    if values is not None and (
+                        not isinstance(values, list) or len(values) != size
+                        or any(not isinstance(x, (int, float)) or not math.isfinite(x) for x in values)
+                    ):
+                        errors.append(f"{prefix}.geometry.{field} must contain {size} finite numbers")
+                points = geometry.get("points")
+                if points is not None and (
+                    not isinstance(points, list) or len(points) < 2
+                    or any(not isinstance(p, list) or len(p) != 2
+                           or any(not isinstance(x, (int, float)) or not math.isfinite(x) for x in p)
+                           for p in points)
+                ):
+                    errors.append(f"{prefix}.geometry.points must contain at least two finite coordinate pairs")
 
         assertion = row.get("assertion")
         if status in {"VERIFIED_CONNECTED", "VERIFIED_SEPARATE"}:
