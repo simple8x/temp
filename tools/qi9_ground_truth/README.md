@@ -78,7 +78,7 @@ running the current single-page validator.
 
 - Parser candidates and rankings are not ground truth.
 - A confirmed annotation requires source evidence and two distinct reviewers
-  who both chose CONFIRM; mixed decisions cannot pass.
+  who both chose CONFIRM; mixed decisions cannot pass. Reviewer IDs are self-declared labels, not authenticated identities; the project must arrange genuinely independent human review.
 - Connectivity assertions require two existing annotation endpoints and a
   matching `CONNECTED_TO` or `SEPARATE_FROM` predicate.
 - Disagreements remain `CONFLICT`; insufficient evidence remains `UNKNOWN`.
