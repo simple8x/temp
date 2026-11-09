@@ -1,1 +1,1 @@
-video#p5,vme-wren#p20
+video,vme-wren,kit-dev-coldfire-xilinx_5213,multichannel_mixer

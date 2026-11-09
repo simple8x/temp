@@ -295,3 +295,32 @@ def test_t22b_restrict_needs_a_closed_outline():
     by_id = {p.id: p for p in pi.prims}
     cl = _rebuild(0, tuple(by_id), by_id)
     assert restrict_to_outline_style(cl, by_id) is None
+
+
+def _circle(cx, cy, r, n=16):
+    import math as _m
+    pts = [(cx + r * _m.cos(2 * _m.pi * k / n), cy + r * _m.sin(2 * _m.pi * k / n)) for k in range(n)]
+    return ("%.3f %.3f m " % pts[0] + " ".join("%.3f %.3f l" % p for p in pts[1:]) + " h S\n").encode()
+
+
+def test_t23_small_round_mark_touching_the_body_does_not_block_the_template():
+    # an inversion-bubble-like closed round mark in the body colour, attached to the body: dropped by the retry
+    syms = [v for k, v in LIB_FOR_T16.symbols.items() if k != "R_LONG"]
+    pi0 = ingest_pdf(one_page(_scene_with_r(), size=(300, 200))).pages[0]
+    r0 = detect_pins(pi0, classify_page(pi0), syms)
+    assert len(r0) == 1 and r0[0].resolution.status == "UNIQUE"
+    x0, y0, x1, y1 = r0[0].cluster.bbox
+    ops = _circle((x0 + x1) / 2, 200 - y0 + 0.3, 0.35)          # bubble sticking out of the top edge (y-up stream)
+    pi = ingest_pdf(one_page(_scene_with_r(ops), size=(300, 200))).pages[0]
+    results = detect_pins(pi, classify_page(pi), syms)
+    ok = [r for r in results if r.resolution.status == "UNIQUE"]
+    assert len(ok) == 1 and len(ok[0].pins) == 2
+
+
+def test_t23b_strip_decor_keeps_large_closed_shapes():
+    from ecci.symbols import _rebuild, strip_decor
+    ops = _circle(50, 50, 20) + b"0 0 m 100 0 l 100 100 l 0 100 l h S\n" + b"10 10 m 90 10 l S 10 90 m 90 90 l S\n"
+    pi = ingest_pdf(one_page(b"0.5 0 0 RG 0.45 w " + ops, size=(200, 200))).pages[0]
+    by_id = {p.id: p for p in pi.prims}
+    cl = _rebuild(0, tuple(by_id), by_id)
+    assert strip_decor(cl, by_id) is None          # the circle is 40% of the cluster: not a small mark

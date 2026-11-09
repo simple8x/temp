@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from dataclasses import dataclass
 
 from .arrangement import EPS_DEFAULT, build_arrangement, independent_prims_at
@@ -291,3 +293,57 @@ def restrict_to_outline_style(cl: Cluster, by_id: dict):
     if not dropped or len(keep) < 2:
         return None
     return _rebuild(cl.id, keep, by_id), dropped
+
+
+def strip_decor(cl: Cluster, by_id: dict, max_frac: float = 0.05, min_pts: int = 8):
+    """Drop small closed round marks (inversion bubbles, dots) from a cluster. Library templates model the body
+    outline only; the template still decides whether the reduced cluster is a symbol. Returns (cluster, dropped)
+    or None."""
+    big = _maxdim(cl.bbox)
+    dropped = tuple(i for i in cl.prim_ids if by_id[i].line_closed and len(by_id[i].pts) >= min_pts
+                    and _maxdim(_bbox(by_id[i])) <= max_frac * big)
+    rest = tuple(i for i in cl.prim_ids if i not in set(dropped))
+    if not dropped or len(rest) < 2:
+        return None
+    return _rebuild(cl.id, rest, by_id), dropped
+
+
+def relaxations(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_prims: int = 400, max_groups: int = 4):
+    """Yield (reduced cluster, stub prim ids) candidates for a cluster that matched no template, most conservative
+    first. Pure geometry; the template decides. 1) without dangling stubs; 2) per colour/width group (the style of
+    the largest closed outline first, then the others by total length), each also without small round marks and/or
+    stubs."""
+    sp = strip_stubs(cl, by_id, eps)
+    if sp is not None:
+        yield sp[0], sp[1]
+    if len(cl.prim_ids) > max_prims:
+        return
+    groups: dict = {}
+    for i in cl.prim_ids:
+        q = by_id[i]
+        groups.setdefault((q.stroke_color, round(q.stroke_w, 2)), []).append(i)
+    if len(groups) < 2:
+        variants_src = [(cl, ())]
+    else:
+        def total(ids):
+            return sum(math.dist(a, b) for i in ids for _, a, b in by_id[i].segments())
+        closed = [i for i in cl.prim_ids if by_id[i].line_closed]
+        first = None
+        if closed:
+            ref = max(closed, key=lambda i: (lambda b: (b[2] - b[0]) * (b[3] - b[1]))(_bbox(by_id[i])))
+            first = (by_id[ref].stroke_color, round(by_id[ref].stroke_w, 2))
+        order = sorted(groups, key=lambda k: (k != first, -total(groups[k])))[:max_groups]
+        variants_src = [(_rebuild(cl.id, tuple(groups[k]), by_id), ()) for k in order if len(groups[k]) >= 2]
+    for base, _ in variants_src:
+        if base is not cl:
+            yield base, ()
+        dc = strip_decor(base, by_id)
+        cur = dc[0] if dc is not None else None
+        if cur is not None:
+            yield cur, ()
+        for c in (base, cur):
+            if c is None:
+                continue
+            sp2 = strip_stubs(c, by_id, eps)
+            if sp2 is not None:
+                yield sp2[0], sp2[1]
