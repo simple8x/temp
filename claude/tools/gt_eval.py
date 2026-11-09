@@ -78,7 +78,7 @@ def shortest_path(final_edges, a, b):
     return out[::-1]
 
 
-MAX_PAGE_PINS = 450
+MAX_PAGE_PINS = 1500
 PAGE_SECONDS = 150            # wall-clock budget per page; a page over budget is reported, never silently dropped
 
 
@@ -130,7 +130,7 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
         npages = len(p.pages)
     if npages == 1 and len(schs) == 1:
         return [evaluate(pdir, 0, schs[0], pdir.name)]
-    if npages > 40 or len(schs) > 40:
+    if npages > 80 or len(schs) > 80:
         return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
     mp = map_pages_to_sheets(str(pdf[0]), schs, npages)
     out = []

@@ -25,6 +25,7 @@ jobs:
       - name: Summary
         run: python claude/tools/gt_summary.py gt_out | tee gt_summary.log
       - name: Profile heavy pages
+        if: ${{ contains(github.event.head_commit.message, '[profile]') }}
         run: |
           python claude/tools/gt_profile.py gt_out jetson-agx-thor-baseboard 1 2>&1 | tee gt_profile.log
           python claude/tools/gt_profile.py gt_out video 1 2>&1 | tee -a gt_profile.log
