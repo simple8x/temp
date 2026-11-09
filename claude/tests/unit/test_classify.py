@@ -142,3 +142,15 @@ def test_lone_glyph_of_many_tiny_strokes_is_text_but_a_rectangle_is_not():
     cls = {r.cls for r in res.records.values()}
     assert sum(r.cls == "TEXT" for r in res.records.values()) == 6
     assert "BODY" in cls or "OTHER" in cls
+
+
+def test_colour_that_draws_closed_outlines_is_a_body_colour_not_the_wire_colour():
+    g, r = "0 0.6 0", "0.5 0 0"
+    c = b""
+    for i in range(6):                                   # red: pin-like lines chained, very well connected
+        c += _seg(20 + 40 * i, 100, 52 + 40 * i, 100, r)
+    c += f"{r} RG 0.72 w 100 200 14 20 re S 150 200 14 20 re S\n".encode()   # red closed outlines
+    for i in range(5):                                   # green: wires, less connected
+        c += _seg(20 + 60 * i, 300, 70 + 60 * i, 300, g)
+    res = _style_of(c)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)

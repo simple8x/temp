@@ -44,6 +44,7 @@ class ClassifyParams:
     manhattan_tol_deg: float = 0.5
     style_min_connected: int = 3       # wire-style choice by structure: minimum connected ends   (ASSUMPTION)
     style_max_mean_len_frac: float = 0.2    # mean line length / page diagonal above which a style is sheet furniture (ASSUMPTION)
+    style_body_marks: int = 2           # closed/slanted outlines in a colour that mark it as a body colour (ASSUMPTION)
     style_min_len_share: float = 0.1   # a style needs this share of the longest style's total length (ASSUMPTION)
     style_len_dominance: float = 2.0   # mean-length ratio that decides when structure is ambiguous (ASSUMPTION)
     style_dominance: float = 1.5       # ... and the winner must have this many times the runner-up (ASSUMPTION)
@@ -228,7 +229,8 @@ def _connected_ends(group: list[Prim], eps: float) -> int:
 AMBIGUOUS_STYLE = ("AMBIGUOUS",)   # no line of the page may be called a wire (never guess)
 
 
-def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[str], diag_page: float):
+def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[str], diag_page: float,
+                       body_colours: dict | None = None):
     if len(pop) < params.min_population:
         notes.append(f"wire style undetermined: only {len(pop)} Manhattan open lines")
         return None, 0.0
@@ -242,6 +244,15 @@ def _choose_wire_style(pop: list[Prim], params: "ClassifyParams", notes: list[st
         min_len = params.style_min_mean_len_frac * diag_page
         big = {k: v for k, v in big.items()
                if sum(math.dist(p.pts[0], p.pts[-1]) for p in v) / len(v) >= min_len} or big
+        # ... nor a colour that also draws closed or slanted outlines (symbol bodies): wires are open and axis-aligned
+        if body_colours:
+            clean = {k: v for k, v in big.items() if body_colours.get(k[1], 0) < params.style_body_marks}
+            if clean and len(clean) < len(big):
+                notes.append(f"wire style: {len(big) - len(clean)} style(s) share a colour with closed/slanted outlines")
+                big = clean
+                if len(big) == 1:
+                    k = next(iter(big))
+                    return k, len(groups[k]) / len(pop)
         # ... nor lines spanning a large part of the page (drawing-sheet / title-block rules)
         max_len = params.style_max_mean_len_frac * diag_page
         big = {k: v for k, v in big.items()
@@ -326,7 +337,13 @@ def classify_page(pi: PageIngest, params: ClassifyParams = ClassifyParams()) -> 
     pop = [p for p in pi.prims if p.kind == "polyline" and p.stroke and not p.fill
            and not p.line_closed and is_manhattan(p, params.manhattan_tol_deg)
            and p.prov.source == SRC_VECTOR and p.id not in text_ids]
-    mode, share = _choose_wire_style(pop, params, notes, diag_page)
+    body_colours: dict = {}
+    for p in pi.prims:
+        if (p.kind == "polyline" and p.stroke and not p.fill and p.id not in text_ids
+                and p.prov.source == SRC_VECTOR and (p.line_closed or not is_manhattan(p, params.manhattan_tol_deg))):
+            c = style_key(p, params.width_round)[1]
+            body_colours[c] = body_colours.get(c, 0) + 1
+    mode, share = _choose_wire_style(pop, params, notes, diag_page, body_colours)
     no_wire = mode == AMBIGUOUS_STYLE
     if no_wire:
         mode = ('__none__',)    # matches no style: every line stays BODY/OTHER, nothing becomes a wire
