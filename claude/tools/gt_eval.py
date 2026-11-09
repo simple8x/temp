@@ -21,7 +21,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import pikepdf  # noqa: E402
 
-from ecci.gt_kicad import embedded_library_text, gt_pins  # noqa: E402
+from ecci.gt_kicad import embedded_library_text, gt_pins, wire_component_index  # noqa: E402
 from ecci.ingest_vector import ingest_pdf  # noqa: E402
 from ecci.kicad_lib import load_library  # noqa: E402
 from ecci.rules import analyze_page  # noqa: E402
@@ -112,12 +112,14 @@ def map_pages_to_sheets(pdf_path: str, schs: list, npages: int):
         order = sorted(range(len(sc)), key=lambda i: -sc[i])
         best = order[0]
         second = sc[order[1]] if len(order) > 1 else 0.0
+        top3 = [(schs[i].name, round(sc[i], 2)) for i in order[:3]]
         if sc[best] >= 0.8 and sc[best] - second >= 0.2:
-            res[k] = (best, round(sc[best], 3), round(second, 3))
+            res[k] = (best, round(sc[best], 3), round(second, 3), top3)
         else:
-            res[k] = (None, round(sc[best], 3), round(second, 3))
+            res[k] = (None, round(sc[best], 3), round(second, 3), top3)
     claimed = collections.Counter(v[0] for v in res.values() if v[0] is not None)
-    return {k: (v if v[0] is None or claimed[v[0]] == 1 else (None, v[1], v[2])) for k, v in res.items()}
+    return {k: (v if v[0] is None or claimed[v[0]] == 1 else (None, v[1], v[2], v[3] + ["claimed-by-several-pages"]))
+            for k, v in res.items()}
 
 
 def evaluate_project(pdir: pathlib.Path) -> list[dict]:
@@ -134,10 +136,10 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
         return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
     mp = map_pages_to_sheets(str(pdf[0]), schs, npages)
     out = []
-    for k, (si, score, second) in sorted(mp.items()):
+    for k, (si, score, second, top3) in sorted(mp.items()):
         name = f"{pdir.name}#p{k}"
         if si is None:
-            out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})"})
+            out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})", "map_top3": top3})
             continue
         try:
             print("GT_PAGE_START", name, flush=True)
@@ -178,13 +180,16 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str) -> dic
             p = prim[int(o.id[2:])]
             ends = [p.pts[0], p.pts[-1]] if not p.line_closed else []
             wire_ends.append((o.id, ends))
+    comp_of = wire_component_index(str(schs[0]))
     # oracle attachment
     attached = []
+    comps = []
     for gp in vis:
         ws = sorted({oid for oid, ends in wire_ends
                      if any(math.hypot(e[0] - gp.x, e[1] - gp.y) <= TOL_WIRE for e in ends)})
         if ws:
             attached.append((tuple(ws), gp.net))
+            comps.append(comp_of(gp.x, gp.y))
     rank = {"VERIFIED": 3, "INFERRED": 2, "UNKNOWN": 1, "CONFLICT": 0}
 
     def oracle_status(a, b):
@@ -197,6 +202,21 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str) -> dic
         return best
 
     oracle = pair_metrics(attached, oracle_status)
+    # recall split: pairs whose pins sit on the SAME connected set of wires in the sheet file ("local": visible in
+    # the drawing as wires) versus pairs on the same net only through labels, power symbols or other sheets
+    loc = collections.Counter()
+    for i in range(len(attached)):
+        for j in range(i + 1, len(attached)):
+            if attached[i][1] != attached[j][1]:
+                continue
+            kind = "local" if comps[i] is not None and comps[i] == comps[j] else "nonlocal"
+            st = oracle_status(attached[i][0], attached[j][0])
+            loc[kind + "_pos"] += 1
+            if st == "VERIFIED":
+                loc[kind + "_V"] += 1
+            if st in LEVELS:
+                loc[kind + "_VI"] += 1
+    oracle["split"] = dict(loc)
     # diagnostics: which rules sit on the path of every false positive; details of VERIFIED false positives
     emap = {e.id: e for e in g.edges}
     fp_rules = collections.Counter()
@@ -275,6 +295,8 @@ def main(root: str) -> int:
             rs = [{"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}]
         for r in rs:
             print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
+            for k, v in (r.get("oracle", {}).get("split") or {}).items():
+                tot["split_" + k] += v
             for mode in ("oracle", "detected"):
                 m = r.get(mode)
                 if m:
@@ -292,6 +314,11 @@ def main(root: str) -> int:
                      "precision_V": round(tpv / max(1, tpv + fpv), 4), "recall_V": round(tpv / pos, 4),
                      "precision_VI": round((tpv + tpi) / max(1, tpv + tpi + fpv + fpi), 4),
                      "recall_VI": round((tpv + tpi) / pos, 4), "FP_V": fpv, "FP_I": fpi}
+    sp = {k[6:]: v for k, v in tot.items() if k.startswith("split_")}
+    for kind in ("local", "nonlocal"):
+        n = max(1, sp.get(kind + "_pos", 0))
+        out["oracle_" + kind] = {"pos": sp.get(kind + "_pos", 0), "recall_V": round(sp.get(kind + "_V", 0) / n, 4),
+                                 "recall_VI": round(sp.get(kind + "_VI", 0) / n, 4)}
     print("GT_TOTAL " + json.dumps(out, sort_keys=True))
     return 0
 

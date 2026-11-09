@@ -235,3 +235,48 @@ def _dump(node) -> str:
     if s == "" or any(ch in s for ch in ' ()"\t\n') :
         return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
     return s
+
+
+def wire_component_index(sch_path: str):
+    """Geometric connectivity of the sheet's wires alone, as a function (x_pt, y_pt) -> component id or None.
+
+    Two wires belong together when an end of one lies on the other (end-to-end or T); crossings do not join.
+    Labels, power symbols and other sheets are NOT used: this is what a reader can see in the drawing, so it
+    separates pairs that are connected by wires on this page from pairs connected only by name or other pages."""
+    sch = read_sch(sch_path)
+    segs = [((a[0], a[1]), (b[0], b[1])) for a, b in sch["wires"]]
+    n = len(segs)
+    parent = list(range(n))
+
+    def find(a: int) -> int:
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    def on(p, a, b, tol=0.02):
+        (px, py), (ax, ay), (bx, by) = p, a, b
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy
+        t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / L2))
+        return (px - (ax + t * dx)) ** 2 + (py - (ay + t * dy)) ** 2 <= tol * tol
+
+    cell: dict = {}
+    for i, (a, b) in enumerate(segs):
+        for cx in range(int(min(a[0], b[0]) // 5) - 1, int(max(a[0], b[0]) // 5) + 2):
+            for cy in range(int(min(a[1], b[1]) // 5) - 1, int(max(a[1], b[1]) // 5) + 2):
+                cell.setdefault((cx, cy), []).append(i)
+    for i, (a, b) in enumerate(segs):
+        for end in (a, b):
+            for j in cell.get((int(end[0] // 5), int(end[1] // 5)), []):
+                if j != i and on(end, *segs[j]) and find(i) != find(j):
+                    parent[find(i)] = find(j)
+
+    def comp_of(x_pt: float, y_pt: float, tol_pt: float = 0.6):
+        x, y = x_pt / MM_TO_PT, y_pt / MM_TO_PT
+        for j in cell.get((int(x // 5), int(y // 5)), []):
+            if on((x, y), *segs[j], tol=tol_pt / MM_TO_PT):
+                return find(j)
+        return None
+
+    return comp_of

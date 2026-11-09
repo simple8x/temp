@@ -112,3 +112,16 @@ def test_coincident_pins_on_different_nets_drop_the_symbols_from_scoring(tmp_pat
     pins, info = gt_pins(s, x)
     assert info["inconsistent_refs"] == 2
     assert all(p.net is None for p in pins)
+
+
+def test_wire_components_join_end_to_end_and_t_touches_but_not_crossings(tmp_path):
+    from ecci.gt_kicad import MM_TO_PT, wire_component_index
+    sch = tmp_path / "w.kicad_sch"
+    sch.write_text("(kicad_sch (wire (pts (xy 0 0) (xy 10 0))) (wire (pts (xy 10 0) (xy 10 10)))"
+                   " (wire (pts (xy 5 0) (xy 5 -5)))"                        # T onto the first wire
+                   " (wire (pts (xy 20 -3) (xy 20 3))) (wire (pts (xy 17 0) (xy 23 0))))")   # a crossing, no common end
+    comp = wire_component_index(str(sch))
+    at = lambda x, y: comp(x * MM_TO_PT, y * MM_TO_PT)  # noqa: E731
+    assert at(0, 0) == at(10, 10) == at(5, -5) is not None
+    assert at(20, -3) != at(17, 0) and at(20, -3) is not None and at(17, 0) is not None
+    assert at(40, 40) is None
