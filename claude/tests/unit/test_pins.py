@@ -271,7 +271,7 @@ COPIES = """(kicad_symbol_lib (version 20231120) (generator test)
 def test_part_stem_ignores_library_nickname_and_unit_suffix():
     from ecci.pins import _part_stem
     assert _part_stem("video_schlib:SIM4X32") == _part_stem("SIM4X32_3") == _part_stem("SIM4X32#u2") == "SIM4X32"
-    assert _part_stem("Logic:XCZU4CG-1SFVC784E#u10") == "XCZU4CG-1SFVC784E"
+    assert _part_stem("Logic:XCZU4CG-1SFVC784E#u10") == _part_stem("XCZU4CG-1SFVC784E_3#u2") == "XCZU4CG-1SFVC784E"
     assert _part_stem("a:R") != _part_stem("a:C")
 
 

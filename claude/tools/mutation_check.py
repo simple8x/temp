@@ -183,6 +183,8 @@ MUTATIONS = [
      "len({_part_stem(h.symbol.name) for h in res.hits}) == 1:", "len({1 for h in res.hits}) == 1:"),
     ("M91-stem-keeps-library-nickname", "ecci/pins.py",
      'name.rsplit(":", 1)[-1])', "name)"),
+    ("M92-stem-strips-one-suffix-only", "ecci/pins.py",
+     '(#u\\d+|_\\d+)+$', '(#u\\d+|_\\d+)$'),
     ("M60-stub-evidence-prefix", "ecci/rules.py",
      'if ev.startswith("S2:") and ev in reg.items:\n                    for tok', 'if ev.startswith("S9:") and ev in reg.items:\n                    for tok'),
     ("M61-style-length-share-off", "ecci/classify.py",

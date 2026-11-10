@@ -121,9 +121,9 @@ def _wire_segments(pi: PageIngest, cls: PageClassification, exclude: set[int]):
 
 
 def _part_stem(name: str) -> str:
-    """'SIM4X32_2', 'SIM4X32#u2' and 'video_schlib:SIM4X32' are units / per-sheet copies of the part 'SIM4X32'.
+    """'SIM4X32_2', 'SIM4X32#u2', 'SIM4X32_2#u3' and 'video_schlib:SIM4X32' are units / per-sheet copies of the part 'SIM4X32'.
     The library nickname before ':' is not part of the part name (KiCad embeds the same part under both forms)."""
-    return re.sub(r"(#u\d+|_\d+)$", "", name.rsplit(":", 1)[-1])
+    return re.sub(r"(#u\d+|_\d+)+$", "", name.rsplit(":", 1)[-1])
 
 
 def _line_index(pi: PageIngest, cls: PageClassification, cell: float = 20.0):
