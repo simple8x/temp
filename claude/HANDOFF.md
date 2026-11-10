@@ -48,6 +48,22 @@ assertions; no auto UNKNOWN->VERIFIED; report SHA + run URL + PASS/FAIL/UNKNOWN 
   mutation_check.py runs the mutations in parallel (MUTATION_WORKERS, default cpu-1): 111 in ~5 min, report
   order fixed.
 
+## Audit round 3 (scope: P1 VERIFIED boundary, P1 CI gate, P2 pinned project list)
+- `status.py`: SOUND rules need their exact role-kind pair (TR1 W+W, TR2 W+DOT, TR3 PIN+W); role records must
+  name the edge endpoints in order; VERIFIED needs provenance; blank/duplicate/non-str evidence ids do not count;
+  any `weak` other than False caps at INFERRED; malformed n_prims / negative / coord / types fail closed.
+  `audit_verified` re-checks all of it independently; `audit_result` flags a VERIFIED status that is not in the
+  graph or that classify_edge would not give. M115-M126.
+- `gt_gate.py` + `gt_gate.txt`: CI step `M4.0 regression gate`, if: always(). FAIL on partial run (GT_ONLY),
+  inventory_consistent != true, FP_V/FP_I > 0 (detected AND oracle), pin_recall < 0.55, < 100 pages, != 32
+  projects, or any missing field. A GT_ONLY run is now red by design. M127-M131.
+- `EXPECT_EXPORT_OK_LIST` (32 names) in gt_pages.txt, checked by gt_verify.sh (files present) and gt_eval.py
+  (evaluated corpus). Not in gt_source.txt, so no re-export. M132-M134.
+- mutation_check.py was VACUOUS before this round: the copy lacked .github/workflows (one test always failed) and
+  the harness self-test failed on every mutated source, so every mutation read KILLED. Now: workflows copied,
+  harness test deselected in the copy, unmutated baseline must pass first, detail names the killing test.
+  The earlier "111/111 killed" is therefore NOT evidence.
+
 ## Done this stretch
 - `_part_stem` ignores the library nickname and stacked unit suffixes, so KiCad's duplicate embeddings
   ("video_schlib:SIM4X32" + "SIM4X32_1..7", "XCZU4CG-1SFVC784E_1#u2") are recognised as one part and the drawn

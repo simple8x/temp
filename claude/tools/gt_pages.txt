@@ -2,6 +2,10 @@
 # between the two (mapping improved, or a page stops being evaluated) fails the run until this file is updated.
 # The 4 projects of EXPECT_EXPORT_FAIL contribute no pages at all and are therefore not counted here.
 EXPECT_MIN_PAGES=100
+# the exact projects that must export (pdf + netlist), by name; must have EXPECT_EXPORT_OK names. Checked against
+# the files present by gt_verify.sh (cached or fresh) and against the evaluated corpus by gt_eval.py. Kept here,
+# not in gt_source.txt, because it is a check on the data, not an input: pinning it must not force a re-export.
+EXPECT_EXPORT_OK_LIST=Class-D,One-Air-Max,Q17ng,RoyalBlue54L-Feather,RoyalBlue54L-NFC-Antenna,a-multi,amplifier-ac,buck_conv,complex_hierarchy,ecc83-pp,ecc83-pp_v2,generic_opamp_bip,hv_converter,ibis,interf_u,jetson-agx-thor-baseboard,kit-dev-coldfire-xilinx_5213,laser_driver,mainsheet,mult_vca810,multichannel_mixer,power_supply,rectifier,royer1,sallen_key,smps-com,sonde xilinx,tinytapeout-demo,up-down-c,v_i_sources,video,vme-wren
 EXPECT_TOTAL_PAGES=142
 # pages skipped because one sheet is instantiated several times, so page -> sheet is not one-to-one (UNKNOWN,
 # NOT a measured result; they are excluded from every number reported by gt_eval)

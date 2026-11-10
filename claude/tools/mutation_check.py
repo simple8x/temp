@@ -86,11 +86,11 @@ MUTATIONS = [
     ("M30-tr1-precondition-dropped", "ecci/status.py",
      'if pre == "eq2" and e.n_prims != 2:', 'if False:'),
     ("M31-negative-evidence-ignored", "ecci/status.py",
-     "    if e.negative:\n        return UNKNOWN", "    if False:\n        return UNKNOWN"),
+     "    if not isinstance(e.negative, tuple) or e.negative:\n        return UNKNOWN", "    if False:\n        return UNKNOWN"),
     ("M32-weak-source-ignored", "ecci/status.py",
-     "if any(r.weak for r in e.roles):", "if False:"),
+     "if any(r.weak is not False for r in e.roles):", "if False:"),
     ("M33-missing-coord-ignored", "ecci/status.py",
-     "    if not e.coord:\n        return INFERRED", "    if False:\n        return INFERRED"),
+     "    if not (isinstance(e.coord, str) and e.coord.strip()):\n        return INFERRED", "    if False:\n        return INFERRED"),
     ("M34-single-evidence-confirmed", "ecci/status.py",
      "if len(set(r.evidence)) < 2:\n            return ROLE_CANDIDATE", "if False:\n            return ROLE_CANDIDATE"),
     ("M35-conventional-rule-verified", "ecci/status.py",
@@ -261,13 +261,82 @@ MUTATIONS = [
      "never merge by proximity: only by touching.\n    # Without it, text strokes chain into one page-sized \"cluster\" that matches nothing.\n    min_part = 0.0 * min_gap_part_frac"),
     ("M69-lone-glyph-needs-no-strokes", "ecci/classify.py",
      "len(short) >= params.glyph_stroke_share * len(ps)", "False"),
+    # ---- trust boundary of VERIFIED (status.py / solver.audit_result)
+    ("M115-sound-kind-multiset-off", "ecci/status.py",
+     "if kind == SOUND and tuple(sorted(r.kind for r in e.roles)) != SOUND_KINDS[e.rule]:", "if False:"),
+    ("M116-role-obj-mismatch-ignored", "ecci/status.py",
+     "if (e.roles[0].obj, e.roles[1].obj) != (e.a, e.b):", "if False:"),
+    ("M117-verified-without-provenance", "ecci/status.py",
+     "    if not e.prov or not _valid_ids(e.prov):\n        return INFERRED", "    if False:\n        return INFERRED"),
+    ("M118-blank-evidence-id-counts", "ecci/status.py",
+     "        if not _valid_ids(r.evidence):\n            return ROLE_CANDIDATE", "        if False:\n            return ROLE_CANDIDATE"),
+    ("M119-truthy-weak-flag-trusted", "ecci/status.py",
+     "if any(r.weak is not False for r in e.roles):", "if any(r.weak is True for r in e.roles):"),
+    ("M120-n-prims-type-unchecked", "ecci/status.py",
+     "if not isinstance(e.n_prims, int) or isinstance(e.n_prims, bool):", "if False:"),
+    ("M121-audit-kinds-off", "ecci/status.py",
+     "    if sorted(r.kind for r in e.roles) != want:", "    if False:"),
+    ("M122-audit-endpoints-off", "ecci/status.py",
+     "    if e.roles[0].obj != e.a or e.roles[1].obj != e.b:", "    if False:"),
+    ("M123-audit-provenance-off", "ecci/status.py",
+     '        problems.append("no provenance record")', "        pass"),
+    ("M124-audit-n-prims-off", "ecci/status.py",
+     "    if need is not None and e.n_prims != need:", "    if False:"),
+    ("M125-audit-result-skips-unknown-edge", "ecci/solver.py",
+     '            problems.append(f"I7 {eid}: VERIFIED edge is not in the graph")', "            pass"),
+    ("M126-audit-result-trusts-edge-status", "ecci/solver.py",
+     "        if classify_edge(emap[eid])[0] != VERIFIED:", "        if False:"),
+    ("M127-gate-fp-ignored", "tools/gt_gate.py",
+     '            fail(f"{mode}.{k}={v} > {lim}")', "            pass"),
+    ("M128-gate-pin-recall-ignored", "tools/gt_gate.py",
+     '        fail(f"detected_local.pin_recall={pr} < {g[\'GATE_MIN_PIN_RECALL\']}")', "        pass"),
+    ("M129-gate-accepts-partial-run", "tools/gt_gate.py",
+     '        fail("partial run (GT_ONLY): the M4.0 gate needs the full corpus")', "        pass"),
+    ("M130-gate-accepts-inconsistent", "tools/gt_gate.py",
+     '        fail(f"inventory_consistent={tot.get(\'inventory_consistent\')}")', "        pass"),
+    ("M131-gate-min-pages-ignored", "tools/gt_gate.py",
+     '        fail(f"evaluated={cov.get(\'evaluated\')} < {g[\'GATE_MIN_PAGES\']}")', "        pass"),
+    ("M132-verify-ok-list-ignored", "tools/gt_verify.sh",
+     '[ "$got_ok_list" = "$want_ok_list" ] || fail', '[ "$got_ok_list" = "$want_ok_list" ] || true'),
+    ("M133-eval-ok-list-ignored", "tools/gt_eval.py",
+     '            problems.append(f"exported project set != pinned EXPECT_EXPORT_OK_LIST: "', '            (f"exported project set != pinned EXPECT_EXPORT_OK_LIST: "'),
+    ("M134-pins-list-count-ignored", "tools/gt_eval.py",
+     '        problems.append(f"EXPECT_EXPORT_OK_LIST has {len(ok_list)} names != EXPECT_EXPORT_OK={exp_proj}")',
+     "        pass"),
 ]
 
 
+HARNESS_TESTS = (
+    "tests/unit/test_gt_failclosed.py::test_mutation_runner_reports_in_a_fixed_order_and_counts_every_mutation",
+)
+
+
 def run_suite(pkg_root: Path) -> tuple[int, str]:
-    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", "tests"],
+    # HARNESS_TESTS check this file's own patterns against the (mutated) sources, so they fail for EVERY mutation
+    # and would make each one look KILLED. They are tests of the runner, not of ECCI: deselected in the copy.
+    desel = [a for t in HARNESS_TESTS for a in ("--deselect", t)]
+    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", *desel, "tests"],
                        cwd=pkg_root, capture_output=True, text=True, timeout=900)
     return p.returncode, (p.stdout + p.stderr)[-400:]
+
+
+def make_copy(td: Path) -> Path:
+    """Private copy of the package AND the claude-* workflows the suite reads. Without the workflows every run in
+    the copy failed on a missing file, so every mutation was reported KILLED whatever it changed."""
+    work = td / "claude"
+    shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns(
+        "__pycache__", ".pytest_cache", ".hypothesis", "out", "*.egg-info"))
+    wf = ROOT.parent / ".github" / "workflows"
+    (td / ".github" / "workflows").mkdir(parents=True)
+    for f in sorted(wf.glob("claude-*.yml")):
+        shutil.copy2(f, td / ".github" / "workflows" / f.name)
+    return work
+
+
+def baseline() -> tuple[int, str]:
+    """The UNMUTATED suite must pass in the same kind of copy; otherwise KILLED means nothing."""
+    with tempfile.TemporaryDirectory() as td:
+        return run_suite(make_copy(Path(td)))
 
 
 def check_one(mut) -> dict:
@@ -275,9 +344,7 @@ def check_one(mut) -> dict:
     run in parallel; the report is still printed in MUTATIONS order."""
     mid, rel, old, new = mut
     with tempfile.TemporaryDirectory() as td:
-        work = Path(td) / "claude"
-        shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns(
-            "__pycache__", ".pytest_cache", ".hypothesis", "out", "*.egg-info"))
+        work = make_copy(Path(td))
         target = work / rel
         src = target.read_text()
         if src.count(old) != 1:
@@ -287,8 +354,10 @@ def check_one(mut) -> dict:
             code, tail = run_suite(work)
         except subprocess.TimeoutExpired:
             return {"id": mid, "status": "TIMEOUT", "detail": "suite exceeded 900s"}
+        lines = tail.strip().splitlines()
+        killer = [ln for ln in lines if ln.startswith(("FAILED ", "ERROR "))]
         return {"id": mid, "status": "KILLED" if code != 0 else "SURVIVED",
-                "detail": tail.strip().splitlines()[-1] if tail.strip() else ""}
+                "detail": (killer[0] if killer else lines[-1] if lines else "")[:160]}
 
 
 def main() -> int:
@@ -297,6 +366,12 @@ def main() -> int:
     # one worker per CPU, but each worker runs a whole pytest suite, so leave one core free
     workers = max(1, int(os.environ.get("MUTATION_WORKERS", max(1, (os.cpu_count() or 2) - 1))))
     t0 = time.time()
+    code, tail = baseline()
+    if code != 0:
+        print("MUTATION_BASELINE_FAIL the unmutated suite fails in the copy, so no mutation result is valid:")
+        print(tail)
+        return 1
+    print(f"MUTATION_BASELINE_OK {round(time.time() - t0)}s", flush=True)
     results: dict[str, dict] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         futs = {ex.submit(check_one, m): m[0] for m in muts}

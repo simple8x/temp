@@ -46,6 +46,14 @@ RULES: dict[str, tuple[str, frozenset[str], str]] = {
     "TR6": (CONVENTIONAL, frozenset({"WIRE", "PIN", "DOT", "LABEL"}), "any"),
 }
 
+# Exact role-kind multiset of each SOUND rule (trust boundary of VERIFIED): the set check above lets
+# e.g. TR3 run on PIN+PIN or TR2 on WIRE+WIRE; a SOUND rule needs exactly these two kinds.
+SOUND_KINDS: dict[str, tuple[str, str]] = {
+    "TR1": ("WIRE", "WIRE"),
+    "TR2": ("DOT", "WIRE"),
+    "TR3": ("PIN", "WIRE"),
+}
+
 
 @dataclass(frozen=True)
 class RoleRef:
@@ -70,8 +78,14 @@ class Edge:
     prov: tuple[str, ...] = ()      # page/op/bbox references (I8)
 
 
+def _valid_ids(xs) -> bool:
+    return isinstance(xs, tuple) and all(isinstance(x, str) and x.strip() for x in xs)
+
+
 def effective_role(r: RoleRef) -> tuple[str, str]:
     if r.status == ROLE_CONFIRMED:
+        if not _valid_ids(r.evidence):
+            return ROLE_CANDIDATE, "CONFIRMED_WITH_BAD_EVIDENCE_ID"
         if len(set(r.evidence)) < 2:
             return ROLE_CANDIDATE, "CONFIRMED_WITHOUT_2_EVIDENCE"
         return ROLE_CONFIRMED, ""
@@ -80,33 +94,48 @@ def effective_role(r: RoleRef) -> tuple[str, str]:
 
 def classify_edge(e: Edge) -> tuple[str, str]:
     """Return (status, reason). Pure: no registry, no global state, no side effects."""
-    rule = RULES.get(e.rule)
+    # fail closed on anything that is not exactly the record classify_edge was written for
+    if not isinstance(e, Edge) or not isinstance(e.roles, tuple):
+        return UNKNOWN, "BAD_TYPE"
+    rule = RULES.get(e.rule) if isinstance(e.rule, str) else None
     if rule is None:
         return UNKNOWN, "UNKNOWN_RULE"
     kind, role_kinds, pre = rule
     if len(e.roles) != 2:
         return UNKNOWN, "BAD_ARITY"
+    if not all(isinstance(r, RoleRef) for r in e.roles):
+        return UNKNOWN, "BAD_TYPE"
     if any(r.kind not in role_kinds for r in e.roles):
         return UNKNOWN, "RULE_ROLE_KIND_MISMATCH"
+    if kind == SOUND and tuple(sorted(r.kind for r in e.roles)) != SOUND_KINDS[e.rule]:
+        return UNKNOWN, "RULE_ROLE_KIND_MISMATCH"
+    if not (isinstance(e.a, str) and isinstance(e.b, str) and e.a and e.b):
+        return UNKNOWN, "BAD_ENDPOINT"
     if e.a == e.b:
         return UNKNOWN, "SELF_LOOP"
+    if (e.roles[0].obj, e.roles[1].obj) != (e.a, e.b):
+        return UNKNOWN, "ROLE_OBJ_MISMATCH"
+    if not isinstance(e.n_prims, int) or isinstance(e.n_prims, bool):
+        return UNKNOWN, "BAD_N_PRIMS"
     if any(r.status not in (ROLE_CONFIRMED, ROLE_CANDIDATE) for r in e.roles):
         return UNKNOWN, "ROLE_UNKNOWN"
     if pre == "eq2" and e.n_prims != 2:
         return UNKNOWN, "RULE_PRECONDITION_N_PRIMS"
     if pre == "eq1" and e.n_prims != 1:
         return UNKNOWN, "RULE_PRECONDITION_N_PRIMS"
-    if e.negative:
+    if not isinstance(e.negative, tuple) or e.negative:
         return UNKNOWN, "NEGATIVE_EVIDENCE"
     if kind == CONVENTIONAL:
         return INFERRED, "CONVENTIONAL_RULE"
     eff = [effective_role(r) for r in e.roles]
     if any(s != ROLE_CONFIRMED for s, _ in eff):
         return INFERRED, "ROLE_NOT_CONFIRMED"
-    if any(r.weak for r in e.roles):
+    if any(r.weak is not False for r in e.roles):
         return INFERRED, "WEAK_SOURCE"
-    if not e.coord:
+    if not (isinstance(e.coord, str) and e.coord.strip()):
         return INFERRED, "MISSING_COORD_RECORD"
+    if not e.prov or not _valid_ids(e.prov):
+        return INFERRED, "MISSING_PROVENANCE"
     return VERIFIED, "PREMISES_COMPLETE"
 
 
@@ -115,21 +144,38 @@ def audit_verified(e: Edge) -> list[str]:
 
     Written separately from `classify_edge` on purpose, so that a bug in one does not hide
     in the other. Returns a list of problems; empty means the record is complete."""
+    if not isinstance(e, Edge):
+        return ["not an Edge record"]
     problems: list[str] = []
-    rule = RULES.get(e.rule)
+    rule = RULES.get(e.rule) if isinstance(e.rule, str) else None
     if rule is None or rule[0] != SOUND:
         problems.append("rule is not SOUND")
-    if not e.coord:
+    if not (isinstance(e.coord, str) and e.coord.strip()):
         problems.append("no coordinate record")
-    if len(e.roles) != 2:
+    if not (isinstance(e.prov, tuple) and e.prov and all(isinstance(x, str) and x.strip() for x in e.prov)):
+        problems.append("no provenance record")
+    if not isinstance(e.roles, tuple) or len(e.roles) != 2 or not all(isinstance(r, RoleRef) for r in e.roles):
         problems.append("need exactly two role records")
+        return problems
+    want = {"TR1": ["WIRE", "WIRE"], "TR2": ["DOT", "WIRE"], "TR3": ["PIN", "WIRE"]}.get(e.rule)
+    if sorted(r.kind for r in e.roles) != want:
+        problems.append(f"role kinds {[r.kind for r in e.roles]} do not fit {e.rule}")
+    if e.roles[0].obj != e.a or e.roles[1].obj != e.b:
+        problems.append("role records do not name the edge endpoints")
+    if e.a == e.b:
+        problems.append("self loop")
+    need = {"TR1": 2, "TR3": 1}.get(e.rule)
+    if need is not None and e.n_prims != need:
+        problems.append(f"{e.rule} at a point with {e.n_prims} primitives")
     for r in e.roles:
         if r.status != ROLE_CONFIRMED:
             problems.append(f"role of {r.obj} is {r.status}")
-        if len(set(r.evidence)) < 2:
-            problems.append(f"role of {r.obj} has < 2 independent evidence ids")
-        if r.weak:
+        ev = r.evidence if isinstance(r.evidence, tuple) else ()
+        good = {x for x in ev if isinstance(x, str) and x.strip()}
+        if len(good) != len(set(ev)) or len(good) < 2:
+            problems.append(f"role of {r.obj} has < 2 valid independent evidence ids")
+        if r.weak is not False:
             problems.append(f"role of {r.obj} rests on RASTER/OCR")
-    if e.negative:
+    if not isinstance(e.negative, tuple) or e.negative:
         problems.append("negative evidence present")
     return problems

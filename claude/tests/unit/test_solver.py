@@ -14,8 +14,9 @@ def role(o, kind="WIRE", conf=True, weak=False):
                    (f"A:{o}", f"B:{o}") if conf else (f"A:{o}",), weak)
 
 
-def edge(eid, a, b, rule="TR1", ka="WIRE", kb="WIRE", n=2, conf=True, weak=False, coord="pt", negative=()):
-    return Edge(eid, a, b, rule, (role(a, ka, conf, weak), role(b, kb, conf, weak)), coord, n, negative)
+def edge(eid, a, b, rule="TR1", ka="WIRE", kb="WIRE", n=2, conf=True, weak=False, coord="pt", negative=(),
+         prov=("page:0/op:1",)):
+    return Edge(eid, a, b, rule, (role(a, ka, conf, weak), role(b, kb, conf, weak)), coord, n, negative, prov)
 
 
 def wires(*ids):
@@ -39,7 +40,7 @@ def test_candidate_role_caps_at_inferred():
 
 def test_confirmed_with_single_evidence_is_not_trusted():
     r = RoleRef("a", "WIRE", "CONFIRMED", ("only-one",))
-    e = Edge("e", "a", "b", "TR1", (r, role("b")), "pt", 2)
+    e = Edge("e", "a", "b", "TR1", (r, role("b")), "pt", 2, (), ("page:0/op:1",))
     assert classify_edge(e) == (INFERRED, "ROLE_NOT_CONFIRMED")
 
 

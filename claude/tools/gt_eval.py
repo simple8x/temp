@@ -596,6 +596,12 @@ def coverage(results: list, dirs: list, pin: dict | None = None) -> dict:
             problems.append(f"{len(ok)} pages evaluated < pinned minimum {min_pages}")
         if exp_proj and len(projects) != exp_proj:
             problems.append(f"{len(projects)} exported projects != pinned {exp_proj}")
+        ok_list = sorted(plist("EXPECT_EXPORT_OK_LIST"))
+        if len(ok_list) != exp_proj or len(set(ok_list)) != len(ok_list):
+            problems.append(f"EXPECT_EXPORT_OK_LIST has {len(ok_list)} names != EXPECT_EXPORT_OK={exp_proj}")
+        if projects != ok_list:
+            problems.append(f"exported project set != pinned EXPECT_EXPORT_OK_LIST: "
+                            f"missing {sorted(set(ok_list) - set(projects))}, extra {sorted(set(projects) - set(ok_list))}")
         if set(disposition.get("no_export", ())) != allowed_no_export:
             problems.append(f"export-failure set {sorted(disposition.get('no_export', ()))} != pinned "
                             f"{sorted(allowed_no_export)}")

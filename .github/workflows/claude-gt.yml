@@ -64,6 +64,13 @@ jobs:
         run: |
           set -o pipefail
           python claude/tools/gt_inventory.py gt_eval.log 2>&1 | tee gt_inventory.log
+      - name: M4.0 regression gate (FP_V=FP_I=0, pin recall, full inventory; pins in gt_gate.txt)
+        if: always()
+        run: |
+          # M4.0 is FROZEN: every claude-gt run must pass the full gate. A GT_ONLY (partial) run fails here
+          # by design: it is a diagnostic, never evidence.
+          set -o pipefail
+          python claude/tools/gt_gate.py gt_eval.log 2>&1 | tee gt_gate.log
       - name: Misses by library symbol
         if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
@@ -97,6 +104,7 @@ jobs:
             gt_export.log
             gt_verify.log
             gt_inventory.log
+            gt_gate.log
             gt_summary.log
             gt_eval.log
             gt_probe.log

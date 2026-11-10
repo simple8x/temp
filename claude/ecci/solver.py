@@ -501,8 +501,14 @@ def audit_result(G: ConnGraph, res: SolveResult) -> list[str]:
         problems.append("C3: some object is in no net")
     emap = {e.id: e for e in G.edges}
     for eid, (st, _) in res.edge_status.items():
-        if st == VERIFIED and eid in emap:
-            problems += [f"I2 {eid}: {p}" for p in audit_verified(emap[eid])]
+        if st != VERIFIED:
+            continue
+        if eid not in emap:
+            problems.append(f"I7 {eid}: VERIFIED edge is not in the graph")
+            continue
+        if classify_edge(emap[eid])[0] != VERIFIED:
+            problems.append(f"I7 {eid}: VERIFIED but classify_edge says {classify_edge(emap[eid])[0]}")
+        problems += [f"I2 {eid}: {p}" for p in audit_verified(emap[eid])]
     for sid, sr in res.sites.items():
         if sr.status == INFERRED and sr.option is None:
             problems.append(f"C6: site {sid} resolved without an option")

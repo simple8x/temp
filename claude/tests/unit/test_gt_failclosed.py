@@ -33,7 +33,7 @@ def _dirs(tmp_path, n):
 
 PIN = {"KICAD_SRC_SHA": "deadbeef", "KICAD_CLI_VERSION": "9.0.9", "EXPECT_EXPORT_OK": "2",
        "EXPECT_EXPORT_FAIL": "brokenproj", "EXPECT_MIN_PAGES": "2", "EXPECT_TOTAL_PAGES": "3",
-       "SKIP_REPEATED_SHEET": "p1#p7"}
+       "SKIP_REPEATED_SHEET": "p1#p7", "EXPECT_EXPORT_OK_LIST": "p0,p1"}
 
 
 def test_page_error_is_a_problem(gt_eval, tmp_path):
@@ -115,7 +115,17 @@ def test_main_exits_nonzero_when_a_project_raises(gt_eval, tmp_path, monkeypatch
     assert "GT_INCOMPLETE" in out and '"inventory_consistent": false' in out
 
 
-def _fake_gt(tmp_path, n_ok=None, failed=None):
+def _pins():
+    return dict(line.split("=", 1) for f in ("gt_source.txt", "gt_pages.txt")
+                for line in (TOOLS / f).read_text().splitlines()
+                if "=" in line and not line.startswith("#"))
+
+
+OK_NAMES = _pins()["EXPECT_EXPORT_OK_LIST"].split(",")
+P0 = OK_NAMES[0]
+
+
+def _fake_gt(tmp_path, n_ok=None, failed=None, names=None):
     """A gt_out tree that satisfies every pin, so each test can break exactly one thing."""
     pins = dict(line.split("=", 1) for f in ("gt_source.txt", "gt_pages.txt")
                 for line in (TOOLS / f).read_text().splitlines()
@@ -123,11 +133,12 @@ def _fake_gt(tmp_path, n_ok=None, failed=None):
     n_ok = int(pins["EXPECT_EXPORT_OK"]) if n_ok is None else n_ok
     failed = pins["EXPECT_EXPORT_FAIL"].split(",") if failed is None else failed
     out = tmp_path / "gt_out"
-    for k in range(n_ok):
-        d = out / f"proj{k}"
+    names = (OK_NAMES + [f"extra{k}" for k in range(n_ok)])[:n_ok] if names is None else names
+    for k, nm in enumerate(names):
+        d = out / nm
         (d / "src").mkdir(parents=True)
-        (d / f"proj{k}.pdf").write_text(f"pdf{k}")
-        (d / f"proj{k}.xml").write_text(f"net{k}")
+        (d / f"{nm}.pdf").write_text(f"pdf{k}")
+        (d / f"{nm}.xml").write_text(f"net{k}")
         (d / "src" / "sheet.kicad_sch").write_text("(kicad_sch)")
     for name in failed:
         (out / name).mkdir(parents=True, exist_ok=True)
@@ -157,7 +168,7 @@ def test_verify_accepts_a_complete_consistent_corpus(tmp_path):
 
 def test_verify_rejects_tampered_file_wrong_pin_and_missing_provenance(tmp_path):
     out = _fake_gt(tmp_path)
-    (out / "proj0" / "proj0.xml").write_text("tampered")
+    (out / P0 / f"{P0}.xml").write_text("tampered")
     assert "GT_VERIFY FAIL: manifest" in _verify(out).stdout
     out = _fake_gt(tmp_path / "b")
     prov = (out / "PROVENANCE.txt").read_text()
@@ -179,19 +190,19 @@ def test_verify_rejects_a_truncated_manifest(tmp_path):
 
 def test_verify_rejects_an_undeclared_extra_file(tmp_path):
     out = _fake_gt(tmp_path)
-    (out / "proj0" / "sneaked-in.xml").write_text("extra")
+    (out / P0 / "sneaked-in.xml").write_text("extra")
     r = _verify(out)
     assert r.returncode == 1 and "manifest inventory differs" in r.stdout
 
 
 def test_verify_rejects_a_missing_pdf_and_an_empty_one(tmp_path):
     out = _fake_gt(tmp_path)
-    (out / "proj1" / "proj1.pdf").unlink()
+    (out / OK_NAMES[1] / f"{OK_NAMES[1]}.pdf").unlink()
     _write_manifest(out)                      # manifest kept consistent: only the inventory rule can catch this
     r = _verify(out)
     assert r.returncode == 1 and ("0 pdf / 1 netlist" in r.stdout or "exported projects, expected" in r.stdout)
     out = _fake_gt(tmp_path / "c")
-    (out / "proj1" / "proj1.pdf").write_text("")
+    (out / OK_NAMES[1] / f"{OK_NAMES[1]}.pdf").write_text("")
     _write_manifest(out)
     assert "empty pdf" in _verify(out).stdout
 
@@ -200,10 +211,10 @@ def test_verify_rejects_a_project_with_a_pdf_but_no_netlist(tmp_path):
     """One extra complete project keeps the OK count at the pinned value, so only the per-project
     pdf/netlist pairing rule can notice that proj0 lost its netlist."""
     out = _fake_gt(tmp_path, n_ok=33)
-    (out / "proj0" / "proj0.xml").unlink()
+    (out / P0 / f"{P0}.xml").unlink()
     _write_manifest(out)
     r = _verify(out)
-    assert r.returncode == 1 and "proj0: 1 pdf / 0 netlist" in r.stdout, r.stdout
+    assert r.returncode == 1 and f"{P0}: 1 pdf / 0 netlist" in r.stdout, r.stdout
 
 
 def test_verify_rejects_a_changed_project_set(tmp_path):
@@ -218,7 +229,7 @@ def test_verify_rejects_a_changed_project_set(tmp_path):
 
 def test_verify_rejects_a_project_without_source_sheets(tmp_path):
     out = _fake_gt(tmp_path)
-    (out / "proj2" / "src" / "sheet.kicad_sch").unlink()
+    (out / OK_NAMES[2] / "src" / "sheet.kicad_sch").unlink()
     _write_manifest(out)
     r = _verify(out)
     assert r.returncode == 1 and "no source sheet copied" in r.stdout
@@ -344,9 +355,63 @@ def test_mutation_runner_reports_in_a_fixed_order_and_counts_every_mutation(tmp_
     for mid, rel, old, new in mc.MUTATIONS:
         src = (TOOLS.parents[0] / rel).read_text()
         assert src.count(old) == 1, f"{mid}: pattern occurs {src.count(old)}x in {rel}"
+    monkeypatch.setattr(mc, "baseline", lambda: (0, ""))
     monkeypatch.setattr(mc, "check_one", lambda m: {"id": m[0], "status": "KILLED", "detail": ""})
     monkeypatch.setattr(mc, "ROOT", tmp_path)
     monkeypatch.setattr(sys, "argv", ["mutation_check.py"])
     assert mc.main() == 0
     report = json.loads((tmp_path / "out" / "mutation_report.json").read_text())
     assert [r["id"] for r in report] == ids          # MUTATIONS order, not completion order
+
+
+# ---------------------------------------------------------------- P2: the 32 exported projects are pinned by name
+
+def test_pinned_ok_list_matches_the_count_and_the_failures_are_disjoint():
+    pins = _pins()
+    assert len(OK_NAMES) == len(set(OK_NAMES)) == int(pins["EXPECT_EXPORT_OK"]) == 32
+    assert not set(OK_NAMES) & set(pins["EXPECT_EXPORT_FAIL"].split(","))
+
+
+def test_verify_rejects_a_renamed_project_even_when_the_count_is_right(tmp_path):
+    names = OK_NAMES[:-1] + ["impostor"]
+    r = _verify(_fake_gt(tmp_path, names=names))
+    assert r.returncode == 1 and "differs from EXPECT_EXPORT_OK_LIST" in r.stdout, r.stdout
+    assert "impostor" in r.stdout and OK_NAMES[-1] in r.stdout
+
+
+def test_coverage_rejects_a_renamed_project_and_a_bad_list(gt_eval, tmp_path):
+    dirs = _dirs(tmp_path, 2)
+    res = [[{"project": "p0"}], [{"project": "p1"}, {"project": "p1#p7", "skipped": "not mapped to one sheet"}]]
+    base = dict(PIN, EXPECT_EXPORT_FAIL="")
+    assert gt_eval.coverage(res, dirs, base)["problems"] == []
+    bad = gt_eval.coverage(res, dirs, dict(base, EXPECT_EXPORT_OK_LIST="p0,px"))["problems"]
+    assert any("EXPECT_EXPORT_OK_LIST" in p and "px" in p for p in bad), bad
+    short = gt_eval.coverage(res, dirs, dict(base, EXPECT_EXPORT_OK_LIST="p0"))["problems"]
+    assert any("names != EXPECT_EXPORT_OK=2" in p for p in short), short
+    missing = gt_eval.coverage(res, dirs, {k: v for k, v in base.items() if k != "EXPECT_EXPORT_OK_LIST"})
+    assert missing["problems"], "an unpinned list must fail, not pass"
+
+
+def test_mutation_runner_refuses_to_report_when_the_unmutated_suite_fails(tmp_path, monkeypatch, capsys):
+    import importlib
+    sys.path.insert(0, str(TOOLS))
+    mc = importlib.import_module("mutation_check")
+    called = []
+    monkeypatch.setattr(mc, "baseline", lambda: (1, "boom"))
+    monkeypatch.setattr(mc, "check_one", lambda m: called.append(m) or {"id": m[0], "status": "KILLED", "detail": ""})
+    monkeypatch.setattr(mc, "ROOT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["mutation_check.py"])
+    assert mc.main() == 1 and not called
+    assert "MUTATION_BASELINE_FAIL" in capsys.readouterr().out
+
+
+def test_mutation_copy_contains_the_workflows_the_suite_reads(tmp_path):
+    import importlib
+    sys.path.insert(0, str(TOOLS))
+    mc = importlib.import_module("mutation_check")
+    work = mc.make_copy(tmp_path)
+    assert (work.parent / ".github" / "workflows" / "claude-gt.yml").is_file()
+    assert (work / "tools" / "gt_gate.py").is_file()
+    # the harness self-test must exist under the node id that run_suite deselects
+    nid = mc.HARNESS_TESTS[0].split("::")
+    assert f"def {nid[1]}(" in (work / nid[0]).read_text()
