@@ -185,7 +185,8 @@ def test_contradictory_inventory_and_problems_fail():
 def test_raw_log_baseline_passes_and_thresholds_unchanged():
     assert gt_gate.check(raw_log(), G) == []
     assert gt_gate.check(raw_log(cov={"evaluated": 142}), G) == []
-    assert (TOOLS / "gt_gate.txt").read_text().count("=") == 5
+    assert G == {"GATE_MAX_FP_V": 0, "GATE_MAX_FP_I": 0, "GATE_MIN_PIN_RECALL": 0.55, "GATE_MIN_PAGES": 100,
+                 "GATE_PROJECTS": 32}
 
 
 @pytest.mark.parametrize("bad", ["GATE_MAX_FP_V=nan", "GATE_MAX_FP_V=inf", "GATE_MAX_FP_V=0\nGATE_MAX_FP_V=1"])
@@ -195,3 +196,81 @@ def test_gate_pin_file_rejects_non_finite_and_duplicate_pins(tmp_path, bad):
     p.write_text(good)
     with pytest.raises(ValueError):
         gt_gate.load_gate(p)
+
+
+# ---------------------------------------------------------------- the pin file is a closed, frozen schema
+
+CANON = {"GATE_MAX_FP_V": "0", "GATE_MAX_FP_I": "0", "GATE_MIN_PIN_RECALL": "0.55", "GATE_MIN_PAGES": "100",
+         "GATE_PROJECTS": "32"}
+# a looser value for each pin (max raised, min lowered); GATE_PROJECTS is an exact count, so both directions
+WEAKER = {"GATE_MAX_FP_V": ["1", "0.5", "1000"], "GATE_MAX_FP_I": ["1", "0.5", "1000"],
+          "GATE_MIN_PIN_RECALL": ["0.54", "0.5", "0"], "GATE_MIN_PAGES": ["99", "1", "0"],
+          "GATE_PROJECTS": ["31", "33", "0"]}
+OTHER = {"GATE_MAX_FP_V": ["2"], "GATE_MAX_FP_I": ["2"], "GATE_MIN_PIN_RECALL": ["0.56", "1"],
+         "GATE_MIN_PAGES": ["101", "142"], "GATE_PROJECTS": ["64"]}
+MALFORMED = ["nan", "NaN", "inf", "Infinity", "-inf", "True", "False", "true", "", "zero", "0x0", "1e2", "+0",
+             "-0", "0 0", "0,55", "1_00", "0.55.0", "'0'", '"32"', "None", "[0]", "0.55#x", "\uff10", "\u0660"]
+
+
+def write(tmp_path, lines):
+    f = tmp_path / "g.txt"
+    f.write_text("# header\n" + "".join(f"{x}\n" for x in lines))
+    return f
+
+
+def canon_lines(**over):
+    return [f"{k}={over.get(k, v)}" for k, v in CANON.items()]
+
+
+def test_canonical_configuration_is_accepted_with_exact_values(tmp_path):
+    g = gt_gate.load_gate(write(tmp_path, canon_lines()))
+    assert g == {"GATE_MAX_FP_V": 0.0, "GATE_MAX_FP_I": 0.0, "GATE_MIN_PIN_RECALL": 0.55, "GATE_MIN_PAGES": 100.0,
+                 "GATE_PROJECTS": 32.0}
+    assert gt_gate.load_gate(TOOLS / "gt_gate.txt") == g          # the committed pin file IS the frozen gate
+    assert gt_gate.FROZEN == g
+
+
+@pytest.mark.parametrize("key,val", [(k, v) for k, vs in WEAKER.items() for v in vs]
+                         + [(k, v) for k, vs in OTHER.items() for v in vs])
+def test_every_changed_or_weakened_value_fails_closed(tmp_path, key, val):
+    with pytest.raises(ValueError, match=key):
+        gt_gate.load_gate(write(tmp_path, canon_lines(**{key: val})))
+
+
+@pytest.mark.parametrize("key", list(CANON))
+def test_every_missing_key_fails_closed(tmp_path, key):
+    with pytest.raises(ValueError, match="missing"):
+        gt_gate.load_gate(write(tmp_path, [x for x in canon_lines() if not x.startswith(key + "=")]))
+
+
+@pytest.mark.parametrize("key", list(CANON))
+@pytest.mark.parametrize("second", ["same", "weaker"])
+def test_every_duplicated_key_fails_closed(tmp_path, key, second):
+    v = CANON[key] if second == "same" else WEAKER[key][0]
+    with pytest.raises(ValueError, match="twice"):
+        gt_gate.load_gate(write(tmp_path, canon_lines() + [f"{key}={v}"]))
+
+
+@pytest.mark.parametrize("key", list(CANON))
+@pytest.mark.parametrize("val", MALFORMED)
+def test_every_malformed_value_fails_closed(tmp_path, key, val):
+    with pytest.raises(ValueError):
+        gt_gate.load_gate(write(tmp_path, canon_lines(**{key: val})))
+
+
+@pytest.mark.parametrize("line", ["GATE_EXTRA=0", "GATE_MAX_FP_X=0", "gate_max_fp_v=0", "GATE MAX=0",
+                                  "GATE_MAX_FP_V", "GATE_MAX_FP_V==0", "GATE_MAX_FP_V=0=0", "=0", "junk"])
+def test_unexpected_or_malformed_lines_fail_closed(tmp_path, line):
+    with pytest.raises(ValueError):
+        gt_gate.load_gate(write(tmp_path, canon_lines() + [line]))
+
+
+def test_altered_pin_file_makes_the_cli_fail(tmp_path):
+    logf = tmp_path / "gt_eval.log"
+    logf.write_text(raw_log())
+    ok = subprocess.run([sys.executable, str(TOOLS / "gt_gate.py"), str(logf), str(write(tmp_path, canon_lines()))],
+                        capture_output=True, text=True)
+    assert ok.returncode == 0 and "M4_GATE PASS" in ok.stdout, ok.stdout + ok.stderr
+    bad = write(tmp_path, canon_lines(GATE_MIN_PIN_RECALL="0.5"))
+    r = subprocess.run([sys.executable, str(TOOLS / "gt_gate.py"), str(logf), str(bad)], capture_output=True, text=True)
+    assert r.returncode != 0 and "M4_GATE PASS" not in r.stdout

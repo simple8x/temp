@@ -8,24 +8,39 @@ usage: gt_gate.py gt_eval.log [gt_gate.txt]
 import json
 import math
 import pathlib
+import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-REQUIRED = ("GATE_MAX_FP_V", "GATE_MAX_FP_I", "GATE_MIN_PIN_RECALL", "GATE_MIN_PAGES", "GATE_PROJECTS")
+# M4.0 is FROZEN: the pin file must state exactly these keys with exactly these values. Anything else (a weakened,
+# tightened, missing, duplicated, unknown or malformed pin) is a configuration error, never a different gate.
+FROZEN = {"GATE_MAX_FP_V": 0.0, "GATE_MAX_FP_I": 0.0, "GATE_MIN_PIN_RECALL": 0.55,
+          "GATE_MIN_PAGES": 100.0, "GATE_PROJECTS": 32.0}
+REQUIRED = tuple(FROZEN)
+_KEY = re.compile(r"[A-Z][A-Z0-9_]*")
+_LITERAL = re.compile(r"[0-9]+(?:\.[0-9]+)?")     # plain decimal: no sign, exponent, nan, inf, bool, _ or spaces
 
 
 def load_gate(path) -> dict:
-    g = {}
-    for line in pathlib.Path(path).read_text().splitlines():
-        if line.startswith("#") or "=" not in line:
+    g: dict[str, float] = {}
+    for n, line in enumerate(pathlib.Path(path).read_text().splitlines(), 1):
+        if not line.strip() or line.lstrip().startswith("#"):
             continue
-        k, v = line.split("=", 1)
-        k = k.strip()
+        if line.count("=") != 1:
+            raise ValueError(f"line {n}: not KEY=VALUE: {line!r}")
+        k, v = (x.strip() for x in line.split("="))
+        if not _KEY.fullmatch(k):
+            raise ValueError(f"line {n}: malformed key {k!r}")
+        if k not in FROZEN:
+            raise ValueError(f"line {n}: unexpected gate pin {k}")
         if k in g:
             raise ValueError(f"gate pin {k} given twice")
-        g[k] = float(v.strip())
-        if not math.isfinite(g[k]):
-            raise ValueError(f"gate pin {k}={v.strip()} is not finite")
+        if not _LITERAL.fullmatch(v):
+            raise ValueError(f"line {n}: {k}={v!r} is not a plain decimal number")
+        x = float(v)
+        if not math.isfinite(x) or x != FROZEN[k]:
+            raise ValueError(f"gate pin {k}={v} differs from the frozen M4.0 value {FROZEN[k]:g}")
+        g[k] = x
     missing = [k for k in REQUIRED if k not in g]
     if missing:
         raise ValueError(f"gate pins missing: {missing}")
