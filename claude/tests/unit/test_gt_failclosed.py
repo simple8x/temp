@@ -1,6 +1,7 @@
 """Fail-closed ground-truth evaluation (external review P1): an incomplete corpus is never a result."""
 import hashlib
 import importlib
+import json
 import os
 import pathlib
 import subprocess
@@ -331,3 +332,21 @@ def test_inventory_fails_when_the_evaluation_did_not_run(tmp_path):
                         'GT_COVERAGE {"evaluated": 1}\n'
                         'GT_TOTAL {"inventory_consistent": true}\n')
     assert inv.main(str(unpinned)) == 1
+
+
+def test_mutation_runner_reports_in_a_fixed_order_and_counts_every_mutation(tmp_path, monkeypatch):
+    """The runner became parallel for speed; the report must stay deterministic and must not lose an entry."""
+    import importlib
+    sys.path.insert(0, str(TOOLS))
+    mc = importlib.import_module("mutation_check")
+    ids = [m[0] for m in mc.MUTATIONS]
+    assert len(ids) == len(set(ids)), "duplicate mutation id"
+    for mid, rel, old, new in mc.MUTATIONS:
+        src = (TOOLS.parents[0] / rel).read_text()
+        assert src.count(old) == 1, f"{mid}: pattern occurs {src.count(old)}x in {rel}"
+    monkeypatch.setattr(mc, "check_one", lambda m: {"id": m[0], "status": "KILLED", "detail": ""})
+    monkeypatch.setattr(mc, "ROOT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["mutation_check.py"])
+    assert mc.main() == 0
+    report = json.loads((tmp_path / "out" / "mutation_report.json").read_text())
+    assert [r["id"] for r in report] == ids          # MUTATIONS order, not completion order

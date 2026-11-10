@@ -7,11 +7,14 @@ it means the tests cannot detect that class of bug. The original sources are nev
 """
 from __future__ import annotations
 
+import concurrent.futures
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -267,29 +270,50 @@ def run_suite(pkg_root: Path) -> tuple[int, str]:
     return p.returncode, (p.stdout + p.stderr)[-400:]
 
 
-def main() -> int:
-    results = []
-    for mid, rel, old, new in MUTATIONS:
-        with tempfile.TemporaryDirectory() as td:
-            work = Path(td) / "claude"
-            shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns(
-                "__pycache__", ".pytest_cache", ".hypothesis", "out", "*.egg-info"))
-            target = work / rel
-            src = target.read_text()
-            if src.count(old) != 1:
-                results.append({"id": mid, "status": "INVALID", "detail": f"pattern occurs {src.count(old)}x"})
-                continue
-            target.write_text(src.replace(old, new))
+def check_one(mut) -> dict:
+    """Apply one mutation to a private copy of the package and run the suite there. No shared state, so these
+    run in parallel; the report is still printed in MUTATIONS order."""
+    mid, rel, old, new = mut
+    with tempfile.TemporaryDirectory() as td:
+        work = Path(td) / "claude"
+        shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns(
+            "__pycache__", ".pytest_cache", ".hypothesis", "out", "*.egg-info"))
+        target = work / rel
+        src = target.read_text()
+        if src.count(old) != 1:
+            return {"id": mid, "status": "INVALID", "detail": f"pattern occurs {src.count(old)}x"}
+        target.write_text(src.replace(old, new))
+        try:
             code, tail = run_suite(work)
-            results.append({"id": mid, "status": "KILLED" if code != 0 else "SURVIVED",
-                            "detail": tail.strip().splitlines()[-1] if tail.strip() else ""})
+        except subprocess.TimeoutExpired:
+            return {"id": mid, "status": "TIMEOUT", "detail": "suite exceeded 900s"}
+        return {"id": mid, "status": "KILLED" if code != 0 else "SURVIVED",
+                "detail": tail.strip().splitlines()[-1] if tail.strip() else ""}
+
+
+def main() -> int:
+    only = [a for a in sys.argv[1:] if not a.startswith("-")]
+    muts = [m for m in MUTATIONS if not only or m[0].split("-")[0] in only or m[0] in only]
+    # one worker per CPU, but each worker runs a whole pytest suite, so leave one core free
+    workers = max(1, int(os.environ.get("MUTATION_WORKERS", max(1, (os.cpu_count() or 2) - 1))))
+    t0 = time.time()
+    results: dict[str, dict] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(check_one, m): m[0] for m in muts}
+        for f in concurrent.futures.as_completed(futs):
+            r = f.result()
+            results[r["id"]] = r
+            print(f"  {r['status']:9s} {r['id']}", flush=True)       # progress, unordered
+    ordered = [results[m[0]] for m in muts]
     out_dir = ROOT / "out"
     out_dir.mkdir(exist_ok=True)
-    (out_dir / "mutation_report.json").write_text(json.dumps(results, indent=2))
-    for r in results:
+    (out_dir / "mutation_report.json").write_text(json.dumps(ordered, indent=2))
+    print()
+    for r in ordered:
         print(f"{r['status']:9s} {r['id']:36s} {r['detail']}")
-    bad = [r for r in results if r["status"] != "KILLED"]
-    print(f"\n{len(results) - len(bad)}/{len(results)} killed")
+    bad = [r for r in ordered if r["status"] != "KILLED"]
+    print(f"\n{len(ordered) - len(bad)}/{len(ordered)} killed in {round(time.time() - t0)}s "
+          f"with {workers} workers")
     return 1 if bad else 0
 
 
