@@ -519,7 +519,9 @@ def main(root: str) -> int:
                              "misses": {k[5:]: v for k, v in tot.items() if k.startswith("miss_")}}
     cov = coverage(results, dirs)
     out["coverage"] = cov
-    out["complete"] = not cov["problems"]
+    # "every page is accounted for as pinned", NOT "the corpus is fully measured": pages skipped for a pinned
+    # reason stay UNKNOWN and are counted in unevaluated_pages / page_coverage.
+    out["inventory_consistent"] = not cov["problems"]
     print("GT_COVERAGE " + json.dumps(cov, sort_keys=True))
     print("GT_TOTAL " + json.dumps(out, sort_keys=True))
     if cov["problems"]:
@@ -529,29 +531,90 @@ def main(root: str) -> int:
     return 0
 
 
-def coverage(results: list, dirs: list) -> dict:
-    """Pages evaluated / skipped by design / failed. An error or timeout on any page is a failure of the run.
-    On a full run (no GT_ONLY) the number of exported projects and evaluated pages must reach the pinned minimum."""
+def pins(path: str | None = None) -> dict:
+    """The pinned corpus facts from gt_expected.txt (KEY=value lines, comments ignored)."""
+    f = pathlib.Path(path or (pathlib.Path(__file__).resolve().parent / "gt_expected.txt"))
+    out = {}
+    for line in f.read_text().splitlines():
+        if line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        out[k.strip()] = v.strip()
+    return out
+
+
+def coverage(results: list, dirs: list, pin: dict | None = None) -> dict:
+    """Account for EVERY page: evaluated, or skipped for a pinned reason. Anything else fails the run.
+
+    A page error or timeout is a failure. On a full run the disposition of each page must equal the pins in
+    gt_expected.txt: a page that is skipped without being listed, a listed page that is now evaluated (the pin
+    is stale), a page count that does not add up, or a project set that differs from the pinned one all fail.
+    With GT_ONLY, every selected page must actually have been evaluated.
+    """
+    pin = pins() if pin is None else pin
     flat = [r for rs in results for r in rs]
     errors = sorted(r["project"] for r in flat if "error" in r)
     ok = [r for r in flat if "error" not in r and "skipped" not in r and "task" not in r]
     skipped = [r for r in flat if "skipped" in r]
-    projects = sum(1 for d in dirs if any(d.glob("*.xml")) and any(d.glob("*.pdf")))
+    projects = sorted(d.name for d in dirs if any(d.glob("*.xml")) and any(d.glob("*.pdf")))
+    evaluated_names = sorted(r["project"] for r in ok)
     problems = [f"page error: {e}" for e in errors]
     never_ran = sorted(r["task"]["name"] for rs in results for r in rs if "task" in r)
     problems += [f"page never evaluated: {n}" for n in never_ran]
+
+    def plist(key):
+        return [x for x in (pin.get(key, "") or "").split(",") if x]
+
+    allowed_repeat = set(plist("SKIP_REPEATED_SHEET"))
+    allowed_no_export = set(plist("EXPECT_EXPORT_FAIL"))
+    disposition: dict[str, list] = collections.defaultdict(list)
+    for r in skipped:
+        reason = r["skipped"]
+        name = r["project"]
+        if "not mapped to one sheet" in reason:
+            bucket = "repeated_sheet" if name in allowed_repeat else "unlisted_unmapped"
+        elif "no pdf/netlist" in reason:
+            bucket = "no_export" if name in allowed_no_export else "unlisted_no_export"
+        else:
+            bucket = "unlisted_other"
+        disposition[bucket].append(name)
+    for bucket in ("unlisted_unmapped", "unlisted_no_export", "unlisted_other"):
+        for name in sorted(disposition.get(bucket, ())):
+            problems.append(f"page skipped but not pinned ({bucket}): {name}")
     if not ONLY:
-        min_pages = int(os.environ.get("GT_MIN_PAGES", "0") or 0)
-        exp_proj = int(os.environ.get("GT_EXPECT_PROJECTS", "0") or 0)
+        min_pages = int(pin.get("EXPECT_MIN_PAGES", "0") or 0)
+        exp_proj = int(pin.get("EXPECT_EXPORT_OK", "0") or 0)
+        total = int(pin.get("EXPECT_TOTAL_PAGES", "0") or 0)
         if len(ok) < min_pages:
             problems.append(f"{len(ok)} pages evaluated < pinned minimum {min_pages}")
-        if exp_proj and projects != exp_proj:
-            problems.append(f"{projects} exported projects != pinned {exp_proj}")
-    elif not ok and not skipped:
-        problems.append(f"GT_ONLY={','.join(ONLY)} selected nothing")
-    return {"evaluated": len(ok), "skipped_by_design": len(skipped), "errors": errors, "projects": projects,
-            "full_run": not ONLY, "problems": problems}
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1]))
+        if exp_proj and len(projects) != exp_proj:
+            problems.append(f"{len(projects)} exported projects != pinned {exp_proj}")
+        if set(disposition.get("no_export", ())) != allowed_no_export:
+            problems.append(f"export-failure set {sorted(disposition.get('no_export', ()))} != pinned "
+                            f"{sorted(allowed_no_export)}")
+        stale = sorted(allowed_repeat & set(evaluated_names))
+        if stale:
+            problems.append(f"pinned as skipped but evaluated (update gt_expected.txt): {stale}")
+        missing = sorted(allowed_repeat - set(disposition.get("repeated_sheet", ())))
+        if missing:
+            problems.append(f"pinned as skipped but not reported at all: {missing}")
+        seen_pages = len(ok) + sum(len(v) for k, v in disposition.items() if k != "no_export")
+        if total and seen_pages != total:
+            problems.append(f"{seen_pages} pages accounted for != pinned total {total}")
+    else:
+        missed = []
+        for sel in ONLY:
+            base = sel.split("#")[0]
+            if "#p" in sel:
+                hit = sel in evaluated_names
+            else:
+                hit = any(n == base or n.startswith(base + "#p") for n in evaluated_names)
+            if not hit:
+                missed.append(sel)
+        if missed:
+            problems.append(f"GT_ONLY selected pages that were not evaluated: {sorted(missed)}")
+    unevaluated = sum(len(v) for k, v in disposition.items() if k != "no_export") + len(errors)
+    return {"evaluated": len(ok), "unevaluated_pages": unevaluated,
+            "page_coverage": round(len(ok) / max(1, len(ok) + unevaluated), 4),
+            "disposition": {k: sorted(v) for k, v in sorted(disposition.items())},
+            "errors": errors, "projects": len(projects), "full_run": not ONLY, "problems": problems}

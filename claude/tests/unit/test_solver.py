@@ -184,20 +184,48 @@ def test_unresolved_terminal_makes_net_open():
     assert any(x.startswith("UNRESOLVED_TERMINAL") for x in r.nets[0].open_reasons)
 
 
-def test_attachment_alone_never_makes_a_pair_verified():
-    # adversarial (external review P1): structural attachment is membership, not an electrical claim
+def test_attachment_only_pair_is_unknown_not_inferred():
+    """External review P1 (second round): a pair joined ONLY by structural attachment must be UNKNOWN. INFERRED
+    would claim an electrical path that no rule ever stated."""
     objs = wires("w", "x") + [Obj("ut", "UNRESOLVED", attach="w"), Obj("ut2", "UNRESOLVED", attach="w")]
     r = solve(ConnGraph(objs, [edge("e", "w", "x")]))
-    assert r.pair_status("w", "x") == "VERIFIED"                  # a real VERIFIED edge stays VERIFIED
+    assert r.pair_status("w", "x") == "VERIFIED"               # a real VERIFIED edge is unaffected
     for p, q in (("ut", "w"), ("ut", "x"), ("ut", "ut2")):
-        assert r.pair_status(p, q) != "VERIFIED"
-        assert r.pair_status(p, q) in ("INFERRED", "UNKNOWN")
-    net = next(n for n in r.nets if "ut" in n.objects)
+        assert r.pair_status(p, q) == "UNKNOWN", (p, q, r.pair_status(p, q))
+    net = next(n for n in r.nets if "ut" in n.objects)         # the net still reports them, and is OPEN
     assert {"w", "x", "ut", "ut2"} <= set(net.objects) and net.closure == "OPEN"
+    assert any(x.startswith("UNRESOLVED_TERMINAL") for x in net.open_reasons)
+
+
+def test_attachment_does_not_turn_a_verified_path_into_something_weaker_or_stronger():
+    objs = wires("a", "b", "c") + [Obj("ut", "UNRESOLVED", attach="c")]
+    r = solve(ConnGraph(objs, [edge("e1", "a", "b")]))
+    assert r.pair_status("a", "b") == "VERIFIED"               # untouched by the attachment elsewhere
+    assert r.pair_status("ut", "c") == "UNKNOWN" and r.pair_status("ut", "a") == "UNKNOWN"
+    assert r.pair_status("a", "c") == "UNKNOWN"
+
+
+def test_inferred_path_stays_inferred_next_to_an_attachment():
+    # TR4 is CONVENTIONAL -> INFERRED. The attachment on the same net must neither hide nor imitate it.
+    objs = wires("a", "b") + [Obj("ut", "UNRESOLVED", attach="b")]
+    r = solve(ConnGraph(objs, [edge("e1", "a", "b", rule="TR4", n=3)]))
+    assert r.pair_status("a", "b") == "INFERRED"
+    assert r.pair_status("ut", "a") == "UNKNOWN" and r.pair_status("ut", "b") == "UNKNOWN"
+    assert r.nets[0].closure == "OPEN"
+
+
+def test_attachment_must_not_upgrade_an_inferred_path_to_verified():
+    """a-b is joined by a CONVENTIONAL rule (INFERRED). An attachment that happens to put a, ut and b in one
+    structural group must not make the a-b path look all-VERIFIED."""
+    objs = wires("a", "b") + [Obj("ut", "UNRESOLVED", attach="a")]
+    g = ConnGraph(objs, [edge("e1", "a", "b", rule="TR4", n=3), edge("e2", "ut", "b")])
+    r = solve(g)
+    assert r.pair_status("ut", "b") == "VERIFIED"
+    assert r.pair_status("a", "b") == "INFERRED", r.pair_status("a", "b")
+    assert r.pair_status("a", "ut") == "INFERRED"      # a-b-ut: a VERIFIED leg plus an INFERRED leg
 
 
 def test_attachment_does_not_bridge_two_verified_groups_into_one():
-    # ut attaches to w only; a pin-less terminal must not make w and y VERIFIED together through anything
     objs = wires("w", "y") + [Obj("ut", "UNRESOLVED", attach="w")]
     r = solve(ConnGraph(objs, []))
     assert r.pair_status("w", "y") == "UNKNOWN" and r.pair_status("ut", "y") == "UNKNOWN"

@@ -11,14 +11,23 @@ SRC_SHA="$(pin KICAD_SRC_SHA)"; CLI_WANT="$(pin KICAD_CLI_VERSION)"
 EXP_OK="$(pin EXPECT_EXPORT_OK)"; EXP_FAIL="$(pin EXPECT_EXPORT_FAIL)"
 [ -n "$SRC_SHA" ] && [ -n "$CLI_WANT" ] && [ -n "$EXP_OK" ] || { echo "PIN MISSING in gt_expected.txt"; exit 2; }
 CLI_HAVE="$(kicad-cli version 2>&1 | head -1 | tr -d '\r')"
-[ "$CLI_HAVE" = "$CLI_WANT" ] || { echo "KICAD_CLI_MISMATCH have='$CLI_HAVE' want='$CLI_WANT'"; exit 2; }
 mkdir -p "$OUT"
-rm -rf ks && mkdir ks
-git -C ks init -q && git -C ks remote add origin https://github.com/KiCad/kicad-source-mirror.git || { echo "INIT FAILED"; exit 2; }
-git -C ks sparse-checkout set demos || { echo "SPARSE FAILED"; exit 2; }
-git -C ks fetch -q --depth 1 --filter=blob:none origin "$SRC_SHA" && git -C ks checkout -q FETCH_HEAD || { echo "FETCH FAILED $SRC_SHA"; exit 2; }
-HAVE_SHA="$(git -C ks rev-parse HEAD)"
-[ "$HAVE_SHA" = "$SRC_SHA" ] || { echo "SOURCE_SHA_MISMATCH have=$HAVE_SHA want=$SRC_SHA"; exit 2; }
+if [ "${GT_SELFTEST:-}" = 1 ]; then
+  # Self-test of this script's own failure handling (see tests/unit/test_gt_failclosed.py): the demos come from
+  # GT_SRC_DIR instead of the pinned upstream commit, and the provenance says SELFTEST, so the result can never
+  # pass gt_verify.sh as ground truth. Nothing else in the script behaves differently.
+  [ -d "${GT_SRC_DIR:-}" ] || { echo "GT_SRC_DIR missing"; exit 2; }
+  rm -rf ks && mkdir -p ks && cp -r "$GT_SRC_DIR" ks/demos
+  HAVE_SHA=SELFTEST
+else
+  [ "$CLI_HAVE" = "$CLI_WANT" ] || { echo "KICAD_CLI_MISMATCH have='$CLI_HAVE' want='$CLI_WANT'"; exit 2; }
+  rm -rf ks && mkdir ks
+  git -C ks init -q && git -C ks remote add origin https://github.com/KiCad/kicad-source-mirror.git || { echo "INIT FAILED"; exit 2; }
+  git -C ks sparse-checkout set demos || { echo "SPARSE FAILED"; exit 2; }
+  git -C ks fetch -q --depth 1 --filter=blob:none origin "$SRC_SHA" && git -C ks checkout -q FETCH_HEAD || { echo "FETCH FAILED $SRC_SHA"; exit 2; }
+  HAVE_SHA="$(git -C ks rev-parse HEAD)"
+  [ "$HAVE_SHA" = "$SRC_SHA" ] || { echo "SOURCE_SHA_MISMATCH have=$HAVE_SHA want=$SRC_SHA"; exit 2; }
+fi
 echo "KICAD_SOURCE_SHA=$HAVE_SHA"
 echo "KICAD_CLI=$CLI_HAVE"
 n_ok=0; fails=()
@@ -26,7 +35,16 @@ while IFS= read -r pro; do
   d=$(dirname "$pro"); name=$(basename "$pro" .kicad_pro); sch="$d/$name.kicad_sch"
   if [ ! -f "$sch" ]; then echo "SKIP(no root sheet) $pro"; continue; fi
   tgt="$OUT/$name"; mkdir -p "$tgt/src"
-  (cd "$d" && find . -name '*.kicad_sch' -print0 | xargs -0 -I{} cp --parents {} "$OLDPWD/$tgt/src/") 2>/dev/null
+  tgt_abs="$(cd "$tgt" && pwd)"          # cp --parents needs an existing absolute destination; OUT may be relative
+  # copying the source sheets must not fail silently: the sheets are what gt_eval maps pages against
+  nsrc=$(cd "$d" && find . -name '*.kicad_sch' | wc -l)
+  if ! (cd "$d" && find . -name '*.kicad_sch' -print0 | xargs -0 -I{} cp --parents {} "$tgt_abs/src/"); then
+    echo "FAIL copy-sheets $name"; fails+=("$name"); rm -rf "$tgt"; continue
+  fi
+  ncopied=$(find "$tgt/src" -name '*.kicad_sch' | wc -l)
+  if [ "$nsrc" != "$ncopied" ]; then
+    echo "FAIL copy-sheets $name ($ncopied of $nsrc)"; fails+=("$name"); rm -rf "$tgt"; continue
+  fi
   ok=1
   kicad-cli sch export pdf --output "$tgt/$name.pdf" "$sch" >"$tgt/pdf.log" 2>&1 || { echo "FAIL pdf $name"; ok=0; }
   kicad-cli sch export netlist --format kicadxml --output "$tgt/$name.xml" "$sch" >"$tgt/net.log" 2>&1 || { echo "FAIL netlist $name"; ok=0; }

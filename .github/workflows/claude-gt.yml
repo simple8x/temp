@@ -45,14 +45,16 @@ jobs:
         if: ${{ contains(github.event.head_commit.message, '[profile]') }}
         run: |
           python claude/tools/gt_profile.py gt_out tinytapeout-demo 0 2>&1 | tee gt_profile.log
+      - name: Coverage inventory (one line per page disposition)
+        if: always()
+        run: python claude/tools/gt_inventory.py gt_eval.log 2>&1 | tee gt_inventory.log
       - name: Evaluate ECCI against KiCad ground truth
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
         run: |
           # claude/tools/gt_only.txt (comma list "proj" or "proj#pN"; empty = everything) restricts the run
-          # fail-closed: a page error/timeout, or (full run) fewer evaluated pages/projects than pinned, exits 1
+          # fail-closed: gt_eval reads the pins itself from claude/tools/gt_expected.txt and exits 1 unless
+          # every page is accounted for exactly as pinned (see GT_COVERAGE in the log)
           set -o pipefail
-          export GT_MIN_PAGES=$(grep '^EXPECT_MIN_PAGES=' claude/tools/gt_expected.txt | cut -d= -f2-)
-          export GT_EXPECT_PROJECTS=$(grep '^EXPECT_EXPORT_OK=' claude/tools/gt_expected.txt | cut -d= -f2-)
           only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)
           echo "GT_ONLY='$only'"
           GT_DUMP_LIB="$(cat claude/tools/gt_dump.txt 2>/dev/null | tr -d ' \n')" GT_DUMP_MAX=1 GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
@@ -88,6 +90,7 @@ jobs:
             gt_out
             gt_export.log
             gt_verify.log
+            gt_inventory.log
             gt_summary.log
             gt_eval.log
             gt_probe.log

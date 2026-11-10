@@ -122,16 +122,23 @@ class SolveResult:
     _vgroup: dict = field(default_factory=dict, repr=False)
     _quar: set = field(default_factory=set, repr=False)
     final_edges: list = field(default_factory=list, repr=False)   # (id, a, b) of the edges that form the nets
+    _elec_of: dict = field(default_factory=dict, repr=False)      # partition of the ELECTRICAL edges only
 
     def pair_status(self, p: str, q: str) -> str:
-        """VERIFIED / INFERRED = same net with an all-VERIFIED / some-INFERRED path.
-        CONFLICT = same quarantined net. Otherwise UNKNOWN. There is no 'different net' claim."""
+        """VERIFIED / INFERRED = an all-VERIFIED / partly-INFERRED ELECTRICAL path joins p and q.
+        CONFLICT = same quarantined net. Otherwise UNKNOWN. There is no 'different net' claim.
+
+        Structural attachment (an unresolved terminal belongs to its wire's net) puts objects in the same net so
+        that the net is reported OPEN, but it is not a path: a pair that only an attachment joins is UNKNOWN,
+        never INFERRED. `_elec_of` is therefore built WITHOUT the attachments, and `_net_of` with them."""
         if p == q or p not in self._net_of or q not in self._net_of:
             return UNKNOWN
         if self._net_of[p] != self._net_of[q]:
             return UNKNOWN
         if self._net_of[p] in self._quar:
             return CONFLICT
+        if self._elec_of.get(p, p) != self._elec_of.get(q, q):
+            return UNKNOWN                     # same net only through an attachment: no electrical claim
         return VERIFIED if self._vgroup.get(p) == self._vgroup.get(q) and p in self._vgroup else INFERRED
 
     def to_dict(self) -> dict:
@@ -439,8 +446,9 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
         elif classified[e.id][0] == UNKNOWN:
             status[e.id] = classified[e.id]
     links, _ = links_of(committed)
-    final_edges = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
+    elec_edges = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
         + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
+    final_edges = list(elec_edges) + A
     frep = _components(objs, final_edges)
     fgroups = _groups(frep)
     unknown_inc: dict[str, list] = defaultdict(list)
@@ -476,7 +484,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
                 vg[o] = r
     netq = {frep[o] for o in Q}
     return SolveResult(status, site_res, nets, quarantined, sorted(set(warns)),
-                       dict(frep), vg, netq, final_edges)
+                       dict(frep), vg, netq, final_edges, dict(_components(objs, elec_edges)))
 
 
 def audit_result(G: ConnGraph, res: SolveResult) -> list[str]:
