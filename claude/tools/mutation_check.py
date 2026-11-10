@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """Mutation check: each mutation deliberately breaks the code; the test suite MUST then fail.
 
-A mutation that survives (suite still passes) is reported as SURVIVED and the script exits 1:
-it means the tests cannot detect that class of bug. The original sources are never modified
-(mutations are applied to a temporary copy of the package).
+Every run is classified from pytest's exit status AND its JUnit report, never from "exit code != 0":
+  KILLED            tests were collected and at least one test failed in its own body (assertion or the exception
+                    the mutated code raised); not an import / syntax error
+  SURVIVED          tests were collected and all passed: the tests cannot detect that class of bug
+  INVALID           the mutation did not apply (pattern found 0 or >1 times, or it changes nothing)
+  COLLECTION_ERROR  the mutated source does not compile, pytest could not collect / import, or 0 tests collected
+  HARNESS_ERROR     the runner or pytest itself failed (internal / usage error, no or unreadable report, a setup
+                    error only, a deselected harness self-test that ran anyway, an exception in the runner)
+  TIMEOUT           the suite exceeded SUITE_TIMEOUT
+Only KILLED is a success: any other outcome makes the script exit 1. The UNMUTATED suite must pass cleanly in the
+same kind of copy first, otherwise no mutation is run. The original sources are never modified (mutations are
+applied to a temporary copy of the package).
 """
 from __future__ import annotations
 
@@ -15,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -275,27 +285,27 @@ MUTATIONS = [
     ("M120-n-prims-type-unchecked", "ecci/status.py",
      "if not isinstance(e.n_prims, int) or isinstance(e.n_prims, bool):", "if False:"),
     ("M121-audit-kinds-off", "ecci/status.py",
-     "    if sorted(r.kind for r in e.roles) != want:", "    if False:"),
+     "    elif want is not None and tuple(sorted(kinds)) != want:", "    elif False:"),
     ("M122-audit-endpoints-off", "ecci/status.py",
-     "    if e.roles[0].obj != e.a or e.roles[1].obj != e.b:", "    if False:"),
+     "    if not (ends_ok and all(_audit_str(o) for o in objs) and objs[0] == e.a and objs[1] == e.b):", "    if False:"),
     ("M123-audit-provenance-off", "ecci/status.py",
      '        problems.append("no provenance record")', "        pass"),
     ("M124-audit-n-prims-off", "ecci/status.py",
-     "    if need is not None and e.n_prims != need:", "    if False:"),
+     '        problems.append(f"{rule} at a point with {e.n_prims} primitives")', "        pass"),
     ("M125-audit-result-skips-unknown-edge", "ecci/solver.py",
      '            problems.append(f"I7 {eid}: VERIFIED edge is not in the graph")', "            pass"),
     ("M126-audit-result-trusts-edge-status", "ecci/solver.py",
      "        if classify_edge(emap[eid])[0] != VERIFIED:", "        if False:"),
     ("M127-gate-fp-ignored", "tools/gt_gate.py",
-     '            fail(f"{mode}.{k}={v} > {lim}")', "            pass"),
+     '                fail(f"{mode}.{k}={raw!r} > {lim}")', "                pass"),
     ("M128-gate-pin-recall-ignored", "tools/gt_gate.py",
-     '        fail(f"detected_local.pin_recall={pr} < {g[\'GATE_MIN_PIN_RECALL\']}")', "        pass"),
+     "    if pr is None or pr < g[\"GATE_MIN_PIN_RECALL\"]:", "    if False:"),
     ("M129-gate-accepts-partial-run", "tools/gt_gate.py",
      '        fail("partial run (GT_ONLY): the M4.0 gate needs the full corpus")', "        pass"),
     ("M130-gate-accepts-inconsistent", "tools/gt_gate.py",
-     '        fail(f"inventory_consistent={tot.get(\'inventory_consistent\')}")', "        pass"),
+     '        fail(f"inventory_consistent={inv!r}")', "        pass"),
     ("M131-gate-min-pages-ignored", "tools/gt_gate.py",
-     '        fail(f"evaluated={cov.get(\'evaluated\')} < {g[\'GATE_MIN_PAGES\']}")', "        pass"),
+     '            fail(f"evaluated={raw!r} < {g[\'GATE_MIN_PAGES\']}")', "            pass"),
     ("M132-verify-ok-list-ignored", "tools/gt_verify.sh",
      '[ "$got_ok_list" = "$want_ok_list" ] || fail', '[ "$got_ok_list" = "$want_ok_list" ] || true'),
     ("M133-eval-ok-list-ignored", "tools/gt_eval.py",
@@ -308,16 +318,125 @@ MUTATIONS = [
 
 HARNESS_TESTS = (
     "tests/unit/test_gt_failclosed.py::test_mutation_runner_reports_in_a_fixed_order_and_counts_every_mutation",
+    # the runner's own adversarial tests: they test this file on a fake package, not ECCI, so they can neither
+    # detect nor be broken by a mutation; running them in each copy would only cost time
+    "tests/unit/test_mutation_runner.py",
 )
 
 
-def run_suite(pkg_root: Path) -> tuple[int, str]:
+def _is_harness(classname: str, name: str) -> bool:
+    for t in HARNESS_TESTS:
+        mod, _, fn = t.partition("::")
+        dotted = mod[:-3].replace("/", ".") if mod.endswith(".py") else mod.replace("/", ".")
+        if (classname == dotted or classname.startswith(dotted + ".")) and (not fn or name.split("[")[0] == fn):
+            return True
+    return False
+
+
+KILLED, SURVIVED, INVALID = "KILLED", "SURVIVED", "INVALID"
+COLLECTION_ERROR, HARNESS_ERROR, TIMEOUT = "COLLECTION_ERROR", "HARNESS_ERROR", "TIMEOUT"
+STATUSES = (KILLED, SURVIVED, INVALID, COLLECTION_ERROR, HARNESS_ERROR, TIMEOUT)
+SUITE_TIMEOUT = 900
+# an exception of one of these types in a test is a broken import / source, not a test detecting the mutation
+IMPORTISH = ("SyntaxError", "IndentationError", "TabError", "ImportError", "ModuleNotFoundError")
+
+
+def run_suite(pkg_root: Path, junit: Path) -> tuple[int, str]:
     # HARNESS_TESTS check this file's own patterns against the (mutated) sources, so they fail for EVERY mutation
     # and would make each one look KILLED. They are tests of the runner, not of ECCI: deselected in the copy.
     desel = [a for t in HARNESS_TESTS for a in ("--deselect", t)]
-    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", *desel, "tests"],
-                       cwd=pkg_root, capture_output=True, text=True, timeout=900)
-    return p.returncode, (p.stdout + p.stderr)[-400:]
+    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", *desel,
+                        f"--junitxml={junit}", "tests"],
+                       cwd=pkg_root, capture_output=True, text=True, timeout=SUITE_TIMEOUT)
+    return p.returncode, (p.stdout + p.stderr)
+
+
+def _importish(text: str) -> bool:
+    t = text or ""
+    return any(t.startswith(n) or f"E   {n}" in t or f"\n{n}:" in t for n in IMPORTISH)
+
+
+def classify(code: int, junit_text: str | None, out: str) -> tuple[str, str]:
+    """(status, detail) of one pytest run. SURVIVED here means "collected and all passed"."""
+    tail = (out or "").strip().splitlines()
+    last = tail[-1][:160] if tail else ""
+    if code == 3:
+        return HARNESS_ERROR, f"pytest internal error (exit 3): {last}"
+    if code == 4:
+        return HARNESS_ERROR, f"pytest usage error (exit 4): {last}"
+    if code == 5:
+        return COLLECTION_ERROR, "no tests collected (exit 5)"
+    if code == 2:
+        text = (out or "") + (junit_text or "")
+        if "collection failure" in text or ("error" in text.lower() and ("collect" in text.lower() or _importish(out))):
+            return COLLECTION_ERROR, f"collection / import error (exit 2): {last}"
+        return HARNESS_ERROR, f"pytest interrupted (exit 2): {last}"
+    if code not in (0, 1):
+        return HARNESS_ERROR, f"unexpected pytest exit status {code}: {last}"
+    if not junit_text:
+        return HARNESS_ERROR, f"no JUnit report (exit {code})"
+    try:
+        root = ET.fromstring(junit_text)
+    except ET.ParseError as x:
+        return HARNESS_ERROR, f"unreadable JUnit report: {x}"
+    cases, failures, errors = 0, [], []
+    for c in root.iter("testcase"):
+        cases += 1
+        nid = f"{c.get('classname', '')}::{c.get('name', '')}"
+        if _is_harness(c.get("classname", ""), c.get("name", "")):
+            return HARNESS_ERROR, f"deselected harness self-test ran: {nid}"
+        for ch in c:
+            info = (nid, ch.get("message") or "", ch.text or "")
+            if ch.tag == "failure":
+                failures.append(info)
+            elif ch.tag == "error":
+                errors.append(info)
+    if cases == 0:
+        return COLLECTION_ERROR, "0 tests collected"
+    coll = [x for x in errors if "collection failure" in x[1] or not x[0].split("::")[-1]]
+    if coll:
+        return COLLECTION_ERROR, f"collection error: {coll[0][0]} {coll[0][1]}"[:160]
+    imp = [x for x in failures + errors if _importish(x[1]) or _importish(x[2])]
+    if imp:
+        return COLLECTION_ERROR, f"import / syntax error in {imp[0][0]}: {imp[0][1]}"[:160]
+    if code == 0:
+        if failures or errors:
+            return HARNESS_ERROR, "exit 0 but the report has failures / errors"
+        return SURVIVED, f"{cases} tests passed"
+    if failures:
+        return KILLED, f"FAILED {failures[0][0]}: {failures[0][1]}"[:160]
+    if errors:
+        return HARNESS_ERROR, f"only setup / teardown errors, no test failed: {errors[0][0]} {errors[0][1]}"[:160]
+    return HARNESS_ERROR, "exit 1 but the report has no failure"
+
+
+def run_and_classify(work: Path) -> tuple[str, str]:
+    junit = work.parent / "junit.xml"
+    try:
+        code, out = run_suite(work, junit)
+    except subprocess.TimeoutExpired:
+        return TIMEOUT, f"suite exceeded {SUITE_TIMEOUT}s"
+    except Exception as x:                                  # the runner itself failed: never KILLED
+        return HARNESS_ERROR, f"runner failed: {type(x).__name__}: {x}"[:160]
+    try:
+        text = junit.read_text() if junit.is_file() else None
+    except OSError as x:
+        return HARNESS_ERROR, f"cannot read JUnit report: {x}"
+    return classify(code, text, out)
+
+
+def _compiles(rel: str, path: Path) -> str:
+    """'' if the mutated file is still syntactically valid, else the error (a broken source is not a kill)."""
+    if rel.endswith(".py"):
+        try:
+            compile(path.read_text(), str(path), "exec")
+        except SyntaxError as x:
+            return f"{type(x).__name__}: {x}"
+    elif rel.endswith(".sh"):
+        p = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True)
+        if p.returncode != 0:
+            return f"bash -n: {p.stderr.strip()[:120]}"
+    return ""
 
 
 def make_copy(td: Path) -> Path:
@@ -334,30 +453,39 @@ def make_copy(td: Path) -> Path:
 
 
 def baseline() -> tuple[int, str]:
-    """The UNMUTATED suite must pass in the same kind of copy; otherwise KILLED means nothing."""
+    """The UNMUTATED suite must pass cleanly (collected, all passed) in the same kind of copy; otherwise KILLED
+    means nothing. Returns (0, detail) only for a clean pass."""
     with tempfile.TemporaryDirectory() as td:
-        return run_suite(make_copy(Path(td)))
+        st, detail = run_and_classify(make_copy(Path(td)))
+    return (0, detail) if st == SURVIVED else (1, f"{st}: {detail}")
 
 
 def check_one(mut) -> dict:
     """Apply one mutation to a private copy of the package and run the suite there. No shared state, so these
-    run in parallel; the report is still printed in MUTATIONS order."""
-    mid, rel, old, new = mut
-    with tempfile.TemporaryDirectory() as td:
-        work = make_copy(Path(td))
-        target = work / rel
-        src = target.read_text()
-        if src.count(old) != 1:
-            return {"id": mid, "status": "INVALID", "detail": f"pattern occurs {src.count(old)}x"}
-        target.write_text(src.replace(old, new))
-        try:
-            code, tail = run_suite(work)
-        except subprocess.TimeoutExpired:
-            return {"id": mid, "status": "TIMEOUT", "detail": "suite exceeded 900s"}
-        lines = tail.strip().splitlines()
-        killer = [ln for ln in lines if ln.startswith(("FAILED ", "ERROR "))]
-        return {"id": mid, "status": "KILLED" if code != 0 else "SURVIVED",
-                "detail": (killer[0] if killer else lines[-1] if lines else "")[:160]}
+    run in parallel; the report is still printed in MUTATIONS order. Never raises."""
+    mid = mut[0] if isinstance(mut, tuple) and mut else repr(mut)
+    try:
+        _, rel, old, new = mut
+        if not old or old == new:
+            return {"id": mid, "status": INVALID, "detail": "mutation changes nothing"}
+        with tempfile.TemporaryDirectory() as td:
+            work = make_copy(Path(td))
+            target = work / rel
+            if not target.is_file():
+                return {"id": mid, "status": INVALID, "detail": f"no such file {rel}"}
+            src = target.read_text()
+            if src.count(old) != 1:
+                return {"id": mid, "status": INVALID, "detail": f"pattern occurs {src.count(old)}x"}
+            target.write_text(src.replace(old, new))
+            if target.read_text() == src:
+                return {"id": mid, "status": INVALID, "detail": "mutated file is unchanged"}
+            bad = _compiles(rel, target)
+            if bad:
+                return {"id": mid, "status": COLLECTION_ERROR, "detail": f"mutated source does not compile: {bad}"[:160]}
+            st, detail = run_and_classify(work)
+            return {"id": mid, "status": st, "detail": detail}
+    except Exception as x:
+        return {"id": mid, "status": HARNESS_ERROR, "detail": f"runner failed: {type(x).__name__}: {x}"[:160]}
 
 
 def main() -> int:
@@ -376,7 +504,12 @@ def main() -> int:
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         futs = {ex.submit(check_one, m): m[0] for m in muts}
         for f in concurrent.futures.as_completed(futs):
-            r = f.result()
+            try:
+                r = f.result()
+            except Exception as x:                          # a crashed worker is a harness failure, never a kill
+                r = {"id": futs[f], "status": HARNESS_ERROR, "detail": f"worker failed: {type(x).__name__}"}
+            if r.get("status") not in STATUSES:
+                r = {"id": futs[f], "status": HARNESS_ERROR, "detail": f"unknown status {r.get('status')!r}"}
             results[r["id"]] = r
             print(f"  {r['status']:9s} {r['id']}", flush=True)       # progress, unordered
     ordered = [results[m[0]] for m in muts]
@@ -386,8 +519,10 @@ def main() -> int:
     print()
     for r in ordered:
         print(f"{r['status']:9s} {r['id']:36s} {r['detail']}")
-    bad = [r for r in ordered if r["status"] != "KILLED"]
-    print(f"\n{len(ordered) - len(bad)}/{len(ordered)} killed in {round(time.time() - t0)}s "
+    bad = [r for r in ordered if r["status"] != KILLED]
+    counts = {s: sum(r["status"] == s for r in ordered) for s in STATUSES}
+    print("\nMUTATION_COUNTS " + json.dumps(counts))
+    print(f"{len(ordered) - len(bad)}/{len(ordered)} killed in {round(time.time() - t0)}s "
           f"with {workers} workers")
     return 1 if bad else 0
 

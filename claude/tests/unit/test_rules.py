@@ -280,3 +280,24 @@ def test_aspect_gate_alone_rejects_an_ellipse():
     assert edges_by_rule(built, "TR2") == []
     _, _, built2, _ = analyze_page(pi, LIB.symbols.values(), RulesParams(dot_roundness=10.0, dot_aspect=0.1))
     assert edges_by_rule(built2, "TR2")          # positive control: with the gate relaxed it IS taken for a dot
+
+
+def test_pipeline_generated_tr1_tr2_tr3_verified_edges_pass_the_independent_audit():
+    """No regression in real VERIFIED output: every VERIFIED edge the pipeline builds for TR1, TR2 and TR3 must
+    survive audit_verified, and the same edge with a malformed premise must not."""
+    import dataclasses
+
+    from ecci.status import audit_verified, classify_edge
+    scenes = {"TR1": line(100, 100, 160, 100) + line(160, 100, 160, 140),
+              "TR2": four_ends() + disc(100, 100, 1.0),
+              "TR3": r_content() + line(*TIP_UP, 150, 160) + line(*TIP_DN, 150, 40)}
+    for rule, content in scenes.items():
+        pi, cls, cl, built, res = run(content)
+        ver = [e for e in edges_by_rule(built, rule) if res.edge_status[e.id][0] == VERIFIED]
+        assert ver, f"{rule}: the pipeline produced no VERIFIED edge"
+        for e in ver:
+            assert classify_edge(e)[0] == VERIFIED
+            assert audit_verified(e) == [], (rule, e)
+            assert audit_verified(dataclasses.replace(e, n_prims=float(e.n_prims)))
+            assert audit_verified(dataclasses.replace(e, coord=e.coord.split("@")[0] + "@nan,0.000"))
+        assert audit_result(built.graph, res) == []

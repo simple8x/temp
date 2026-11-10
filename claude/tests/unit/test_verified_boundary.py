@@ -14,7 +14,7 @@ def R(o, kind="WIRE", ev=None, weak=False, status="CONFIRMED"):
     return RoleRef(o, kind, status, (f"A:{o}", f"B:{o}") if ev is None else ev, weak)
 
 
-def E(rule="TR1", ka="WIRE", kb="WIRE", n=2, a="a", b="b", roles=None, coord="pt", prov=PROV, negative=()):
+def E(rule="TR1", ka="WIRE", kb="WIRE", n=2, a="a", b="b", roles=None, coord="node:1@1.000,2.000", prov=PROV, negative=()):
     return Edge("e", a, b, rule, roles or (R(a, ka), R(b, kb)), coord, n, negative, prov)
 
 
@@ -112,3 +112,115 @@ def test_audit_result_rejects_a_verified_edge_that_is_not_in_the_graph():
     forged = dataclasses.replace(res, edge_status={**res.edge_status, "ghost": (VERIFIED, "PREMISES_COMPLETE")})
     assert isinstance(forged, SolveResult)
     assert "I7 ghost: VERIFIED edge is not in the graph" in audit_result(G, forged)
+
+
+# ---------------------------------------------------------------- audit_verified is total and independent
+
+def _audit_ok(e):
+    out = audit_verified(e)
+    assert isinstance(out, list) and all(isinstance(p, str) for p in out)
+    return out
+
+
+BAD_EDGES = {
+    "n_prims=2.0": E(n=2.0),
+    "n_prims=True": E(n=True),
+    "n_prims='2'": E(n="2"),
+    "n_prims=None": E(n=None),
+    "tr3 n_prims=2": E("TR3", "PIN", "WIRE", n=2),
+    "tr2 n_prims=1": E("TR2", "WIRE", "DOT", n=1),
+    "endpoint a=''": E(a="", roles=(R(""), R("b"))),
+    "endpoint a=' '": E(a=" ", roles=(R(" "), R("b"))),
+    "endpoint a=None": E(a=None, roles=(R(None), R("b"))),
+    "endpoint a=1": E(a=1, roles=(R(1), R("b"))),
+    "endpoint a=['a']": E(a=["a"], roles=(R(["a"]), R("b"))),
+    "self loop": E(a="b", roles=(R("b"), R("b"))),
+    "coord tuple": E(coord=(1.0, 2.0)),
+    "coord bytes": E(coord=b"node:1@1.000,2.000"),
+    "coord no numbers": E(coord="pt"),
+    "coord non-numeric": E(coord="node:1@x,2.000"),
+    "coord nan": E(coord="node:1@nan,2.000"),
+    "coord inf": E(coord="node:1@inf,2.000"),
+    "coord -inf": E(coord="node:1@1.000,-inf"),
+    "coord Infinity": E(coord="node:1@Infinity,0"),
+    "coord huge overflow": E(coord="node:1@1" + "0" * 400 + ",0"),
+    "evidence list element": E(roles=(R("a", ev=(["A:a"], "B:a")), R("b"))),
+    "evidence dict element": E(roles=(R("a", ev=({"x": 1}, "B:a")), R("b"))),
+    "evidence set element": E(roles=(R("a", ev=({"A"}, "B:a", "C:a")), R("b"))),
+    "evidence is a dict": E(roles=(R("a", ev={"A:a": 1, "B:a": 2}), R("b"))),
+    "evidence is a str": E(roles=(R("a", ev="AB"), R("b"))),
+    "evidence None": E(roles=(RoleRef("a", "WIRE", "CONFIRMED", None), R("b"))),
+    "duplicate evidence": E(roles=(R("a", ev=("A:a", "A:a", "B:a")), R("b"))),
+    "single evidence": E(roles=(R("a", ev=("A:a",)), R("b"))),
+    "missing provenance": E(prov=()),
+    "provenance None": E(prov=None),
+    "provenance list": E(prov=["page:0/op:1"]),
+    "provenance bad element": E(prov=("page:0/op:1", ["x"])),
+    "endpoint-role swapped": E(roles=(R("b"), R("a"))),
+    "endpoint-role other obj": E(roles=(R("a"), R("c"))),
+    "role kind list": E(roles=(R("a", kind=["WIRE"]), R("b"))),
+    "role kind bogus": E(roles=(R("a", kind="WIRE2"), R("b"))),
+    "role status unhashable": E(roles=(R("a", status=["CONFIRMED"]), R("b"))),
+    "role candidate": E(roles=(R("a", status="CANDIDATE"), R("b"))),
+    "weak None": E(roles=(R("a", weak=None), R("b"))),
+    "weak 0": E(roles=(R("a", weak=0), R("b"))),
+    "weak 1": E(roles=(R("a", weak=1), R("b"))),
+    "weak 'false'": E(roles=(R("a", weak="false"), R("b"))),
+    "weak 0.0": E(roles=(R("a", weak=0.0), R("b"))),
+    "negative list": E(negative=["x"]),
+    "negative non-empty": E(negative=("x",)),
+    "negative None": E(negative=None),
+    "rule TR4": E("TR4", n=3),
+    "rule unhashable": dataclasses.replace(E(), rule=["TR1"]),
+    "roles is a list": E(roles=[R("a"), R("b")]),
+    "role not a RoleRef": dataclasses.replace(E(), roles=(R("a"), ("b", "WIRE"))),
+    "three roles": dataclasses.replace(E(), roles=(R("a"), R("b"), R("b"))),
+}
+
+
+@pytest.mark.parametrize("name", sorted(BAD_EDGES))
+def test_audit_verified_reports_every_malformed_record_and_never_raises(name):
+    assert _audit_ok(BAD_EDGES[name]), f"{name}: audit accepted a malformed VERIFIED record"
+
+
+@pytest.mark.parametrize("name", sorted(BAD_EDGES))
+def test_audit_result_returns_violations_for_a_malformed_verified_edge_without_crashing(name):
+    G, res = _solved()
+    G2 = ConnGraph(G.objects, [dataclasses.replace(BAD_EDGES[name], id="e")])
+    probs = audit_result(G2, res)                       # res still says e is VERIFIED
+    assert any(p.startswith(("I2 e:", "I7 e:")) for p in probs), (name, probs)
+
+
+@pytest.mark.parametrize("name", sorted(BAD_EDGES))
+def test_classify_edge_never_raises_and_never_verifies_a_malformed_record(name):
+    st, _ = classify_edge(BAD_EDGES[name])
+    if name.startswith(("coord", "duplicate evidence")) or name in ("endpoint a=' '", "tr2 n_prims=1"):
+        return     # classify_edge only checks a non-blank coordinate id, >= 2 distinct ids, a non-empty endpoint and
+                   # no TR2 count: the independent audit is what catches these (checked above)
+    assert st != VERIFIED, name
+
+
+@pytest.mark.parametrize("bad", [ValueError, TypeError])
+def test_audit_turns_an_unreadable_field_into_a_violation(bad):
+    class Evil(str):
+        def strip(self, *a):
+            raise bad("boom")
+    probs = audit_verified(E(a=Evil("a"), roles=(R(Evil("a")), R("b"))))
+    assert probs and isinstance(probs, list)
+
+
+def test_audit_does_not_call_or_share_helpers_with_classify_edge():
+    import ast
+    import inspect
+
+    import ecci.status as st
+    used = set()
+    for f in (st.audit_verified, st._audit_verified, st._audit_ids, st._audit_coord, st._audit_str):
+        used |= {n.id for n in ast.walk(ast.parse(inspect.getsource(f))) if isinstance(n, ast.Name)}
+    assert not used & {"classify_edge", "effective_role", "_valid_ids", "RULES", "SOUND_KINDS"}, used
+
+
+def test_audit_accepts_pipeline_coordinate_records():
+    assert _audit_ok(E(coord="node:17@-12.500,300.000")) == []
+    assert _audit_ok(E("TR3", "PIN", "WIRE", n=1, coord="pin:c3:2@1.270,-2.540")) == []
+    assert _audit_ok(E("TR2", "WIRE", "DOT", n=2, coord="node:4@0.000,0.000")) == []

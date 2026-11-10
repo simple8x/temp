@@ -14,7 +14,7 @@ def role(o, kind="WIRE", conf=True, weak=False):
                    (f"A:{o}", f"B:{o}") if conf else (f"A:{o}",), weak)
 
 
-def edge(eid, a, b, rule="TR1", ka="WIRE", kb="WIRE", n=2, conf=True, weak=False, coord="pt", negative=(),
+def edge(eid, a, b, rule="TR1", ka="WIRE", kb="WIRE", n=2, conf=True, weak=False, coord="node:1@1.000,2.000", negative=(),
          prov=("page:0/op:1",)):
     return Edge(eid, a, b, rule, (role(a, ka, conf, weak), role(b, kb, conf, weak)), coord, n, negative, prov)
 
@@ -40,7 +40,7 @@ def test_candidate_role_caps_at_inferred():
 
 def test_confirmed_with_single_evidence_is_not_trusted():
     r = RoleRef("a", "WIRE", "CONFIRMED", ("only-one",))
-    e = Edge("e", "a", "b", "TR1", (r, role("b")), "pt", 2, (), ("page:0/op:1",))
+    e = Edge("e", "a", "b", "TR1", (r, role("b")), "node:1@1.000,2.000", 2, (), ("page:0/op:1",))
     assert classify_edge(e) == (INFERRED, "ROLE_NOT_CONFIRMED")
 
 
@@ -66,7 +66,7 @@ def test_unknown_rule_and_kind_mismatch_and_role_unknown():
     assert classify_edge(edge("e", "a", "b", rule="TR3"))[1] == "RULE_ROLE_KIND_MISMATCH" or True
     assert classify_edge(edge("e", "a", "b", rule="TR2", ka="WIRE", kb="WIRE"))[0] in (VERIFIED, UNKNOWN)
     r = RoleRef("a", "WIRE", "UNKNOWN")
-    assert classify_edge(Edge("e", "a", "b", "TR1", (r, role("b")), "pt", 2))[1] == "ROLE_UNKNOWN"
+    assert classify_edge(Edge("e", "a", "b", "TR1", (r, role("b")), "node:1@1.000,2.000", 2))[1] == "ROLE_UNKNOWN"
 
 
 def test_tr2_requires_wire_and_dot_kinds():
@@ -80,7 +80,7 @@ def test_tr3_requires_pin_wire_and_exactly_one_prim():
 
 
 def test_audit_verified_catches_incomplete_record():
-    bad = Edge("e", "a", "b", "TR1", (RoleRef("a", "WIRE", "CONFIRMED", ("x",)), role("b")), "pt", 2)
+    bad = Edge("e", "a", "b", "TR1", (RoleRef("a", "WIRE", "CONFIRMED", ("x",)), role("b")), "node:1@1.000,2.000", 2)
     assert audit_verified(bad)
     assert audit_verified(edge("e", "a", "b")) == []
 
@@ -159,7 +159,7 @@ def test_tc_h6_every_verified_edge_has_full_premise_record():
     for k in range(25):
         a, b = rnd.sample(ids, 2)
         edges.append(edge(f"e{k}", a, b, conf=rnd.random() < 0.7, weak=rnd.random() < 0.2,
-                          coord="" if rnd.random() < 0.2 else "pt", n=rnd.choice([1, 2, 2, 3])))
+                          coord="" if rnd.random() < 0.2 else "node:1@1.000,2.000", n=rnd.choice([1, 2, 2, 3])))
     G = ConnGraph(wires(*ids), edges)
     r = solve(G)
     assert audit_result(G, r) == []
@@ -169,7 +169,7 @@ def test_tc_h6_every_verified_edge_has_full_premise_record():
 def test_tc_h7_unresolved_candidate_keeps_net_open():
     unknown = edge("gap", "a", "z", rule="TR5", n=0, conf=False)
     unknown = Edge("gap", "a", "z", "TR5", (RoleRef("a", "WIRE", "CONFIRMED", ("A", "B")),
-                                           RoleRef("z", "WIRE", "UNKNOWN")), "pt", 0)
+                                           RoleRef("z", "WIRE", "UNKNOWN")), "node:1@1.000,2.000", 0)
     G = ConnGraph(wires("a", "b", "z"), [edge("e", "a", "b")] + [unknown])
     r = solve(G)
     net = next(n for n in r.nets if "a" in n.objects)
