@@ -247,7 +247,61 @@ def strip_stubs(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: fl
 
     Returns (reduced cluster, stub prim ids) or None when nothing can be stripped. Pure geometry: the stubs
     are NOT assumed to be pins here; the template decides, and the stub primitives then serve as the measured
-    second evidence (their lineage never contains the library token)."""
+    second evidence (their lineage never contains the library token).
+
+    The touch test is exactly the one `_touches_other` states; it is evaluated over a grid of the cluster's
+    segments (the geometry keys are computed once per primitive) so that a cluster of n primitives does not cost
+    n^2 distance computations. `strip_stubs_reference` below is the same test written as plain loops; a property
+    test checks that the two agree."""
+    from .flatten import point_segment_distance
+    ids = list(cl.prim_ids)
+    maxd = _maxdim(cl.bbox)
+    gk = {i: _geom_key(by_id[i]) for i in ids}
+    wmax = max((by_id[i].stroke_w for i in ids), default=0.0)
+    cand = []
+    for i in ids:
+        p = by_id[i]
+        if len(p.pts) != 2 or p.line_closed:
+            continue
+        a, b = p.pts[0], p.pts[-1]
+        if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > 0.01:
+            continue
+        if ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5 > max_frac * maxd:
+            continue
+        cand.append(i)
+    if not cand:
+        return None
+    # grid over the cluster's segments; margin covers the largest tolerance any pair can produce
+    margin = eps + 0.5 * (wmax + wmax)
+    cell = max(20.0, 2.0 * margin)
+    grid: dict[tuple[int, int], list[tuple[int, tuple, tuple]]] = {}
+    for j in ids:
+        for _, s0, s1 in by_id[j].segments():
+            x0, x1 = sorted((s0[0], s1[0]))
+            y0, y1 = sorted((s0[1], s1[1]))
+            for cx in range(math.floor((x0 - margin) / cell), math.floor((x1 + margin) / cell) + 1):
+                for cy in range(math.floor((y0 - margin) / cell), math.floor((y1 + margin) / cell) + 1):
+                    grid.setdefault((cx, cy), []).append((j, s0, s1))
+
+    def touches_other(i: int, end) -> bool:
+        p = by_id[i]
+        for j, s0, s1 in grid.get((math.floor(end[0] / cell), math.floor(end[1] / cell)), ()):
+            if j == i or gk[j] == gk[i]:
+                continue
+            if point_segment_distance(end, s0, s1) <= eps + 0.5 * (p.stroke_w + by_id[j].stroke_w):
+                return True
+        return False
+
+    stubs = [i for i in cand
+             if touches_other(i, by_id[i].pts[0]) != touches_other(i, by_id[i].pts[-1])]
+    rest = tuple(i for i in ids if i not in set(stubs))
+    if not stubs or not rest:
+        return None
+    return _rebuild(cl.id, rest, by_id), tuple(stubs)
+
+
+def strip_stubs_reference(cl: Cluster, by_id: dict, eps: float = EPS_DEFAULT, max_frac: float = 1.5):
+    """Plain-loop statement of `strip_stubs`, kept only as the reference the property test compares against."""
     from .flatten import point_segment_distance
     ids = list(cl.prim_ids)
     maxd = _maxdim(cl.bbox)
