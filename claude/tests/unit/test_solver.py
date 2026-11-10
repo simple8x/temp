@@ -184,6 +184,25 @@ def test_unresolved_terminal_makes_net_open():
     assert any(x.startswith("UNRESOLVED_TERMINAL") for x in r.nets[0].open_reasons)
 
 
+def test_attachment_alone_never_makes_a_pair_verified():
+    # adversarial (external review P1): structural attachment is membership, not an electrical claim
+    objs = wires("w", "x") + [Obj("ut", "UNRESOLVED", attach="w"), Obj("ut2", "UNRESOLVED", attach="w")]
+    r = solve(ConnGraph(objs, [edge("e", "w", "x")]))
+    assert r.pair_status("w", "x") == "VERIFIED"                  # a real VERIFIED edge stays VERIFIED
+    for p, q in (("ut", "w"), ("ut", "x"), ("ut", "ut2")):
+        assert r.pair_status(p, q) != "VERIFIED"
+        assert r.pair_status(p, q) in ("INFERRED", "UNKNOWN")
+    net = next(n for n in r.nets if "ut" in n.objects)
+    assert {"w", "x", "ut", "ut2"} <= set(net.objects) and net.closure == "OPEN"
+
+
+def test_attachment_does_not_bridge_two_verified_groups_into_one():
+    # ut attaches to w only; a pin-less terminal must not make w and y VERIFIED together through anything
+    objs = wires("w", "y") + [Obj("ut", "UNRESOLVED", attach="w")]
+    r = solve(ConnGraph(objs, []))
+    assert r.pair_status("w", "y") == "UNKNOWN" and r.pair_status("ut", "y") == "UNKNOWN"
+
+
 # ---------------------------------------------------------------- TC-C
 
 def names(**kw):

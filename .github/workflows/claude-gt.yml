@@ -16,20 +16,29 @@ jobs:
         uses: actions/cache@v4
         with:
           path: gt_out
-          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh') }}
+          # every input of the reference is pinned in gt_expected.txt (KiCad source commit, KiCad build, expected
+          # export outcome), so hashing it with the export script makes the key depend on all of them
+          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh', 'claude/tools/gt_expected.txt') }}
       - name: Install KiCad CLI
         if: steps.gtcache.outputs.cache-hit != 'true'
         run: |
           sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
           sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends kicad
+          pkg=$(grep '^KICAD_PKG=' claude/tools/gt_expected.txt | cut -d= -f2-)
+          sudo apt-get install -y --no-install-recommends "kicad=$pkg"
           kicad-cli version
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install pikepdf
       - name: Export PDFs and netlists
         if: steps.gtcache.outputs.cache-hit != 'true'
-        run: bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
+        run: |
+          set -o pipefail
+          bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
+      - name: Verify ground-truth provenance and manifest (cached or fresh)
+        run: |
+          set -o pipefail
+          bash claude/tools/gt_verify.sh gt_out 2>&1 | tee gt_verify.log
       - name: Summary
         run: python claude/tools/gt_summary.py gt_out | tee gt_summary.log
       - name: Profile heavy pages
@@ -41,6 +50,10 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
         run: |
           # claude/tools/gt_only.txt (comma list "proj" or "proj#pN"; empty = everything) restricts the run
+          # fail-closed: a page error/timeout, or (full run) fewer evaluated pages/projects than pinned, exits 1
+          set -o pipefail
+          export GT_MIN_PAGES=$(grep '^EXPECT_MIN_PAGES=' claude/tools/gt_expected.txt | cut -d= -f2-)
+          export GT_EXPECT_PROJECTS=$(grep '^EXPECT_EXPORT_OK=' claude/tools/gt_expected.txt | cut -d= -f2-)
           only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)
           echo "GT_ONLY='$only'"
           GT_DUMP_LIB="$(cat claude/tools/gt_dump.txt 2>/dev/null | tr -d ' \n')" GT_DUMP_MAX=1 GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
@@ -75,6 +88,7 @@ jobs:
           path: |
             gt_out
             gt_export.log
+            gt_verify.log
             gt_summary.log
             gt_eval.log
             gt_probe.log

@@ -480,8 +480,38 @@ def main(root: str) -> int:
                              "pin_recall": round(tot["local_pins_found"] / max(1, tot["local_pins"]), 4),
                              "pins": tot["local_pins"],
                              "misses": {k[5:]: v for k, v in tot.items() if k.startswith("miss_")}}
+    cov = coverage(results, dirs)
+    out["coverage"] = cov
+    out["complete"] = not cov["problems"]
+    print("GT_COVERAGE " + json.dumps(cov, sort_keys=True))
     print("GT_TOTAL " + json.dumps(out, sort_keys=True))
+    if cov["problems"]:
+        # fail-closed: totals over an incomplete corpus are NOT a result; the missing pages are UNKNOWN
+        print("GT_INCOMPLETE " + "; ".join(cov["problems"]))
+        return 1
     return 0
+
+
+def coverage(results: list, dirs: list) -> dict:
+    """Pages evaluated / skipped by design / failed. An error or timeout on any page is a failure of the run.
+    On a full run (no GT_ONLY) the number of exported projects and evaluated pages must reach the pinned minimum."""
+    flat = [r for rs in results for r in rs]
+    errors = sorted(r["project"] for r in flat if "error" in r)
+    ok = [r for r in flat if "error" not in r and "skipped" not in r]
+    skipped = [r for r in flat if "skipped" in r]
+    projects = sum(1 for d in dirs if any(d.glob("*.xml")) and any(d.glob("*.pdf")))
+    problems = [f"page error: {e}" for e in errors]
+    if not ONLY:
+        min_pages = int(os.environ.get("GT_MIN_PAGES", "0") or 0)
+        exp_proj = int(os.environ.get("GT_EXPECT_PROJECTS", "0") or 0)
+        if len(ok) < min_pages:
+            problems.append(f"{len(ok)} pages evaluated < pinned minimum {min_pages}")
+        if exp_proj and projects != exp_proj:
+            problems.append(f"{projects} exported projects != pinned {exp_proj}")
+    elif not ok and not skipped:
+        problems.append(f"GT_ONLY={','.join(ONLY)} selected nothing")
+    return {"evaluated": len(ok), "skipped_by_design": len(skipped), "errors": errors, "projects": projects,
+            "full_run": not ONLY, "problems": problems}
 
 
 if __name__ == "__main__":

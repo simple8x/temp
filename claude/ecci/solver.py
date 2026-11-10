@@ -282,13 +282,15 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
     edges = list(G.edges) + _name_edges(G)
     classified = {e.id: classify_edge(e) for e in edges}
     emap = {e.id: e for e in edges}
-    attach = [(f"attach:{o.id}", o.id, o.attach) for o in G.objects if o.attach]
+    # structural membership (an unresolved terminal belongs to its wire's net) is NOT an electrical claim: it joins
+    # the partition, so the net is reported OPEN, but never the VERIFIED groups that pair_status reads.
+    A = sorted((f"attach:{o.id}", o.id, o.attach) for o in G.objects if o.attach)
 
-    V = sorted([(e.id, e.a, e.b) for e in edges if classified[e.id][0] == VERIFIED] + attach)
+    V = sorted([(e.id, e.a, e.b) for e in edges if classified[e.id][0] == VERIFIED])
     S0 = {e.id: (e.a, e.b) for e in edges if classified[e.id][0] == INFERRED}
 
     # ---- phase 1
-    rep1 = _components(objs, V)
+    rep1 = _components(objs, V + A)
     groups1 = _groups(rep1)
     quarantined: list = []
     Q: set = set()
@@ -303,7 +305,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
             Q |= groups1[r]
             qroots.add(r)
 
-    V_ok = [e for e in V if e[1] not in Q]      # quarantined nets take no further part in phases 2-3
+    V_ok = [e for e in V + A if e[1] not in Q]      # quarantined nets take no further part in phases 2-3
     status: dict[str, tuple[str, str]] = {}
     S = {}
     for eid, (a, b) in S0.items():
@@ -348,7 +350,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
                 site_res[sid] = SiteResult(CONFLICT, None, "ROLLED_BACK_BY_RESOLVE")
             continue
         # phase 3 against the current partition
-        edges_now = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
+        edges_now = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
             + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
         rep = _components(objs, edges_now)
         groups = _groups(rep)
@@ -437,7 +439,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
         elif classified[e.id][0] == UNKNOWN:
             status[e.id] = classified[e.id]
     links, _ = links_of(committed)
-    final_edges = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
+    final_edges = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
         + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
     frep = _components(objs, final_edges)
     fgroups = _groups(frep)

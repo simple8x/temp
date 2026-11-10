@@ -1,0 +1,10 @@
+# Ground-truth corpus pins (M4.0). Changing any line changes the cache key and forces a fresh export.
+# KiCad demos commit and KiCad CLI build the reference was produced with:
+KICAD_SRC_SHA=c4d506e7a9de9740f288ebb25ce77f07852569b7
+KICAD_PKG=9.0.9~ubuntu24.04.1
+KICAD_CLI_VERSION=9.0.9
+# projects that must export (pdf + netlist) and the ones known to fail export with this build
+EXPECT_EXPORT_OK=32
+EXPECT_EXPORT_FAIL=CM5_MINIMA_3,StickHub,constraints,pic_programmer
+# full evaluation: pages that must be evaluated without error (a page error or timeout fails the run)
+EXPECT_MIN_PAGES=100
