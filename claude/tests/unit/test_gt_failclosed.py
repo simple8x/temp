@@ -282,3 +282,47 @@ def test_export_fails_the_project_when_sheets_cannot_be_copied(tmp_path):
 def test_export_fails_the_project_when_kicad_cli_fails(tmp_path):
     r = _run_export(tmp_path, _selftest_demos(tmp_path), kicad_rc=3)
     assert "FAIL pdf good" in r.stdout and "EXPORT_OK=0" in r.stdout and r.returncode != 0
+
+
+def test_gt_eval_has_a_working_entrypoint(tmp_path):
+    """Regression: a rewrite of gt_eval.py once dropped `if __name__ == "__main__"`, so the CI step imported the
+    module, produced no output and exited 0 — a green run that measured nothing (run 42782032226)."""
+    (tmp_path / "gt_out").mkdir()
+    r = subprocess.run([sys.executable, str(TOOLS / "gt_eval.py"), str(tmp_path / "gt_out")],
+                       capture_output=True, text=True, env={**os.environ, "GT_WORKERS": "1"})
+    assert "GT_TOTAL " in r.stdout, r.stdout + r.stderr
+    assert "GT_COVERAGE " in r.stdout
+    assert r.returncode == 1 and "GT_INCOMPLETE" in r.stdout      # an empty corpus is not a result
+
+
+def test_inventory_fails_when_the_evaluation_did_not_run(tmp_path):
+    """The inventory step is the gate that the evaluation produced a result at all."""
+    import importlib
+    sys.path.insert(0, str(TOOLS))
+    inv = importlib.import_module("gt_inventory")
+    empty = tmp_path / "empty.log"
+    empty.write_text("")
+    assert inv.main(str(empty)) == 1
+    partial = tmp_path / "partial.log"
+    partial.write_text('GT_EVAL {"project": "a", "local_pins": 1, "local_pins_found": 1}\n')
+    assert inv.main(str(partial)) == 1                            # pages but no GT_TOTAL, no GT_COVERAGE
+    cut = tmp_path / "cut.log"                                    # everything except the final GT_TOTAL line:
+    cut.write_text('GT_EVAL {"project": "a", "local_pins": 1, "local_pins_found": 1}\n'
+                   'GT_COVERAGE {"evaluated": 1}\n')             # the run died between the two
+    assert inv.main(str(cut)) == 1
+    good = tmp_path / "good.log"
+    good.write_text('GT_EVAL {"project": "a", "local_pins": 1, "local_pins_found": 1}\n'
+                    'GT_COVERAGE {"evaluated": 1}\n'
+                    'GT_TOTAL {"inventory_consistent": true}\n')
+    assert inv.main(str(good)) == 0
+    bad = tmp_path / "bad.log"
+    bad.write_text('GT_EVAL {"project": "a", "local_pins": 1, "local_pins_found": 1}\n'
+                   'GT_COVERAGE {"evaluated": 1}\n'
+                   'GT_TOTAL {"inventory_consistent": false}\n')
+    assert inv.main(str(bad)) == 1
+    unpinned = tmp_path / "unpinned.log"
+    unpinned.write_text('GT_EVAL {"project": "a", "local_pins": 1, "local_pins_found": 1}\n'
+                        'GT_EVAL {"project": "zz#p9", "skipped": "page not mapped to one sheet (best 1.0, runner-up 1.0)"}\n'
+                        'GT_COVERAGE {"evaluated": 1}\n'
+                        'GT_TOTAL {"inventory_consistent": true}\n')
+    assert inv.main(str(unpinned)) == 1

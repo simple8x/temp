@@ -47,8 +47,23 @@ def main(path: str) -> int:
         print("COVERAGE " + json.dumps({k: cov[k] for k in keys if k in cov}, sort_keys=True))
     if tot is not None:
         print(f"INVENTORY_CONSISTENT {tot.get('inventory_consistent')}")
-    unpinned = counts.get("SKIP UNPINNED", 0) + counts.get("ERROR", 0)
-    return 1 if unpinned else 0
+    # This is also the gate that the evaluation actually RAN: a step whose script exits 0 without producing a
+    # GT_TOTAL line (a missing entrypoint, a killed process, an empty log) must not leave the job green.
+    problems = []
+    if tot is None:
+        problems.append("no GT_TOTAL line: the evaluation did not finish")
+    elif tot.get("inventory_consistent") is not True:
+        problems.append(f"inventory_consistent={tot.get('inventory_consistent')}")
+    if cov is None:
+        problems.append("no GT_COVERAGE line")
+    if not counts.get("EVAL"):
+        problems.append("no page was evaluated")
+    for bad in ("SKIP UNPINNED", "ERROR"):
+        if counts.get(bad):
+            problems.append(f"{counts[bad]} page(s): {bad}")
+    for p in problems:
+        print("GT_INVENTORY_FAIL " + p)
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":

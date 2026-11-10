@@ -618,3 +618,7 @@ def coverage(results: list, dirs: list, pin: dict | None = None) -> dict:
             "page_coverage": round(len(ok) / max(1, len(ok) + unevaluated), 4),
             "disposition": {k: sorted(v) for k, v in sorted(disposition.items())},
             "errors": errors, "projects": len(projects), "full_run": not ONLY, "problems": problems}
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1]))

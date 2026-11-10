@@ -40,14 +40,14 @@ jobs:
           set -o pipefail
           bash claude/tools/gt_verify.sh gt_out 2>&1 | tee gt_verify.log
       - name: Summary
-        run: python claude/tools/gt_summary.py gt_out | tee gt_summary.log
+        run: |
+          set -o pipefail
+          python claude/tools/gt_summary.py gt_out | tee gt_summary.log
       - name: Profile heavy pages
         if: ${{ contains(github.event.head_commit.message, '[profile]') }}
         run: |
+          set -o pipefail
           python claude/tools/gt_profile.py gt_out tinytapeout-demo 0 2>&1 | tee gt_profile.log
-      - name: Coverage inventory (one line per page disposition)
-        if: always()
-        run: python claude/tools/gt_inventory.py gt_eval.log 2>&1 | tee gt_inventory.log
       - name: Evaluate ECCI against KiCad ground truth
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
         run: |
@@ -58,6 +58,11 @@ jobs:
           only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)
           echo "GT_ONLY='$only'"
           GT_DUMP_LIB="$(cat claude/tools/gt_dump.txt 2>/dev/null | tr -d ' \n')" GT_DUMP_MAX=1 GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
+      - name: Coverage inventory and "did the evaluation actually run" gate
+        if: always()
+        run: |
+          set -o pipefail
+          python claude/tools/gt_inventory.py gt_eval.log 2>&1 | tee gt_inventory.log
       - name: Misses by library symbol
         if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
