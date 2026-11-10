@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Integrity AND completeness of the (possibly cached) ground truth before it is used.
 #
-# Integrity: provenance matches the pins in gt_expected.txt and every file listed in the manifest still hashes
+# Integrity: provenance matches the pins in gt_source.txt / gt_pages.txt and every file listed in the manifest still hashes
 # to the recorded value. Completeness: the manifest lists EXACTLY the files that are there (a truncated manifest,
 # a deleted file or an extra undeclared file all fail), every exported project has exactly one PDF and one
 # netlist, and the successful / failed project sets equal the pinned ones. Exits non-zero on any mismatch.
 set -uo pipefail
 OUT="${1:-gt_out}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-pin() { grep -E "^$1=" "$HERE/gt_expected.txt" | head -1 | cut -d= -f2-; }
+pin() { grep -hE "^$1=" "$HERE/gt_source.txt" "$HERE/gt_pages.txt" | head -1 | cut -d= -f2-; }
 prov() { grep -E "^$1=" "$OUT/PROVENANCE.txt" | head -1 | cut -d= -f2-; }
 [ -f "$OUT/PROVENANCE.txt" ] && [ -f "$OUT/MANIFEST.sha256" ] || { echo "GT_VERIFY FAIL: no provenance/manifest"; exit 1; }
 cat "$OUT/PROVENANCE.txt"
@@ -19,7 +19,7 @@ fail() { echo "GT_VERIFY FAIL: $*"; rc=1; }
 [ "$(prov KICAD_SOURCE_SHA)" = "$(pin KICAD_SRC_SHA)" ] || fail "source sha"
 [ "$(prov KICAD_CLI)" = "$(pin KICAD_CLI_VERSION)" ] || fail "kicad version"
 [ "$(prov EXPORT_SCRIPT_SHA256)" = "$(sha256sum "$HERE/gt_export.sh" | cut -d' ' -f1)" ] || fail "export script changed"
-[ "$(prov EXPECTED_SHA256)" = "$(sha256sum "$HERE/gt_expected.txt" | cut -d' ' -f1)" ] || fail "pins changed"
+[ "$(prov SOURCE_PINS_SHA256)" = "$(sha256sum "$HERE/gt_source.txt" | cut -d' ' -f1)" ] || fail "source pins changed"
 
 # ---- every listed file still hashes to the recorded value
 (cd "$OUT" && sha256sum --quiet -c MANIFEST.sha256) || fail "manifest"

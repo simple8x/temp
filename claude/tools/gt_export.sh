@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Ground-truth export (M4.0). Runs on the CI runner: KiCad itself renders the PDF and computes the netlist,
 # so the reference connectivity is independent of the ECCI algorithm. Nothing here is committed to the repo.
-# Fail-closed: the KiCad source commit and CLI version are pinned in gt_expected.txt and checked; any export
+# Fail-closed: the KiCad source commit and CLI version are pinned in gt_source.txt and checked; any export
 # outcome other than the pinned one exits non-zero. Provenance and a SHA-256 manifest are written into OUT.
 set -uo pipefail
 OUT="${1:-gt_out}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-pin() { grep -E "^$1=" "$HERE/gt_expected.txt" | head -1 | cut -d= -f2-; }
+pin() { grep -hE "^$1=" "$HERE/gt_source.txt" "$HERE/gt_pages.txt" | head -1 | cut -d= -f2-; }
 SRC_SHA="$(pin KICAD_SRC_SHA)"; CLI_WANT="$(pin KICAD_CLI_VERSION)"
 EXP_OK="$(pin EXPECT_EXPORT_OK)"; EXP_FAIL="$(pin EXPECT_EXPORT_FAIL)"
-[ -n "$SRC_SHA" ] && [ -n "$CLI_WANT" ] && [ -n "$EXP_OK" ] || { echo "PIN MISSING in gt_expected.txt"; exit 2; }
+[ -n "$SRC_SHA" ] && [ -n "$CLI_WANT" ] && [ -n "$EXP_OK" ] || { echo "PIN MISSING in gt_source.txt"; exit 2; }
 CLI_HAVE="$(kicad-cli version 2>&1 | head -1 | tr -d '\r')"
 mkdir -p "$OUT"
 if [ "${GT_SELFTEST:-}" = 1 ]; then
@@ -57,7 +57,7 @@ echo "EXPORT_OK=$n_ok EXPORT_FAIL=${#fails[@]} ($got_fail)"
   echo "KICAD_SOURCE_SHA=$HAVE_SHA"
   echo "KICAD_CLI=$CLI_HAVE"
   echo "EXPORT_SCRIPT_SHA256=$(sha256sum "$0" | cut -d' ' -f1)"
-  echo "EXPECTED_SHA256=$(sha256sum "$HERE/gt_expected.txt" | cut -d' ' -f1)"
+  echo "SOURCE_PINS_SHA256=$(sha256sum "$HERE/gt_source.txt" | cut -d' ' -f1)"
   echo "EXPORT_OK=$n_ok"
   echo "EXPORT_FAIL=$got_fail"
 } > "$OUT/PROVENANCE.txt"

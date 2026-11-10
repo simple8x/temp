@@ -16,15 +16,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: gt_out
-          # every input of the reference is pinned in gt_expected.txt (KiCad source commit, KiCad build, expected
-          # export outcome), so hashing it with the export script makes the key depend on all of them
-          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh', 'claude/tools/gt_expected.txt') }}
+          # everything the exported DATA depends on is pinned in gt_source.txt (KiCad source commit, KiCad
+          # build, expected export outcome), so hashing it with the export script makes the key depend on all of
+          # them. gt_pages.txt (page bookkeeping) is deliberately NOT in the key: it does not change the data.
+          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh', 'claude/tools/gt_source.txt') }}
       - name: Install KiCad CLI
         if: steps.gtcache.outputs.cache-hit != 'true'
         run: |
           sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
           sudo apt-get update -q
-          pkg=$(grep '^KICAD_PKG=' claude/tools/gt_expected.txt | cut -d= -f2-)
+          pkg=$(grep '^KICAD_PKG=' claude/tools/gt_source.txt | cut -d= -f2-)
           sudo apt-get install -y --no-install-recommends "kicad=$pkg"
           kicad-cli version
       - uses: actions/setup-python@v5
@@ -52,7 +53,7 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
         run: |
           # claude/tools/gt_only.txt (comma list "proj" or "proj#pN"; empty = everything) restricts the run
-          # fail-closed: gt_eval reads the pins itself from claude/tools/gt_expected.txt and exits 1 unless
+          # fail-closed: gt_eval reads the pins itself (gt_source.txt + gt_pages.txt) and exits 1 unless
           # every page is accounted for exactly as pinned (see GT_COVERAGE in the log)
           set -o pipefail
           only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)

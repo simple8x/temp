@@ -531,15 +531,22 @@ def main(root: str) -> int:
     return 0
 
 
-def pins(path: str | None = None) -> dict:
-    """The pinned corpus facts from gt_expected.txt (KEY=value lines, comments ignored)."""
-    f = pathlib.Path(path or (pathlib.Path(__file__).resolve().parent / "gt_expected.txt"))
+PIN_FILES = ("gt_source.txt", "gt_pages.txt")
+
+
+def pins(paths=None) -> dict:
+    """The pinned corpus facts (KEY=value lines, comments ignored).
+
+    gt_source.txt holds what the exported DATA depends on and is part of the cache key; gt_pages.txt holds the
+    per-page bookkeeping and is not, so correcting an inventory pin does not force a 20-minute re-export."""
+    here = pathlib.Path(__file__).resolve().parent
     out = {}
-    for line in f.read_text().splitlines():
-        if line.startswith("#") or "=" not in line:
-            continue
-        k, v = line.split("=", 1)
-        out[k.strip()] = v.strip()
+    for f in (paths or [here / n for n in PIN_FILES]):
+        for line in pathlib.Path(f).read_text().splitlines():
+            if line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            out[k.strip()] = v.strip()
     return out
 
 
@@ -547,7 +554,7 @@ def coverage(results: list, dirs: list, pin: dict | None = None) -> dict:
     """Account for EVERY page: evaluated, or skipped for a pinned reason. Anything else fails the run.
 
     A page error or timeout is a failure. On a full run the disposition of each page must equal the pins in
-    gt_expected.txt: a page that is skipped without being listed, a listed page that is now evaluated (the pin
+    the pins: a page that is skipped without being listed, a listed page that is now evaluated (the pin
     is stale), a page count that does not add up, or a project set that differs from the pinned one all fail.
     With GT_ONLY, every selected page must actually have been evaluated.
     """
@@ -594,7 +601,7 @@ def coverage(results: list, dirs: list, pin: dict | None = None) -> dict:
                             f"{sorted(allowed_no_export)}")
         stale = sorted(allowed_repeat & set(evaluated_names))
         if stale:
-            problems.append(f"pinned as skipped but evaluated (update gt_expected.txt): {stale}")
+            problems.append(f"pinned as skipped but evaluated (update gt_pages.txt): {stale}")
         missing = sorted(allowed_repeat - set(disposition.get("repeated_sheet", ())))
         if missing:
             problems.append(f"pinned as skipped but not reported at all: {missing}")

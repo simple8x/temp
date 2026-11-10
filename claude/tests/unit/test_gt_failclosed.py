@@ -93,10 +93,14 @@ def test_gt_only_fails_when_a_selected_page_was_not_evaluated(gt_eval, tmp_path,
     assert gt_eval.coverage([[{"project": "p0#p0"}]], _dirs(tmp_path, 1), PIN)["problems"] == []
 
 
-def test_pins_reads_the_real_expected_file(gt_eval):
+def test_pins_reads_both_real_pin_files(gt_eval):
     pin = gt_eval.pins()
     assert pin["KICAD_CLI_VERSION"] and pin["EXPECT_TOTAL_PAGES"].isdigit()
     assert len(pin["SKIP_REPEATED_SHEET"].split(",")) == 42
+    # the page bookkeeping must NOT be part of the export cache key, or every inventory fix costs a re-export
+    wf = (TOOLS.parents[1] / ".github/workflows/claude-gt.yml").read_text()
+    assert "gt_source.txt" in wf.split("key: gt-out-")[1].split("\n")[0]
+    assert "gt_pages.txt" not in wf.split("key: gt-out-")[1].split("\n")[0]
 
 
 def test_main_exits_nonzero_when_a_project_raises(gt_eval, tmp_path, monkeypatch, capsys):
@@ -112,7 +116,8 @@ def test_main_exits_nonzero_when_a_project_raises(gt_eval, tmp_path, monkeypatch
 
 def _fake_gt(tmp_path, n_ok=None, failed=None):
     """A gt_out tree that satisfies every pin, so each test can break exactly one thing."""
-    pins = dict(line.split("=", 1) for line in (TOOLS / "gt_expected.txt").read_text().splitlines()
+    pins = dict(line.split("=", 1) for f in ("gt_source.txt", "gt_pages.txt")
+                for line in (TOOLS / f).read_text().splitlines()
                 if "=" in line and not line.startswith("#"))
     n_ok = int(pins["EXPECT_EXPORT_OK"]) if n_ok is None else n_ok
     failed = pins["EXPECT_EXPORT_FAIL"].split(",") if failed is None else failed
@@ -129,7 +134,7 @@ def _fake_gt(tmp_path, n_ok=None, failed=None):
     sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()   # noqa: E731
     (out / "PROVENANCE.txt").write_text(
         f"KICAD_SOURCE_SHA={pins['KICAD_SRC_SHA']}\nKICAD_CLI={pins['KICAD_CLI_VERSION']}\n"
-        f"EXPORT_SCRIPT_SHA256={sha(TOOLS / 'gt_export.sh')}\nEXPECTED_SHA256={sha(TOOLS / 'gt_expected.txt')}\n")
+        f"EXPORT_SCRIPT_SHA256={sha(TOOLS / 'gt_export.sh')}\nSOURCE_PINS_SHA256={sha(TOOLS / 'gt_source.txt')}\n")
     _write_manifest(out)
     return out
 
