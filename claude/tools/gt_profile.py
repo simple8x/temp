@@ -17,10 +17,25 @@ mp = gt_eval.map_pages_to_sheets(str(sorted(pdir.glob("*.pdf"))[0]), schs, __imp
 print("PROFILE map_pages seconds", round(time.time() - t0, 1), mp.get(page))
 si = mp[page][0]
 pr = cProfile.Profile()
+import os  # noqa: E402
+import signal  # noqa: E402
+
+
+def _stop(signum, frame):
+    raise TimeoutError("profile budget reached")
+
+
+signal.signal(signal.SIGALRM, _stop)
+signal.alarm(int(os.environ.get("GT_PROFILE_SECONDS", "400")))
 pr.enable()
 t1 = time.time()
-r = gt_eval.evaluate(pdir, page, schs[si], f"{proj}#p{page}")
-pr.disable()
+try:
+    r = gt_eval.evaluate(pdir, page, schs[si], f"{proj}#p{page}")
+except TimeoutError as e:           # still print where the time went
+    r = {"error": str(e)}
+finally:
+    signal.alarm(0)
+    pr.disable()
 print("PROFILE evaluate seconds", round(time.time() - t1, 1), "prims", r.get("prims"), "gt_pins", r.get("gt_pins"))
 buf = io.StringIO()
 pstats.Stats(pr, stream=buf).sort_stats("cumulative").print_stats(28)
