@@ -121,8 +121,9 @@ def _wire_segments(pi: PageIngest, cls: PageClassification, exclude: set[int]):
 
 
 def _part_stem(name: str) -> str:
-    """'SIM4X32_2' and 'SIM4X32#u2' are units of the part 'SIM4X32'."""
-    return re.sub(r"(#u\d+|_\d+)$", "", name)
+    """'SIM4X32_2', 'SIM4X32#u2' and 'video_schlib:SIM4X32' are units / per-sheet copies of the part 'SIM4X32'.
+    The library nickname before ':' is not part of the part name (KiCad embeds the same part under both forms)."""
+    return re.sub(r"(#u\d+|_\d+)$", "", name.rsplit(":", 1)[-1])
 
 
 def _line_index(pi: PageIngest, cls: PageClassification, cell: float = 20.0):
@@ -137,21 +138,23 @@ def _line_index(pi: PageIngest, cls: PageClassification, cell: float = 20.0):
     return grid, cell
 
 
-def _stub_supported(hit, lines, params: "PinParams") -> bool:
-    """True when EVERY pin of `hit` has a drawn pin line: one end at the tip, collinear with the pin axis, with a
-    length of 0.5 to 1.3 pin lengths (a bubble may shorten the line). Uses only measured lines, no library data
-    other than the predicted pin positions."""
+def stub_support(hit, lines, params: "PinParams") -> list[tuple[tuple[float, float], str]]:
+    """Pins of `hit` WITHOUT a drawn pin line: (tip, reason). A pin line has one end at the tip, is collinear with
+    the pin axis and has a length of 0.5 to 1.3 pin lengths (a bubble may shorten the line). Uses only measured
+    lines, no library data other than the predicted pin positions. Empty list = every pin is drawn."""
     grid, cell = lines
     pins = [(hit.place(*p.tip), hit.place(*p.base)) for p in hit.symbol.pins]
     if not pins:
-        return False
+        return [((0.0, 0.0), "no pins")]
+    missing = []
     for tip, base in pins:
         plen = math.hypot(tip[0] - base[0], tip[1] - base[1])
         if plen <= 0:
-            return False
+            missing.append((tip, "zero length"))
+            continue
         t2 = max(params.match.tau_abs, params.s2_rel * plen)
         ux, uy = (base[0] - tip[0]) / plen, (base[1] - tip[1]) / plen
-        ok = False
+        ok, why = False, "no line end at tip"
         gx, gy = math.floor(tip[0] / cell), math.floor(tip[1] / cell)
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
@@ -160,13 +163,21 @@ def _stub_supported(hit, lines, params: "PinParams") -> bool:
                         continue
                     vx, vy = far[0] - end[0], far[1] - end[1]
                     ln = math.hypot(vx, vy)
+                    why = f"line length {ln:.2f} vs pin {plen:.2f}"
                     if not (0.5 * plen <= ln <= 1.3 * plen):
                         continue
                     if abs(vx * uy - vy * ux) <= t2 and vx * ux + vy * uy > 0:
                         ok = True
+                    else:
+                        why = "line not along the pin axis"
         if not ok:
-            return False
-    return True
+            missing.append((tip, why))
+    return missing
+
+
+def _stub_supported(hit, lines, params: "PinParams") -> bool:
+    """True when EVERY pin of `hit` has a drawn pin line (see stub_support)."""
+    return not stub_support(hit, lines, params)
 
 
 def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinParams = PinParams(),

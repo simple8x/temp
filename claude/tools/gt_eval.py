@@ -320,6 +320,7 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
     n_local_found = sum(1 for k in used_gt if comp_of(vis[k].x, vis[k].y) is not None)
     miss = collections.Counter()
     dump_n = collections.Counter()
+    dump_lines = [None]
     miss_lib = collections.Counter()
     for k, gp in enumerate(vis):
         if k in used_gt or comp_of(gp.x, gp.y) is None:
@@ -338,6 +339,21 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
                     print("DUMP   nearby cluster", c_.resolution.status, len(c_.cluster.prim_ids), [round(v, 1) for v in bb],
                           "syms", c_.resolution.symbols[:3], "note", c_.resolution.note[:60], "npins", len(c_.pins),
                           "tips", [tuple(round(v, 1) for v in pn.tip) for pn in c_.pins[:3]])
+                    if c_.resolution.status == "DIFFERENT_TIP_SETS":
+                        from ecci.pins import PinParams, _line_index, _part_stem, stub_support
+                        if dump_lines[0] is None:
+                            dump_lines[0] = _line_index(pi, cls)
+                        print("DUMP     stems", sorted({_part_stem(h.symbol.name) for h in c_.resolution.hits}), "hits", len(c_.resolution.hits))
+                        sup = [(h, stub_support(h, dump_lines[0], PinParams())) for h in c_.resolution.hits]
+                        for h, ms in sorted(sup, key=lambda t: len(t[1]))[:4]:
+                            print("DUMP     hit", h.symbol.name, "o", h.orient, "missing", len(ms), "of", len(h.symbol.pins),
+                                  [((round(t[0], 1), round(t[1], 1)), r) for t, r in ms[:4]])
+                        h0, ms0 = min(sup, key=lambda t: len(t[1]))
+                        for t, r in ms0[:2]:
+                            for q in pi.prims:
+                                if any(math.hypot(a - t[0], b - t[1]) <= 4 for a, b in q.pts):
+                                    print("DUMP       at", (round(t[0], 1), round(t[1], 1)), "prim", q.id, q.kind, cls.records[q.id].cls,
+                                          round(q.stroke_w, 2), len(q.pts), q.line_closed, [(round(a, 1), round(b, 1)) for a, b in q.pts][:4])
                     if c_.pins:
                         same = [g_ for g_ in vis if g_.ref == gp.ref][:3]
                         print("DUMP     gt pins of", gp.ref, [(g_.number, round(g_.x, 1), round(g_.y, 1)) for g_ in same])

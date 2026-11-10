@@ -246,3 +246,71 @@ def test_p8d_pin_lines_of_the_wrong_length_do_not_select_a_unit(tmp_path):
     pi = ingest_pdf(one_page(ops, size=(W, H))).pages[0]
     res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
     assert len(res) == 1 and res[0].resolution.status == "DIFFERENT_TIP_SETS"
+
+
+# The same part embedded twice, as KiCad does: once as "<lib>:<part>" and once as a per-sheet copy "<part>_1".
+# Asymmetric pins on a symmetric rectangle: only the drawn pin lines tell the orientation (and the copy) apart.
+COPIES = """(kicad_symbol_lib (version 20231120) (generator test)
+  (symbol "video_schlib:CP" (pin_names (offset 0))
+    (symbol "CP_0_1"
+      (rectangle (start -5.08 -7.62) (end 5.08 7.62) (stroke (width 0.254) (type default)) (fill (type background))))
+    (symbol "CP_1_1"
+      (pin input line (at -7.62 5.08 0) (length 2.54) (name "A") (number "1"))
+      (pin input line (at -6.35 2.54 0) (length 1.27) (name "NC") (number "2"))
+      (pin input line (at 7.62 -5.08 180) (length 2.54) (name "B") (number "3"))))
+  (symbol "CP_1" (pin_names (offset 0))
+    (symbol "CP_1_0_1"
+      (rectangle (start -5.08 -7.62) (end 5.08 7.62) (stroke (width 0.254) (type default)) (fill (type background))))
+    (symbol "CP_1_1_1"
+      (pin input line (at -7.62 5.08 0) (length 2.54) (name "A") (number "1"))
+      (pin input line (at -6.35 2.54 0) (length 1.27) (name "NC") (number "2"))
+      (pin input line (at 7.62 -5.08 180) (length 2.54) (name "B") (number "3")))))
+"""
+
+
+def test_part_stem_ignores_library_nickname_and_unit_suffix():
+    from ecci.pins import _part_stem
+    assert _part_stem("video_schlib:SIM4X32") == _part_stem("SIM4X32_3") == _part_stem("SIM4X32#u2") == "SIM4X32"
+    assert _part_stem("Logic:XCZU4CG-1SFVC784E#u10") == "XCZU4CG-1SFVC784E"
+    assert _part_stem("a:R") != _part_stem("a:C")
+
+
+def test_p8e_copies_of_one_part_under_library_and_sheet_names_are_resolved_by_pin_lines(tmp_path):
+    f = tmp_path / "cp.kicad_sym"
+    f.write_text(COPIES)
+    lib = load_library(str(f))
+    assert set(lib.symbols) == {"video_schlib:CP", "CP_1"}
+    pi = ingest_pdf(one_page(_draw_unit(lib, "CP_1"), size=(W, H))).pages[0]
+    res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
+    assert len(res) == 1
+    cr = res[0]
+    assert cr.resolution.status == "UNIQUE", cr.resolution.note
+    assert cr.resolution.id_state == "CONFIRMED" and sorted(p.numbers for p in cr.pins) == [("1",), ("2",), ("3",)]
+    assert all(p.pos_state == POS_CANDIDATE for p in cr.pins)       # the lines chose; they are not independent S2
+
+
+def test_p8f_without_pin_lines_the_copies_stay_ambiguous(tmp_path):
+    f = tmp_path / "cp.kicad_sym"
+    f.write_text(COPIES)
+    lib = load_library(str(f))
+    pi = ingest_pdf(one_page(_draw_unit(lib, "CP_1", with_pins=False), size=(W, H))).pages[0]
+    res = [r for r in detect_pins(pi, classify_page(pi), list(lib.symbols.values())) if r.cluster.bbox[2] - r.cluster.bbox[0] > 40]
+    assert len(res) == 1 and res[0].resolution.status == "DIFFERENT_TIP_SETS" and res[0].pins == []
+
+
+def test_stub_support_names_the_undrawn_pins(tmp_path):
+    from ecci.pins import PinParams, _line_index, stub_support
+    from ecci.template import match_cluster
+    from ecci.symbols import body_clusters
+    lib = _multi_unit_lib(tmp_path)
+    pi = ingest_pdf(one_page(_draw_unit(lib, "MU"), size=(W, H))).pages[0]
+    cls = classify_page(pi)
+    lines = _line_index(pi, cls)
+    cl = max(body_clusters(pi, cls, 0.02, 0.1), key=lambda c: c.bbox[2] - c.bbox[0])
+    from ecci.symbols import strip_stubs
+    by_id = {q.id: q for q in pi.prims}
+    red = strip_stubs(cl, by_id)
+    hits = match_cluster(red[0] if red else cl, list(lib.symbols.values()))
+    miss = {h.symbol.name + str(h.orient): stub_support(h, lines, PinParams()) for h in hits}
+    assert any(not v for v in miss.values())                 # the drawn unit: every pin has its line
+    assert any(v and all(isinstance(r, str) for _, r in v) for v in miss.values())   # the others: named reasons
