@@ -124,7 +124,15 @@ def map_pages_to_sheets(pdf_path: str, schs: list, npages: int):
             for k, v in res.items()}
 
 
-def evaluate_project(pdir: pathlib.Path) -> list[dict]:
+def plan_project(pdir: pathlib.Path) -> list[dict]:
+    """Decide, for one project, which pages are evaluated and against which sheet.
+
+    Returns one slot per page in page order: either a FINAL record (a skip, with its reason) or a TASK
+    (``{"task": ...}``) to be evaluated later. Planning is separated from evaluation so that pages of one
+    project are spread over all workers: a 40-page project used to run start-to-finish inside a single worker
+    and set the wall-clock floor for the whole run.
+    """
+    t0 = time.time()
     xml = sorted(pdir.glob("*.xml"))
     pdf = sorted(pdir.glob("*.pdf"))
     if not xml or not pdf:
@@ -132,14 +140,17 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
     schs = sorted((pdir / "src").rglob("*.kicad_sch"))
     with pikepdf.open(pdf[0]) as p:
         npages = len(p.pages)
+
+    def task(page: int, si: int, name: str, score=1.0, instance=None) -> dict:
+        return {"task": {"pdir": str(pdir), "page": page, "sch": str(schs[si]), "name": name,
+                         "instance": instance, "score": score}}
+
     if npages == 1 and len(schs) == 1:
-        if not wanted(pdir.name):
-            return []
-        return [evaluate(pdir, 0, schs[0], pdir.name)]
+        return [task(0, 0, pdir.name)] if wanted(pdir.name) else []
     if npages > 80 or len(schs) > 80:
         return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
     mp = map_pages_to_sheets(str(pdf[0]), schs, npages)
-    inst = {}
+    inst: dict[int, str] = {}
     try:      # repeated sheets: pages follow the depth-first sheet order; trust it only if EVERY page agrees with geometry
         root = find_root([str(x) for x in schs], str(pdir / "src"))
         hier = hierarchy(str(root)) if root else []
@@ -151,7 +162,8 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
                 mp[k] = (si, mp[k][1], mp[k][2], mp[k][3])
     except Exception as e:  # noqa: BLE001
         print("GT_HIER_FAIL", pdir.name, type(e).__name__, e, flush=True)
-    out = []
+    print(f"GT_PLAN {pdir.name} seconds={round(time.time() - t0, 1)} pages={npages} sheets={len(schs)}", flush=True)
+    out: list[dict] = []
     for k, (si, score, second, top3) in sorted(mp.items()):
         name = f"{pdir.name}#p{k}"
         if not wanted(name):
@@ -159,21 +171,29 @@ def evaluate_project(pdir: pathlib.Path) -> list[dict]:
         if si is None:
             out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})", "map_top3": top3})
             continue
-        try:
-            print("GT_PAGE_START", name, flush=True)
-            signal.signal(signal.SIGALRM, _on_alarm)
-            signal.alarm(PAGE_SECONDS)
-            try:
-                r = evaluate(pdir, k, schs[si], name, inst.get(k))
-            finally:
-                signal.alarm(0)
-            r["sheet"] = str(schs[si].relative_to(pdir / "src"))
-            r["instance"] = inst.get(k)
-            r["map_score"] = score
-        except Exception as e:  # noqa: BLE001
-            r = {"project": name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
-        out.append(r)
+        out.append(task(k, si, name, score, inst.get(k)))
     return out
+
+
+def run_task(t: dict) -> dict:
+    """Evaluate one planned page. Never raises: a failure (timeout included) becomes a record with "error",
+    which `coverage` turns into a failure of the whole run."""
+    pdir, sch = pathlib.Path(t["pdir"]), pathlib.Path(t["sch"])
+    try:
+        print("GT_PAGE_START", t["name"], flush=True)
+        signal.signal(signal.SIGALRM, _on_alarm)
+        signal.alarm(PAGE_SECONDS)
+        try:
+            r = evaluate(pdir, t["page"], sch, t["name"], t["instance"])
+        finally:
+            signal.alarm(0)
+        if "skipped" not in r:
+            r["sheet"] = str(sch.relative_to(pdir / "src")) if (pdir / "src") in sch.parents else sch.name
+            r["instance"] = t["instance"]
+            r["map_score"] = t["score"]
+        return r
+    except Exception as e:  # noqa: BLE001
+        return {"project": t["name"], "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
 
 
 ONLY = [x for x in os.environ.get("GT_ONLY", "").split(",") if x]
@@ -419,9 +439,9 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
     }
 
 
-def _safe_project(d: pathlib.Path) -> list[dict]:
+def _safe_plan(d: pathlib.Path) -> list[dict]:
     try:
-        return evaluate_project(d)
+        return plan_project(d)
     except Exception as e:  # noqa: BLE001  one project must never hide the others
         return [{"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}]
 
@@ -430,12 +450,29 @@ def main(root: str) -> int:
     tot = collections.Counter()
     miss_libs_tot = collections.Counter()
     dirs = sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir() and wanted(p.name))
-    results = []
     workers = max(1, int(os.environ.get("GT_WORKERS", os.cpu_count() or 1)))
+    t0 = time.time()
     with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as ex:
-        futs = {d: ex.submit(_safe_project, d) for d in dirs}
-        for d in dirs:     # deterministic output order regardless of completion order
-            results.append(futs[d].result())
+        plans = [ex.submit(_safe_plan, d) for d in dirs]
+        slots = [p.result() for p in plans]                 # deterministic: one list per project, in page order
+        t1 = time.time()
+        # one flat queue of pages: a project with many pages no longer occupies a single worker. Heavier pages
+        # (more PDF bytes per page) are submitted first so the longest page cannot be the last one started.
+        jobs = [(pi, si, slot["task"]) for pi, ps in enumerate(slots) for si, slot in enumerate(ps) if "task" in slot]
+
+        def weight(j):
+            try:
+                pdf = sorted(pathlib.Path(j[2]["pdir"]).glob("*.pdf"))
+                return -pdf[0].stat().st_size if pdf else 0
+            except OSError:
+                return 0
+
+        futs = {(pi, si): ex.submit(run_task, t) for pi, si, t in sorted(jobs, key=weight)}
+        for (pi, si), f in futs.items():
+            slots[pi][si] = f.result()
+    print(f"GT_TIMING plan_seconds={round(t1 - t0, 1)} eval_seconds={round(time.time() - t1, 1)} "
+          f"workers={workers} pages={len(futs)}", flush=True)
+    results = slots
     for rs in results:
         for r in rs:
             print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
@@ -497,10 +534,12 @@ def coverage(results: list, dirs: list) -> dict:
     On a full run (no GT_ONLY) the number of exported projects and evaluated pages must reach the pinned minimum."""
     flat = [r for rs in results for r in rs]
     errors = sorted(r["project"] for r in flat if "error" in r)
-    ok = [r for r in flat if "error" not in r and "skipped" not in r]
+    ok = [r for r in flat if "error" not in r and "skipped" not in r and "task" not in r]
     skipped = [r for r in flat if "skipped" in r]
     projects = sum(1 for d in dirs if any(d.glob("*.xml")) and any(d.glob("*.pdf")))
     problems = [f"page error: {e}" for e in errors]
+    never_ran = sorted(r["task"]["name"] for rs in results for r in rs if "task" in r)
+    problems += [f"page never evaluated: {n}" for n in never_ran]
     if not ONLY:
         min_pages = int(os.environ.get("GT_MIN_PAGES", "0") or 0)
         exp_proj = int(os.environ.get("GT_EXPECT_PROJECTS", "0") or 0)

@@ -189,6 +189,8 @@ MUTATIONS = [
      "            if j == i or gk[j] == gk[i]:", "            if j == i:"),
     ("M99-strip-stubs-grid-margin-ignores-stroke", "ecci/symbols.py",
      "    margin = eps + 0.5 * (wmax + wmax)", "    margin = eps"),
+    ("M100-gt-unevaluated-page-ignored", "tools/gt_eval.py",
+     'problems += [f"page never evaluated: {n}" for n in never_ran]', "problems += []"),
     ("M94-gt-incomplete-run-passes", "tools/gt_eval.py",
      '    if cov["problems"]:\n', "    if False:\n"),
     ("M95-gt-page-error-not-a-problem", "tools/gt_eval.py",

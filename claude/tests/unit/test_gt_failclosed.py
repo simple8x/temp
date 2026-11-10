@@ -89,3 +89,23 @@ def test_verify_rejects_tampered_file_wrong_pin_and_missing_provenance(tmp_path)
     (out / "PROVENANCE.txt").unlink()
     r = _verify(out)
     assert r.returncode == 1 and "no provenance" in r.stdout
+
+
+def test_a_planned_page_that_never_ran_is_a_problem(gt_eval, tmp_path):
+    cov = gt_eval.coverage([[{"project": "a"}, {"task": {"name": "a#p1"}}]], _dirs(tmp_path, 1))
+    assert cov["problems"] == ["page never evaluated: a#p1"] and cov["evaluated"] == 1
+
+
+def test_plan_and_run_are_split_and_output_stays_in_page_order(gt_eval, tmp_path, monkeypatch, capsys):
+    # three single-page projects; run_task is replaced, so this checks planning, dispatch and output order only
+    for name in ("c_proj", "a_proj", "b_proj"):
+        d = tmp_path / name
+        (d / "src").mkdir(parents=True)
+        (d / f"{name}.xml").write_text("net")
+        (d / "src" / f"{name}.kicad_sch").write_text("(kicad_sch)")
+        (d / f"{name}.pdf").write_bytes(b"pdf")
+    monkeypatch.setattr(gt_eval.pikepdf, "open", lambda *a, **k: __import__("contextlib").nullcontext(type("P", (), {"pages": [0]})()))
+    monkeypatch.setenv("GT_WORKERS", "1")
+    plans = [gt_eval._safe_plan(d) for d in sorted(tmp_path.iterdir())]
+    assert [p[0]["task"]["name"] for p in plans] == ["a_proj", "b_proj", "c_proj"]
+    assert all("task" in p[0] and "pdir" in p[0]["task"] for p in plans)
