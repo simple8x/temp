@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # PR events default to the synthetic merge ref. Audit the source branch
+          # head instead so main's history is not misclassified as branch changes.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - name: Isolation gate (only claude/** and claude-*.yml may change)
         run: |
