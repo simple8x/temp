@@ -274,3 +274,68 @@ def test_altered_pin_file_makes_the_cli_fail(tmp_path):
     bad = write(tmp_path, canon_lines(GATE_MIN_PIN_RECALL="0.5"))
     r = subprocess.run([sys.executable, str(TOOLS / "gt_gate.py"), str(logf), str(bad)], capture_output=True, text=True)
     assert r.returncode != 0 and "M4_GATE PASS" not in r.stdout
+
+
+# ---------------------------------------------------------------- exact decimal semantics (no float rounding)
+
+TINY = {  # values that round to the frozen float (or very near it) but are NOT the frozen value
+    "GATE_MAX_FP_V": ["0.00000000000000000001", "0.0000000000000000000000000000001"],
+    "GATE_MAX_FP_I": ["0.00000000000000000001", "0.0000000000000000000000000000001"],
+    "GATE_MIN_PIN_RECALL": ["0.54999999999999999", "0.549999999999999999999999", "0.55000000000000001",
+                            "0.550000000000000000000001"],
+    "GATE_MIN_PAGES": ["99.999999999999999", "99.99999999999999999999", "100.00000000000001",
+                       "100.0000000000000000000001"],
+    "GATE_PROJECTS": ["31.999999999999999", "31.99999999999999999999", "32.000000000000001",
+                      "32.0000000000000000000001"],
+}
+
+
+@pytest.mark.parametrize("key,val", [(k, v) for k, vs in TINY.items() for v in vs])
+def test_tiny_deviation_that_rounds_to_the_same_float_still_fails(tmp_path, key, val):
+    assert float(val) == gt_gate.FROZEN[key] or abs(float(val) - gt_gate.FROZEN[key]) < 1e-12
+    with pytest.raises(ValueError, match=key):
+        gt_gate.load_gate(write(tmp_path, canon_lines(**{key: val})))
+
+
+@pytest.mark.parametrize("key,val", [("GATE_MIN_PIN_RECALL", "0.550"), ("GATE_MIN_PAGES", "100.0"),
+                                     ("GATE_PROJECTS", "32.000"), ("GATE_MAX_FP_V", "0.0")])
+def test_equal_decimal_spellings_are_the_same_pin(tmp_path, key, val):
+    assert gt_gate.load_gate(write(tmp_path, canon_lines(**{key: val}))) == gt_gate.FROZEN
+
+
+def test_load_gate_returns_the_frozen_constants():
+    assert gt_gate.FROZEN_TEXT == CANON
+    assert gt_gate.load_gate(TOOLS / "gt_gate.txt") == gt_gate.FROZEN
+
+
+@pytest.mark.parametrize("raw,ok", [("0.55", True), ("0.5509", True), ("0.54999999999999999", False),
+                                    ("0.549999999999999999999", False), ("0.55000000000000001", True)])
+def test_log_pin_recall_is_compared_exactly(raw, ok):
+    text = raw_log().replace('"pin_recall": 0.5509', f'"pin_recall": {raw}')
+    assert f'"pin_recall": {raw}' in text
+    assert (gt_gate.check(text, G) == []) is ok, gt_gate.check(text, G)
+
+
+@pytest.mark.parametrize("field,raw", [("FP_V", "0.00000000000000000001"), ("FP_I", "1e-30"),
+                                       ("FP_V", "-0.00000000000000000001")])
+def test_log_fp_counts_are_compared_exactly(field, raw):
+    fp = {"FP_V": "0", "FP_I": "0", field: raw}
+    text = raw_log().replace('"detected": {"FP_V": 0, "FP_I": 0}',
+                             '"detected": {"FP_V": %s, "FP_I": %s}' % (fp["FP_V"], fp["FP_I"]))
+    assert raw in text
+    assert any(f"detected.{field}" in p for p in gt_gate.check(text, G))
+
+
+@pytest.mark.parametrize("field,raw", [("evaluated", "99.99999999999999999"), ("projects", "32.0000000000000001"),
+                                       ("projects", "31.99999999999999999")])
+def test_log_page_and_project_counts_are_compared_exactly(field, raw):
+    text = raw_log().replace(f'"{field}": {100 if field == "evaluated" else 32}', f'"{field}": {raw}')
+    assert raw in text
+    assert any(p.startswith(field + "=") for p in gt_gate.check(text, G))
+
+
+@pytest.mark.parametrize("dup", ['"FP_V": 0, "FP_V": 5', '"FP_V": 5, "FP_V": 0'])
+def test_duplicate_json_keys_in_a_record_fail(dup):
+    text = raw_log().replace('"detected": {"FP_V": 0', '"detected": {' + dup, 1)
+    assert dup in text
+    assert any("duplicate JSON keys" in p for p in gt_gate.check(text, G))

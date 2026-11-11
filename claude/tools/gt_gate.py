@@ -9,13 +9,18 @@ import json
 import math
 import pathlib
 import re
+from decimal import Decimal, InvalidOperation
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 # M4.0 is FROZEN: the pin file must state exactly these keys with exactly these values. Anything else (a weakened,
 # tightened, missing, duplicated, unknown or malformed pin) is a configuration error, never a different gate.
-FROZEN = {"GATE_MAX_FP_V": 0.0, "GATE_MAX_FP_I": 0.0, "GATE_MIN_PIN_RECALL": 0.55,
-          "GATE_MIN_PAGES": 100.0, "GATE_PROJECTS": 32.0}
+# Values are exact decimals and are validated with Decimal, never float: "0.54999999999999999" rounds to the same
+# float as 0.55 but is a different (weaker) pin and must be rejected.
+FROZEN_TEXT = {"GATE_MAX_FP_V": "0", "GATE_MAX_FP_I": "0", "GATE_MIN_PIN_RECALL": "0.55",
+               "GATE_MIN_PAGES": "100", "GATE_PROJECTS": "32"}
+FROZEN_DEC = {k: Decimal(v) for k, v in FROZEN_TEXT.items()}
+FROZEN = {k: float(v) for k, v in FROZEN_TEXT.items()}     # what load_gate returns (always from these constants)
 REQUIRED = tuple(FROZEN)
 _KEY = re.compile(r"[A-Z][A-Z0-9_]*")
 _LITERAL = re.compile(r"[0-9]+(?:\.[0-9]+)?")     # plain decimal: no sign, exponent, nan, inf, bool, _ or spaces
@@ -37,31 +42,58 @@ def load_gate(path) -> dict:
             raise ValueError(f"gate pin {k} given twice")
         if not _LITERAL.fullmatch(v):
             raise ValueError(f"line {n}: {k}={v!r} is not a plain decimal number")
-        x = float(v)
-        if not math.isfinite(x) or x != FROZEN[k]:
-            raise ValueError(f"gate pin {k}={v} differs from the frozen M4.0 value {FROZEN[k]:g}")
-        g[k] = x
+        try:
+            x = Decimal(v)
+        except InvalidOperation:
+            raise ValueError(f"line {n}: {k}={v!r} is not a decimal number") from None
+        if not x.is_finite() or x != FROZEN_DEC[k]:
+            raise ValueError(f"gate pin {k}={v} differs from the frozen M4.0 value {FROZEN_TEXT[k]}")
+        g[k] = FROZEN[k]                  # the frozen constant itself, never a float parsed from the file
     missing = [k for k in REQUIRED if k not in g]
     if missing:
         raise ValueError(f"gate pins missing: {missing}")
     return g
 
 
+class _Dec(Decimal):
+    """A JSON number from the log, kept exact (no float rounding: 0.54999999999999999 stays below 0.55)."""
+    def __repr__(self):
+        return str(self)
+
+
+def _dec(x):
+    """Exact Decimal of an int / float / Decimal (a float by its shortest repr, i.e. the value that was written)."""
+    if isinstance(x, Decimal):
+        return x
+    return _Dec(repr(x)) if isinstance(x, float) else _Dec(x)
+
+
 def _num(x):
-    """A finite real number, or None. bool, str, None, NaN and +/-Infinity are never numbers here."""
-    if isinstance(x, bool) or not isinstance(x, (int, float)):
+    """A finite real number as an exact Decimal, or None. bool, str, None, NaN and +/-Infinity are never numbers."""
+    if isinstance(x, bool) or not isinstance(x, (int, float, Decimal)):
         return None
-    return x if math.isfinite(x) else None
+    if isinstance(x, float) and not math.isfinite(x):
+        return None
+    v = _dec(x)
+    return v if v.is_finite() else None
 
 
 def _count(x):
-    """A non-negative integer count (int, or a float with an integral value), or None."""
+    """A non-negative integer count (an integral number), or None."""
     v = _num(x)
-    return v if v is not None and v >= 0 and float(v).is_integer() else None
+    return v if v is not None and v >= 0 and v == v.to_integral_value() else None
 
 
 def _reject_constant(c):
     raise ValueError(f"non-finite JSON constant {c}")
+
+
+def _no_dup_keys(pairs):
+    keys = [k for k, _ in pairs]
+    dup = sorted({k for k in keys if keys.count(k) > 1})
+    if dup:
+        raise ValueError(f"duplicate JSON keys {dup}")
+    return dict(pairs)
 
 
 MISSING = object()
@@ -69,6 +101,7 @@ MISSING = object()
 
 def check(log_text: str, g: dict) -> list[str]:
     problems: list[str] = []
+    g = {k: _dec(v) for k, v in g.items()}   # thresholds compared exactly, as Decimal
 
     def fail(msg):
         problems.append(msg)
@@ -79,7 +112,8 @@ def check(log_text: str, g: dict) -> list[str]:
             if line.startswith(tag + " "):
                 body = line[len(tag) + 1:]
                 try:
-                    recs[tag].append(json.loads(body, parse_constant=_reject_constant))
+                    recs[tag].append(json.loads(body, parse_constant=_reject_constant, parse_float=_Dec,
+                                                  object_pairs_hook=_no_dup_keys))
                 except ValueError as x:          # JSONDecodeError is a ValueError
                     fail(f"malformed {tag} record: {x}")
                     recs[tag].append(MISSING)
