@@ -1,11 +1,11 @@
 name: claude-m1
 
 on:
+  # Run on every update to the isolated branch. A paths filter here would let a
+  # PR that changes only forbidden files bypass the isolation gate entirely.
   push:
     branches: [claude]
-    paths: ["claude/**", ".github/workflows/claude-*.yml"]
   pull_request:
-    paths: ["claude/**", ".github/workflows/claude-*.yml"]
   workflow_dispatch:
 
 permissions:
