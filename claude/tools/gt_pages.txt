@@ -1,0 +1,12 @@
+# Disposition of every PAGE of the exported corpus: evaluated, or listed here with its reason. A page that moves
+# between the two (mapping improved, or a page stops being evaluated) fails the run until this file is updated.
+# The 4 projects of EXPECT_EXPORT_FAIL contribute no pages at all and are therefore not counted here.
+EXPECT_MIN_PAGES=100
+# the exact projects that must export (pdf + netlist), by name; must have EXPECT_EXPORT_OK names. Checked against
+# the files present by gt_verify.sh (cached or fresh) and against the evaluated corpus by gt_eval.py. Kept here,
+# not in gt_source.txt, because it is a check on the data, not an input: pinning it must not force a re-export.
+EXPECT_EXPORT_OK_LIST=Class-D,One-Air-Max,Q17ng,RoyalBlue54L-Feather,RoyalBlue54L-NFC-Antenna,a-multi,amplifier-ac,buck_conv,complex_hierarchy,ecc83-pp,ecc83-pp_v2,generic_opamp_bip,hv_converter,ibis,interf_u,jetson-agx-thor-baseboard,kit-dev-coldfire-xilinx_5213,laser_driver,mainsheet,mult_vca810,multichannel_mixer,power_supply,rectifier,royer1,sallen_key,smps-com,sonde xilinx,tinytapeout-demo,up-down-c,v_i_sources,video,vme-wren
+EXPECT_TOTAL_PAGES=142
+# pages skipped because one sheet is instantiated several times, so page -> sheet is not one-to-one (UNKNOWN,
+# NOT a measured result; they are excluded from every number reported by gt_eval)
+SKIP_REPEATED_SHEET=vme-wren#p15,vme-wren#p28,vme-wren#p29,vme-wren#p30,vme-wren#p31,vme-wren#p32,vme-wren#p33,vme-wren#p34,vme-wren#p35,vme-wren#p36,vme-wren#p37,vme-wren#p38,vme-wren#p39,vme-wren#p40,vme-wren#p41,vme-wren#p42,vme-wren#p43,vme-wren#p44,vme-wren#p45,vme-wren#p46,vme-wren#p47,vme-wren#p48,vme-wren#p52,vme-wren#p53,vme-wren#p54,vme-wren#p55,vme-wren#p56,vme-wren#p57,vme-wren#p58,vme-wren#p59,vme-wren#p60,vme-wren#p61,vme-wren#p62,vme-wren#p63,vme-wren#p64,vme-wren#p65,vme-wren#p66,vme-wren#p67,vme-wren#p68,vme-wren#p69,vme-wren#p70,vme-wren#p71

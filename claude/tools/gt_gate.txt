@@ -1,0 +1,7 @@
+# M4.0 regression gate (M4.0 is FROZEN). Enforced by gt_gate.py on every claude-gt run; a partial run
+# (GT_ONLY) or any regression fails the job. Lowering a threshold here is loosening an assertion: do not.
+GATE_MAX_FP_V=0
+GATE_MAX_FP_I=0
+GATE_MIN_PIN_RECALL=0.55
+GATE_MIN_PAGES=100
+GATE_PROJECTS=32

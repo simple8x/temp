@@ -1,0 +1,9 @@
+# What the ground-truth DATA depends on. The cache key hashes this file and gt_export.sh, so a change here
+# forces a fresh KiCad install and export (~20 min). Page bookkeeping lives in gt_pages.txt, which is NOT part
+# of the cache key: fixing an inventory pin must not cost an export.
+KICAD_SRC_SHA=c4d506e7a9de9740f288ebb25ce77f07852569b7
+KICAD_PKG=9.0.9~ubuntu24.04.1
+KICAD_CLI_VERSION=9.0.9
+# projects that must export (pdf + netlist) and the ones known to fail export with this build
+EXPECT_EXPORT_OK=32
+EXPECT_EXPORT_FAIL=CM5_MINIMA_3,StickHub,constraints,pic_programmer
