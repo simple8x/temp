@@ -96,7 +96,7 @@ def fourway_site(sid: str, arms: dict[str, str]) -> Site:
 
 @dataclass(frozen=True)
 class SiteResult:
-    status: str                       # INFERRED (resolved) | UNKNOWN | CONFLICT
+    status: str
     option: str | None
     reason: str
 
@@ -105,8 +105,8 @@ class SiteResult:
 class Net:
     id: str
     objects: tuple
-    status: str                       # "CONFLICT" (quarantined) | "OK"
-    closure: str                      # "CLOSED" | "OPEN"
+    status: str
+    closure: str
     open_reasons: tuple
     warnings: tuple
 
@@ -116,21 +116,16 @@ class SolveResult:
     edge_status: dict
     sites: dict
     nets: list
-    quarantined: list                 # [(objects, violations)]
+    quarantined: list
     warnings: list
     _net_of: dict = field(default_factory=dict, repr=False)
     _vgroup: dict = field(default_factory=dict, repr=False)
     _quar: set = field(default_factory=set, repr=False)
-    final_edges: list = field(default_factory=list, repr=False)   # (id, a, b) of the edges that form the nets
-    _elec_of: dict = field(default_factory=dict, repr=False)      # partition of the ELECTRICAL edges only
+    final_edges: list = field(default_factory=list, repr=False)
+    _elec_of: dict = field(default_factory=dict, repr=False)
 
     def pair_status(self, p: str, q: str) -> str:
-        """VERIFIED / INFERRED = an all-VERIFIED / partly-INFERRED ELECTRICAL path joins p and q.
-        CONFLICT = same quarantined net. Otherwise UNKNOWN. There is no 'different net' claim.
-
-        Structural attachment (an unresolved terminal belongs to its wire's net) puts objects in the same net so
-        that the net is reported OPEN, but it is not a path: a pair that only an attachment joins is UNKNOWN,
-        never INFERRED. `_elec_of` is therefore built WITHOUT the attachments, and `_net_of` with them."""
+        """Return only evidence-backed electrical path status; attachment alone is not a path."""
         if p == q or p not in self._net_of or q not in self._net_of:
             return UNKNOWN
         if self._net_of[p] != self._net_of[q]:
@@ -138,7 +133,7 @@ class SolveResult:
         if self._net_of[p] in self._quar:
             return CONFLICT
         if self._elec_of.get(p, p) != self._elec_of.get(q, q):
-            return UNKNOWN                     # same net only through an attachment: no electrical claim
+            return UNKNOWN
         return VERIFIED if self._vgroup.get(p) == self._vgroup.get(q) and p in self._vgroup else INFERRED
 
     def to_dict(self) -> dict:
@@ -156,8 +151,6 @@ class SolveResult:
     def digest(self) -> str:
         return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
 
-
-# ------------------------------------------------------------------------------ helpers
 
 def _components(objs: list[str], edges: list) -> dict[str, str]:
     """obj -> representative (the smallest id of its component). Deterministic."""
@@ -206,13 +199,38 @@ def _validate(G: ConnGraph) -> None:
             raise GraphError(f"site {s.id}: bad option list")
         if s.fixed is not None and s.fixed not in names:
             raise GraphError(f"site {s.id}: fixed option not in domain")
-        for _, o in s.arms:
-            if o not in known:
+
+        # A site's finite domain may connect only the objects explicitly declared as
+        # arms of that site. Validate the complete arm record before trusting options.
+        if not isinstance(s.arms, tuple) or not s.arms:
+            raise GraphError(f"site {s.id}: bad arm list")
+        labels, arm_objects = [], []
+        for arm in s.arms:
+            if not isinstance(arm, tuple) or len(arm) != 2:
+                raise GraphError(f"site {s.id}: malformed arm record")
+            label, obj = arm
+            if not isinstance(label, str) or not label.strip():
+                raise GraphError(f"site {s.id}: invalid arm label")
+            if not isinstance(obj, str) or obj not in known:
                 raise GraphError(f"site {s.id}: unknown arm object")
+            labels.append(label)
+            arm_objects.append(obj)
+        if len(set(labels)) != len(labels):
+            raise GraphError(f"site {s.id}: duplicate arm label")
+        if len(set(arm_objects)) != len(arm_objects):
+            raise GraphError(f"site {s.id}: duplicate arm object")
+        arm_set = set(arm_objects)
+
         for opt in s.options:
-            for a, b in opt.links:
-                if a not in known or b not in known:
-                    raise GraphError(f"site {s.id}: option link references unknown object")
+            if not isinstance(opt.links, frozenset):
+                raise GraphError(f"site {s.id}: option links must be a frozenset")
+            for link in opt.links:
+                if not isinstance(link, tuple) or len(link) != 2:
+                    raise GraphError(f"site {s.id}: malformed option link")
+                a, b = link
+                if (not isinstance(a, str) or not isinstance(b, str)
+                        or a == b or a not in arm_set or b not in arm_set):
+                    raise GraphError(f"site {s.id}: option link endpoints must be distinct site arms")
     for a, b, _ in G.constraints.cannot_link:
         if a not in known or b not in known:
             raise GraphError("cannot_link references unknown object")
@@ -235,17 +253,13 @@ def _name_edges(G: ConnGraph) -> list[Edge]:
     return out
 
 
-# ------------------------------------------------------------------------------ phase 2
-
 def _phase2(objs, V, S, links, cons):
-    """Reject the whole witness set of every violation. Site links are rolled back before
-    ordinary INFERRED edges (a site is an entailed guess, an edge is evidence-bearing).
-    Returns (active S ids, active link ids, rolled-back link ids)."""
+    """Reject the whole witness set of every violation."""
     cur_S = dict(S)
     cur_L = dict(links)
     rolled: set = set()
     for _ in range(len(S) + len(links) + 2):
-        edges = list(V) + [(i, a, b) for i, (a, b) in sorted(cur_S.items())] \
+        edges = list(V) + [(i, a, b) for i, (a, b) in sorted(cur_S.items())] \\
             + [(i, a, b) for i, (a, b) in sorted(cur_L.items())]
         rep = _components(objs, edges)
         groups = _groups(rep)
@@ -279,8 +293,6 @@ def _phase2(objs, V, S, links, cons):
     raise AssertionError("phase 2 did not converge")
 
 
-# ------------------------------------------------------------------------------ solve
-
 def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
     _validate(G)
     cons = G.constraints
@@ -288,31 +300,24 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
     kind = {o.id: o.kind for o in G.objects}
     edges = list(G.edges) + _name_edges(G)
     classified = {e.id: classify_edge(e) for e in edges}
-    emap = {e.id: e for e in edges}
-    # structural membership (an unresolved terminal belongs to its wire's net) is NOT an electrical claim: it joins
-    # the partition, so the net is reported OPEN, but never the VERIFIED groups that pair_status reads.
     A = sorted((f"attach:{o.id}", o.id, o.attach) for o in G.objects if o.attach)
 
     V = sorted([(e.id, e.a, e.b) for e in edges if classified[e.id][0] == VERIFIED])
     S0 = {e.id: (e.a, e.b) for e in edges if classified[e.id][0] == INFERRED}
 
-    # ---- phase 1
     rep1 = _components(objs, V + A)
     groups1 = _groups(rep1)
     quarantined: list = []
     Q: set = set()
-    qroots: set = set()
     for r in sorted(groups1):
         if len(groups1[r]) < 2:
-            # a singleton can still violate C5 only if it shares a net; singletons cannot
             continue
         viol = check_constraints(groups1[r], cons)
         if viol:
             quarantined.append((groups1[r], viol))
             Q |= groups1[r]
-            qroots.add(r)
 
-    V_ok = [e for e in V + A if e[1] not in Q]      # quarantined nets take no further part in phases 2-3
+    V_ok = [e for e in V + A if e[1] not in Q]
     status: dict[str, tuple[str, str]] = {}
     S = {}
     for eid, (a, b) in S0.items():
@@ -321,7 +326,6 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
         else:
             S[eid] = (a, b)
 
-    # ---- phases 2 and 3 with re-solve
     sites = {s.id: s for s in G.sites}
     site_res: dict[str, SiteResult] = {}
     committed: dict[str, str] = {}
@@ -356,8 +360,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
                 failed.add(sid)
                 site_res[sid] = SiteResult(CONFLICT, None, "ROLLED_BACK_BY_RESOLVE")
             continue
-        # phase 3 against the current partition
-        edges_now = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
+        edges_now = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \\
             + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
         rep = _components(objs, edges_now)
         groups = _groups(rep)
@@ -436,7 +439,6 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
         site_res[sid] = SiteResult(INFERRED, name, "FIXED_ASSUMPTION" if sites[sid].fixed == name
                                    else "ENTAILED_BY_CONSTRAINTS")
 
-    # ---- final statuses
     for eid, (a, b) in S.items():
         status[eid] = (INFERRED, classified[eid][1]) if eid in active_S else (UNKNOWN, "REJECTED_BY_CONSTRAINT")
     vrep = _components(objs, V)
@@ -446,7 +448,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
         elif classified[e.id][0] == UNKNOWN:
             status[e.id] = classified[e.id]
     links, _ = links_of(committed)
-    elec_edges = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
+    elec_edges = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \\
         + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
     final_edges = list(elec_edges) + A
     frep = _components(objs, final_edges)
