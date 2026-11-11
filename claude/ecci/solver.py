@@ -259,7 +259,7 @@ def _phase2(objs, V, S, links, cons):
     cur_L = dict(links)
     rolled: set = set()
     for _ in range(len(S) + len(links) + 2):
-        edges = list(V) + [(i, a, b) for i, (a, b) in sorted(cur_S.items())] \\
+        edges = list(V) + [(i, a, b) for i, (a, b) in sorted(cur_S.items())] \
             + [(i, a, b) for i, (a, b) in sorted(cur_L.items())]
         rep = _components(objs, edges)
         groups = _groups(rep)
@@ -360,7 +360,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
                 failed.add(sid)
                 site_res[sid] = SiteResult(CONFLICT, None, "ROLLED_BACK_BY_RESOLVE")
             continue
-        edges_now = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \\
+        edges_now = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
             + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
         rep = _components(objs, edges_now)
         groups = _groups(rep)
@@ -448,7 +448,7 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
         elif classified[e.id][0] == UNKNOWN:
             status[e.id] = classified[e.id]
     links, _ = links_of(committed)
-    elec_edges = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \\
+    elec_edges = list(V) + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
         + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
     final_edges = list(elec_edges) + A
     frep = _components(objs, final_edges)
