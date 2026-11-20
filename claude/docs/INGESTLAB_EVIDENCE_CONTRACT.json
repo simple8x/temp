@@ -1,0 +1,33 @@
+{
+  "schema": "ecci.ingestlab-evidence",
+  "schema_version": 1,
+  "status_policy": {
+    "allowed": ["CANDIDATE", "INFERRED", "UNKNOWN", "CONFLICT"],
+    "forbidden_adapter_status": ["VERIFIED", "VERIFIED_CONNECTED", "VERIFIED_SEPARATE"],
+    "promotion_authority": "ECCI independent verifier only"
+  },
+  "document": {
+    "source_sha256": "required lowercase 64-hex digest",
+    "source_bytes": "required positive integer",
+    "page_count": "required positive integer",
+    "extractor": "required name and exact version",
+    "extractor_config_sha256": "required lowercase 64-hex digest"
+  },
+  "evidence_item": {
+    "id": "stable unique id within document",
+    "kind": ["text", "span", "table_cell", "figure", "ocr_text", "label_candidate", "reference_candidate", "value_candidate"],
+    "page_index": "zero-based integer within page_count",
+    "bbox": "finite [x0,y0,x1,y1] in normalized page coordinates; 0<=x0<=x1<=1 and 0<=y0<=y1<=1",
+    "raw_text": "optional exact extractor output; never silently normalized",
+    "raw_payload_sha256": "required lowercase 64-hex digest",
+    "status": "one of status_policy.allowed"
+  },
+  "invariants": [
+    "Every item binds to the exact original source_sha256.",
+    "No item without page_index and bbox may be used as geometric evidence.",
+    "Adapter output may annotate but must never create, merge, or split electrical nets.",
+    "Missing/invalid provenance yields UNKNOWN and a nonzero required-validation result.",
+    "Conflicting text and vector evidence yields CONFLICT or UNKNOWN, never VERIFIED.",
+    "A skipped required fixture is UNKNOWN, never PASS."
+  ]
+}
