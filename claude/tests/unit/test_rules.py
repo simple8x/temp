@@ -317,4 +317,3 @@ def test_pipeline_generated_tr1_tr2_tr3_verified_edges_pass_the_independent_audi
             assert audit_verified(dataclasses.replace(e, n_prims=float(e.n_prims)))
             assert audit_verified(dataclasses.replace(e, coord=e.coord.split("@")[0] + "@nan,0.000"))
         assert audit_result(built.graph, res) == []
-[exit status 0]
