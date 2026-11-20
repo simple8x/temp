@@ -1,0 +1,199 @@
+import pytest
+
+from ecci.classify import (LC_BODY, LC_BORDER, LC_OTHER, LC_WIRE, ClassifyParams, classify_page,
+                           is_manhattan)
+from ecci.classify import LC_TEXT, style_key
+from ecci.ingest_vector import ingest_pdf
+from pdfgen import one_page
+
+W, H = 300, 200
+
+
+def classify(content: bytes, **kw):
+    pi = ingest_pdf(one_page(content, size=(W, H), **kw)).pages[0]
+    return pi, classify_page(pi)
+
+
+WIRES = b"0.45 w 10 10 m 80 10 l S 10 20 m 10 60 l S 90 20 m 90 60 l S"
+
+
+def test_border_frame_is_border_and_never_wire():                 # TC-H1
+    pi, c = classify(WIRES + b" 1.2 w 5 5 290 190 re S")
+    frame = next(p for p in pi.prims if p.origin == "re")
+    assert c.records[frame.id].cls == LC_BORDER
+    assert c.records[frame.id].role_status == "CONFIRMED"         # geometry + style (differs from wires)
+    wires = [p.id for p in pi.prims if p.id != frame.id]
+    assert all(c.records[i].cls == LC_WIRE for i in wires)
+
+
+def test_border_without_style_evidence_is_only_candidate():
+    pi, c = classify(b"0.45 w 5 5 290 190 re S")                    # no wire population, no style evidence
+    assert c.records[0].cls == LC_BORDER and c.records[0].role_status == "CANDIDATE"
+
+
+def test_wire_role_confirmed_by_shape_plus_style_independent_items():
+    pi, c = classify(WIRES)
+    rec = c.records[0]
+    assert rec.cls == LC_WIRE and rec.role_status == "CONFIRMED"
+    reg = c.registry
+    shape, style = reg.items[f"WIRE_SHAPE:0"], reg.items[f"WIRE_STYLE:0"]
+    assert shape.lineage == {"geom:0"} and style.lineage == {"style:0", "pagestat:0"}
+
+
+def test_dashed_and_differently_styled_lines_are_not_wires():     # TC-H4 (class level)
+    pi, c = classify(WIRES + b" [3 2] 0 d 0.45 w 100 100 m 160 100 l S"
+                     b" [] 0 d 0.9 w 100 120 m 160 120 l S")
+    dashed, thick = pi.prims[3], pi.prims[4]
+    assert c.records[dashed.id].cls == LC_BODY and c.records[thick.id].cls == LC_BODY
+    assert "style differs from wire style" in " ".join(c.records[thick.id].reasons)
+
+
+def test_filled_shape_and_diagonal_are_not_wires():
+    pi, c = classify(WIRES + b" 100 100 20 20 re f 150 100 m 190 140 l S")
+    assert all(c.records[p.id].cls != LC_WIRE for p in pi.prims[3:])
+
+
+def test_closed_rect_with_wire_style_is_body_not_wire():
+    pi, c = classify(WIRES + b" 100 100 20 30 re S")
+    assert c.records[pi.prims[3].id].cls == LC_BODY
+
+
+def test_undetermined_wire_style_is_reported_and_downgrades_role():
+    pi, c = classify(b"0.2 w 10 10 m 80 10 l S 0.4 w 10 20 m 80 20 l S 0.6 w 10 30 m 80 30 l S")
+    assert c.wire_style is None and any("undetermined" in n for n in c.notes)
+    assert all(r.cls == LC_WIRE and r.role_status == "CANDIDATE" for r in c.records.values())
+
+
+def test_too_few_lines_for_a_style_population():
+    pi, c = classify(b"0.45 w 10 10 m 80 10 l S 10 20 m 80 20 l S")
+    assert c.wire_style is None and all(r.role_status == "CANDIDATE" for r in c.records.values())
+
+
+def test_large_non_frame_element_is_other():
+    pi, c = classify(WIRES + b" 0.9 w 20 20 m 280 180 l S")
+    assert c.records[pi.prims[3].id].cls == LC_OTHER
+
+
+def test_point_primitive_is_other_unknown():
+    pi, c = classify(WIRES + b" 50 50 m 50 50 l S")
+    r = c.records[pi.prims[3].id]
+    assert pi.prims[3].kind == "point" and r.cls == LC_OTHER and r.role_status == "UNKNOWN"
+
+
+def test_manhattan_tolerance_boundary():
+    pi = ingest_pdf(one_page(b"1 w 0 0 m 100 0.8 l S 0 10 m 100 10.9 l S", size=(W, H))).pages[0]
+    assert is_manhattan(pi.prims[0], 0.5) and not is_manhattan(pi.prims[1], 0.5)   # 0.46 deg vs 0.52 deg
+
+
+def test_no_evidence_item_uses_connectivity_or_weak_sources():
+    pi, c = classify(WIRES + b" 1.2 w 5 5 290 190 re S 0.9 w 100 100 m 120 100 l 120 120 l h S")
+    for it in c.registry.items.values():
+        assert not it.uses_connectivity and it.source == "VECTOR"
+
+
+# ---- wire style by structure, length tie-break, and "never guess" on ambiguity
+def _seg(x0, y0, x1, y1, rgb):
+    return f"{rgb} RG 0.45 w {x0} {y0} m {x1} {y1} l S\n".encode()
+
+
+def _style_of(content: bytes, size=(600, 400)):
+    pi = ingest_pdf(one_page(content, size=size)).pages[0]
+    return classify_page(pi)
+
+
+def test_long_wires_beat_equal_width_short_pin_lines_of_other_colour():
+    g, r = "0 0.6 0", "0.5 0 0"
+    c = b""
+    for i in range(6):                       # green: long wires, chained end to end
+        c += _seg(20 + 80 * i, 100, 100 + 80 * i, 100, g)
+    for i in range(12):                      # dark red: short, uniform pin-like lines, partly touching
+        c += _seg(30 + 40 * i, 200, 30 + 40 * i, 207, r)
+        c += _seg(30 + 40 * i, 207, 37 + 40 * i, 207, r)
+    res = _style_of(c)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_tiny_perfectly_connected_group_cannot_win():
+    c = b""
+    for i in range(5):
+        c += _seg(20 + 100 * i, 100, 110 + 100 * i, 100, "0 0.6 0")
+    for i in range(4):                       # magenta crosses: every end touches another magenta end
+        c += _seg(300, 300 + 8 * i, 304, 300 + 8 * i, "0.5 0 0.5")
+        c += _seg(304, 300 + 8 * i, 304, 304 + 8 * i, "0.5 0 0.5")
+    res = _style_of(c)                       # magenta: 8 lines of 4 pt (32 pt) vs green 450 pt, ratio 1.0 vs 0
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def _chain(y, step, n, rgb, x0=20):
+    return b"".join(_seg(x0 + step * i, y, x0 + step * (i + 1), y, rgb) for i in range(n))
+
+
+def _chain(y, n, step, rgb, x0=20):
+    return b"".join(_seg(x0 + step * k, y, x0 + step * (k + 1), y, rgb) for k in range(n))
+
+
+def test_ambiguous_structure_yields_no_wire_at_all():
+    # two equally connected styles of equal line length: nothing may be called a wire (never guess)
+    res = _style_of(_chain(100, 8, 50, "0 0.6 0") + _chain(200, 8, 50, "0.5 0 0"))
+    assert res.wire_style is None
+    assert not any(r.cls == LC_WIRE for r in res.records.values())
+
+
+def test_length_tie_break_picks_long_lines_when_structure_is_similar():
+    # green: 6 long chained wires; red: 14 short chained lines (structure within the dominance factor)
+    res = _style_of(_chain(100, 6, 80, "0 0.6 0") + _chain(200, 14, 20, "0.5 0 0"))
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_off_colour_body_excludes_bus_like_lines_only_when_body_colours_exist():
+    from ecci.rules import off_colour_body
+    boxes = b"".join(f"0.5 0 0 RG 0.45 w {x} 100 m {x + 20} 100 l {x + 20} 120 l {x} 120 l h S\n".encode()
+                     for x in (20, 80))
+    slanted = b"".join(f"0 0 0.5 RG 0.45 w {x} 40 m {x + 8} 48 l S\n".encode() for x in (20, 60, 100))
+    pi = ingest_pdf(one_page(boxes + slanted, size=(300, 200))).pages[0]
+    cls = classify_page(pi)
+    ex = off_colour_body(pi, cls)
+    blue = {p.id for p in pi.prims if not p.line_closed and style_key(p)[1] == ("rgb", 0.0, 0.0, 0.5)}
+    assert blue and ex == frozenset(blue)
+    only_open = ingest_pdf(one_page(slanted, size=(300, 200))).pages[0]
+    assert off_colour_body(only_open, classify_page(only_open)) == frozenset()
+
+
+def test_style_with_negligible_total_length_loses_even_if_perfectly_connected():
+    green = b"".join(_seg(20 + 70 * k, 100, 70 + 70 * k, 100, "0 0.6 0") for k in range(8))   # 8 x 90, no contact
+    mag = _chain(300, 8, 4, "0.5 0 0.5", x0=40)                                                     # 8 x 4, chained
+    res = _style_of(green + mag)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def _pairs(y, n, rgb, length=50, x0=20):
+    """n lines of `length`; consecutive pairs touch (half of all ends are connected), pairs 30pt apart."""
+    out = b""
+    for k in range(n):
+        base = x0 + (length * 2 + 30) * (k // 2)
+        a = base + (length if k % 2 else 0)
+        out += _seg(a, y, a + length, y, rgb)
+    return out
+
+
+def test_colour_that_draws_closed_outlines_cannot_be_the_wire_style():
+    boxes = b"".join(f"0.5 0 0 RG 0.45 w {x} 300 m {x + 20} 300 l {x + 20} 320 l {x} 320 l h S\n".encode()
+                     for x in (20, 80))
+    red_chain = _chain(100, 8, 50, "0.5 0 0")            # strongly connected, but red also draws bodies
+    green = _pairs(200, 8, "0 0.6 0")                     # weaker structure
+    res = _style_of(boxes + red_chain + green)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_style_of_page_spanning_lines_is_sheet_furniture_not_wire():
+    furniture = _chain(100, 8, 200, "0.5 0 0", x0=0)     # title-block like: mean length far above 0.2 x diagonal
+    green = _pairs(300, 8, "0 0.6 0")
+    res = _style_of(furniture + green)
+    assert res.wire_style is not None and res.wire_style[1] == ("rgb", 0.0, 0.6, 0.0)
+
+
+def test_lone_glyph_of_tiny_strokes_is_text_without_any_row():
+    pts = [(300, 200), (301.2, 200.9), (300.2, 201.6), (301.4, 202.3), (300.3, 203.0), (301.1, 203.8), (300.1, 204.4)]
+    c = b"".join(_seg(a[0], a[1], b[0], b[1], "0.5 0 0") for a, b in zip(pts, pts[1:]))
+    res = _style_of(c)
+    assert all(r.cls == LC_TEXT for r in res.records.values())

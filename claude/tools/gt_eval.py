@@ -1,0 +1,637 @@
+"""Evaluate ECCI against KiCad-computed ground truth (M4.0). Prints one JSON line per project.
+
+Two measurements, so that failures are attributed to the right stage:
+  oracle   GT pin POSITIONS (from the .kicad_sch) are attached to wires by geometry; measures wire
+           connectivity and site handling independently of symbol/pin detection.
+  detected our own detected pins are matched to GT pin positions; measures the whole pipeline.
+A GT pair is positive iff KiCad's netlist puts both pins in one net. Only single-sheet, single-page
+projects are evaluated; hierarchical designs are reported as skipped.
+"""
+import collections
+import concurrent.futures
+import os
+import signal
+import json
+import math
+import pathlib
+import sys
+import tempfile
+import time
+import traceback
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+import pikepdf  # noqa: E402
+
+from ecci.gt_kicad import embedded_library_text, find_root, gt_pins, hierarchy, wire_component_index  # noqa: E402
+from ecci.ingest_vector import ingest_pdf  # noqa: E402
+from ecci.kicad_lib import load_library  # noqa: E402
+from ecci.rules import analyze_page  # noqa: E402
+
+TOL_WIRE = 0.6      # pt: wire end within this distance of a GT pin position
+TOL_PIN = 1.0       # pt: detected pin tip within this distance of a GT pin position
+LEVELS = ("VERIFIED", "INFERRED")
+
+
+def pair_metrics(items, status_fn):
+    """items: list of (key, net). Returns counters over all unordered pairs."""
+    c = collections.Counter()
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            same = items[i][1] == items[j][1]
+            st = status_fn(items[i][0], items[j][0])
+            c["pos" if same else "neg"] += 1
+            if st in LEVELS:
+                c[("TP_" if same else "FP_") + st] += 1
+    out = {"pairs": c["pos"] + c["neg"], "pos": c["pos"], "neg": c["neg"]}
+    for lv in LEVELS:
+        tp, fp = c["TP_" + lv], c["FP_" + lv]
+        out[lv] = {"tp": tp, "fp": fp}
+    tp, fp = c["TP_VERIFIED"] + c["TP_INFERRED"], c["FP_VERIFIED"] + c["FP_INFERRED"]
+    out["precision_V"] = round(c["TP_VERIFIED"] / max(1, c["TP_VERIFIED"] + c["FP_VERIFIED"]), 4)
+    out["recall_V"] = round(c["TP_VERIFIED"] / max(1, c["pos"]), 4)
+    out["precision_VI"] = round(tp / max(1, tp + fp), 4)
+    out["recall_VI"] = round(tp / max(1, c["pos"]), 4)
+    return out
+
+
+def shortest_path(final_edges, a, b):
+    """Edge ids on a shortest a-b path over the edges that form the nets (diagnostics only)."""
+    adj = collections.defaultdict(list)
+    for eid, x, y in final_edges:
+        adj[x].append((y, eid))
+        adj[y].append((x, eid))
+    prev = {a: None}
+    q = collections.deque([a])
+    while q:
+        u = q.popleft()
+        if u == b:
+            break
+        for v, eid in adj[u]:
+            if v not in prev:
+                prev[v] = (u, eid)
+                q.append(v)
+    if b not in prev:
+        return []
+    out, cur = [], b
+    while prev[cur] is not None:
+        cur, eid = prev[cur][0], prev[cur][1]
+        out.append(eid)
+    return out[::-1]
+
+
+MAX_PAGE_PINS = 1500
+PAGE_SECONDS = 150            # wall-clock budget per page; a page over budget is reported, never silently dropped
+
+
+def _on_alarm(signum, frame):
+    raise TimeoutError(f"page exceeded {PAGE_SECONDS}s")
+
+
+def _grid(pts):
+    return {(round(x / 0.5), round(y / 0.5)) for x, y in pts}
+
+
+def _near(g, x, y):
+    cx, cy = round(x / 0.5), round(y / 0.5)
+    return any((cx + i, cy + j) in g for i in (-1, 0, 1) for j in (-1, 0, 1))
+
+
+def map_pages_to_sheets(pdf_path: str, schs: list, npages: int):
+    """Page -> sheet by geometry only: the share of a sheet's wire end points (mm -> pt) found among the end
+    points of the page's polylines. Both come from KiCad (file vs plot), neither from ECCI. A page is mapped only
+    if one sheet clearly wins (>= 0.8 and >= 0.2 above the runner-up) and no other page claims the same sheet."""
+    from ecci.gt_kicad import MM_TO_PT, read_sch
+    sheets = []
+    for sp in schs:
+        sc = read_sch(str(sp))
+        sheets.append([(x * MM_TO_PT, y * MM_TO_PT) for w in sc["wires"] for x, y in w])
+    res = {}
+    ingest = ingest_pdf(pdf_path, pages=list(range(npages)))
+    for k, pg in enumerate(ingest.pages):
+        g = _grid([q for p in pg.prims for q in (p.pts[0], p.pts[-1])])
+        sc = [sum(_near(g, x, y) for x, y in ends) / max(1, len(ends)) if ends else 0.0 for ends in sheets]
+        order = sorted(range(len(sc)), key=lambda i: -sc[i])
+        best = order[0]
+        second = sc[order[1]] if len(order) > 1 else 0.0
+        top3 = [(schs[i].name, round(sc[i], 2)) for i in order[:3]]
+        if sc[best] >= 0.8 and sc[best] - second >= 0.2:
+            res[k] = (best, round(sc[best], 3), round(second, 3), top3)
+        else:
+            res[k] = (None, round(sc[best], 3), round(second, 3), top3)
+    claimed = collections.Counter(v[0] for v in res.values() if v[0] is not None)
+    return {k: (v if v[0] is None or claimed[v[0]] == 1 else (None, v[1], v[2], v[3] + ["claimed-by-several-pages"]))
+            for k, v in res.items()}
+
+
+def plan_project(pdir: pathlib.Path) -> list[dict]:
+    """Decide, for one project, which pages are evaluated and against which sheet.
+
+    Returns one slot per page in page order: either a FINAL record (a skip, with its reason) or a TASK
+    (``{"task": ...}``) to be evaluated later. Planning is separated from evaluation so that pages of one
+    project are spread over all workers: a 40-page project used to run start-to-finish inside a single worker
+    and set the wall-clock floor for the whole run.
+    """
+    t0 = time.time()
+    xml = sorted(pdir.glob("*.xml"))
+    pdf = sorted(pdir.glob("*.pdf"))
+    if not xml or not pdf:
+        return [{"project": pdir.name, "skipped": "no pdf/netlist"}]
+    schs = sorted((pdir / "src").rglob("*.kicad_sch"))
+    with pikepdf.open(pdf[0]) as p:
+        npages = len(p.pages)
+
+    def task(page: int, si: int, name: str, score=1.0, instance=None) -> dict:
+        return {"task": {"pdir": str(pdir), "page": page, "sch": str(schs[si]), "name": name,
+                         "instance": instance, "score": score}}
+
+    if npages == 1 and len(schs) == 1:
+        return [task(0, 0, pdir.name)] if wanted(pdir.name) else []
+    if npages > 80 or len(schs) > 80:
+        return [{"project": pdir.name, "skipped": f"too large ({npages} pages, {len(schs)} sheets)"}]
+    mp = map_pages_to_sheets(str(pdf[0]), schs, npages)
+    inst: dict[int, str] = {}
+    try:      # repeated sheets: pages follow the depth-first sheet order; trust it only if EVERY page agrees with geometry
+        root = find_root([str(x) for x in schs], str(pdir / "src"))
+        hier = hierarchy(str(root)) if root else []
+        geo_top = {k: pathlib.Path(v[3][0][0]).name for k, v in mp.items()}
+        if len(hier) == npages and all(hier[k][1].name == geo_top[k] and mp[k][1] >= 0.8 for k in range(npages)):
+            for k in range(npages):
+                si = next(i for i, x in enumerate(schs) if x == hier[k][1])
+                inst[k] = hier[k][0]
+                mp[k] = (si, mp[k][1], mp[k][2], mp[k][3])
+    except Exception as e:  # noqa: BLE001
+        print("GT_HIER_FAIL", pdir.name, type(e).__name__, e, flush=True)
+    print(f"GT_PLAN {pdir.name} seconds={round(time.time() - t0, 1)} pages={npages} sheets={len(schs)}", flush=True)
+    out: list[dict] = []
+    for k, (si, score, second, top3) in sorted(mp.items()):
+        name = f"{pdir.name}#p{k}"
+        if not wanted(name):
+            continue
+        if si is None:
+            out.append({"project": name, "skipped": f"page not mapped to one sheet (best {score}, runner-up {second})", "map_top3": top3})
+            continue
+        out.append(task(k, si, name, score, inst.get(k)))
+    return out
+
+
+def run_task(t: dict) -> dict:
+    """Evaluate one planned page. Never raises: a failure (timeout included) becomes a record with "error",
+    which `coverage` turns into a failure of the whole run."""
+    pdir, sch = pathlib.Path(t["pdir"]), pathlib.Path(t["sch"])
+    try:
+        print("GT_PAGE_START", t["name"], flush=True)
+        signal.signal(signal.SIGALRM, _on_alarm)
+        signal.alarm(PAGE_SECONDS)
+        try:
+            r = evaluate(pdir, t["page"], sch, t["name"], t["instance"])
+        finally:
+            signal.alarm(0)
+        if "skipped" not in r:
+            r["sheet"] = str(sch.relative_to(pdir / "src")) if (pdir / "src") in sch.parents else sch.name
+            r["instance"] = t["instance"]
+            r["map_score"] = t["score"]
+        return r
+    except Exception as e:  # noqa: BLE001
+        return {"project": t["name"], "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}
+
+
+ONLY = [x for x in os.environ.get("GT_ONLY", "").split(",") if x]
+
+
+def wanted(name: str) -> bool:
+    base = name.split("#")[0]
+    return not ONLY or any(name == o or (base == o) or (name == base and o.split("#")[0] == base) for o in ONLY)
+
+
+DUMP_LIB = os.environ.get("GT_DUMP_LIB", "")
+DUMP_MAX = int(os.environ.get("GT_DUMP_MAX", "3"))
+
+
+def sd_ok(gp):
+    return True
+
+
+def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instance_path: str | None = None) -> dict:
+    t0 = time.time()
+    xml = sorted(pdir.glob("*.xml"))
+    pdf = sorted(pdir.glob("*.pdf"))
+    schs = [sch]
+    pins, info = gt_pins(str(schs[0]), str(xml[0]), instance_path=instance_path)
+    vis = [p for p in pins if not p.hidden and p.net]
+    if len(vis) > MAX_PAGE_PINS:      # pair metrics are O(n^2) with a path search per false positive
+        return {"project": name, "skipped": f"{len(vis)} scoreable pins on one page > {MAX_PAGE_PINS} (pair metric budget)"}
+    with tempfile.TemporaryDirectory() as td:
+        lib_path = pathlib.Path(td) / "embedded.kicad_sym"
+        lib_path.write_text(embedded_library_text(str(schs[0])))
+        lib = load_library(str(lib_path))
+    pi = ingest_pdf(str(pdf[0]), pages=[page]).pages[0]
+    cls, clusters, built, res = analyze_page(pi, lib.symbols.values())
+    g = built.graph
+    prim = {p.id: p for p in pi.prims}
+    wire_ends = []
+    for o in g.objects:
+        if o.kind == "WIRE":
+            p = prim[int(o.id[2:])]
+            ends = [p.pts[0], p.pts[-1]] if not p.line_closed else []
+            wire_ends.append((o.id, ends))
+    comp_of = wire_component_index(str(schs[0]))
+    # oracle attachment
+    attached = []
+    comps = []
+    for gp in vis:
+        ws = sorted({oid for oid, ends in wire_ends
+                     if any(math.hypot(e[0] - gp.x, e[1] - gp.y) <= TOL_WIRE for e in ends)})
+        if ws:
+            attached.append((tuple(ws), gp.net))
+            comps.append(comp_of(gp.x, gp.y))
+    rank = {"VERIFIED": 3, "INFERRED": 2, "UNKNOWN": 1, "CONFLICT": 0}
+
+    def oracle_status(a, b):
+        best = "UNKNOWN"
+        for wa in a:
+            for wb in b:
+                st = "VERIFIED" if wa == wb else res.pair_status(wa, wb)
+                if rank[st] > rank[best]:
+                    best = st
+        return best
+
+    oracle = pair_metrics(attached, oracle_status)
+    # recall split: pairs whose pins sit on the SAME connected set of wires in the sheet file ("local": visible in
+    # the drawing as wires) versus pairs on the same net only through labels, power symbols or other sheets
+    loc = collections.Counter()
+    for i in range(len(attached)):
+        for j in range(i + 1, len(attached)):
+            if attached[i][1] != attached[j][1]:
+                continue
+            kind = "local" if comps[i] is not None and comps[i] == comps[j] else "nonlocal"
+            st = oracle_status(attached[i][0], attached[j][0])
+            loc[kind + "_pos"] += 1
+            if st == "VERIFIED":
+                loc[kind + "_V"] += 1
+            if st in LEVELS:
+                loc[kind + "_VI"] += 1
+    oracle["split"] = dict(loc)
+    # diagnostics: which rules sit on the path of every false positive; details of VERIFIED false positives
+    emap = {e.id: e for e in g.edges}
+    fp_rules = collections.Counter()
+    fp_v_detail = []
+    fp_i_detail = []
+    gp_of = {}
+    for gp in vis:
+        ws = tuple(sorted({oid for oid, ends in wire_ends
+                           if any(math.hypot(e[0] - gp.x, e[1] - gp.y) <= TOL_WIRE for e in ends)}))
+        if ws:
+            gp_of.setdefault((ws, gp.net), gp)
+    for i in range(len(attached)):
+        for j in range(i + 1, len(attached)):
+            if attached[i][1] == attached[j][1]:
+                continue
+            st = oracle_status(attached[i][0], attached[j][0])
+            if st not in LEVELS:
+                continue
+            best = None
+            for wa in attached[i][0]:
+                for wb in attached[j][0]:
+                    pth = [] if wa == wb else shortest_path(res.final_edges, wa, wb)
+                    if wa == wb or pth:
+                        best = (wa, wb, pth) if best is None or len(pth) < len(best[2]) else best
+            if best is None:
+                continue
+            rules = sorted({(emap[e].rule if e in emap else ("SITE" if e.startswith("site:") else e.split(":")[0]))
+                            for e in best[2]}) or ["SAME_PRIM"]
+            fp_rules[st + ":" + "+".join(rules)] += 1
+            if (st == "VERIFIED" and len(fp_v_detail) < 4) or (st == "INFERRED" and len(fp_i_detail) < 3):
+                ga, gb = gp_of.get((attached[i][0], attached[i][1])), gp_of.get((attached[j][0], attached[j][1]))
+                (fp_v_detail if st == "VERIFIED" else fp_i_detail).append({
+                    "pins": [f"{ga.ref}.{ga.number}@{ga.x:.1f},{ga.y:.1f}:{ga.net}" if ga else "?",
+                             f"{gb.ref}.{gb.number}@{gb.x:.1f},{gb.y:.1f}:{gb.net}" if gb else "?"],
+                    "path": [{"edge": e, "rule": emap[e].rule if e in emap else "?",
+                              "coord": emap[e].coord if e in emap else "", "n_prims": emap[e].n_prims if e in emap else -1,
+                              "roles": [(r.kind, r.status, len(r.evidence)) for r in emap[e].roles] if e in emap else [],
+                              "prov": list(emap[e].prov) if e in emap else []} for e in best[2]],
+                    "same_prim": best[0] == best[1]})
+    # detected-pin matching (greedy nearest, one-to-one)
+    tips = sorted(built.pin_tips.items())
+    cand = sorted(((math.hypot(t[0] - gp.x, t[1] - gp.y), pi_, oid) for pi_, gp in enumerate(vis) for oid, t in tips
+                   if math.hypot(t[0] - gp.x, t[1] - gp.y) <= TOL_PIN))
+    used_gt, used_obj, matched, matched_comp = set(), set(), [], []
+    for d, gi, oid in cand:
+        if gi in used_gt or oid in used_obj:
+            continue
+        used_gt.add(gi)
+        used_obj.add(oid)
+        matched.append((oid, vis[gi].net))
+        matched_comp.append(comp_of(vis[gi].x, vis[gi].y))
+    detected = pair_metrics(matched, lambda a, b: res.pair_status(a, b))
+    dloc = collections.Counter()
+    for i in range(len(matched)):
+        for j in range(i + 1, len(matched)):
+            if matched[i][1] != matched[j][1]:
+                continue
+            kind = "local" if matched_comp[i] is not None and matched_comp[i] == matched_comp[j] else "nonlocal"
+            st = res.pair_status(matched[i][0], matched[j][0])
+            dloc[kind + "_pos"] += 1
+            dloc[kind + "_V"] += st == "VERIFIED"
+            dloc[kind + "_VI"] += st in LEVELS
+    detected["split"] = dict(dloc)
+    # pins of the GT that sit on a wire component (the ones a reader can follow) and whether we found them
+    n_local_pins = sum(1 for gp in vis if comp_of(gp.x, gp.y) is not None)
+    n_local_found = sum(1 for k in used_gt if comp_of(vis[k].x, vis[k].y) is not None)
+    miss = collections.Counter()
+    dump_n = collections.Counter()
+    dump_lines = [None]
+    miss_lib = collections.Counter()
+    for k, gp in enumerate(vis):
+        if k in used_gt or comp_of(gp.x, gp.y) is None:
+            continue
+        near = [c for c in clusters if c.cluster.bbox[0] - 4 <= gp.x <= c.cluster.bbox[2] + 4
+                and c.cluster.bbox[1] - 4 <= gp.y <= c.cluster.bbox[3] + 4]
+        dl = next((d for d in DUMP_LIB.split(",") if d and d in gp.lib_id), None)
+        if dl and dump_n[dl] < DUMP_MAX:
+            dump_n[dl] += 1
+            print("DUMP", name, gp.ref, gp.lib_id, "pin", gp.number, "at", round(gp.x, 1), round(gp.y, 1),
+                  "near_clusters", [(c.resolution.status, len(c.cluster.prim_ids)) for c in near][:3])
+            print("DUMP   notes", [n[:110] for n in cls.notes][:5])
+            for c_ in clusters:
+                bb = c_.cluster.bbox
+                if bb[0] - 60 <= gp.x <= bb[2] + 60 and bb[1] - 60 <= gp.y <= bb[3] + 60:
+                    print("DUMP   nearby cluster", c_.resolution.status, len(c_.cluster.prim_ids), [round(v, 1) for v in bb],
+                          "syms", c_.resolution.symbols[:3], "note", c_.resolution.note[:60], "npins", len(c_.pins),
+                          "tips", [tuple(round(v, 1) for v in pn.tip) for pn in c_.pins[:3]])
+                    if c_.resolution.status == "DIFFERENT_TIP_SETS":
+                        from ecci.pins import PinParams, _line_index, _part_stem, stub_support
+                        if dump_lines[0] is None:
+                            dump_lines[0] = _line_index(pi, cls)
+                        print("DUMP     stems", sorted({_part_stem(h.symbol.name) for h in c_.resolution.hits}), "hits", len(c_.resolution.hits))
+                        sup = [(h, stub_support(h, dump_lines[0], PinParams())) for h in c_.resolution.hits]
+                        for h, ms in sorted(sup, key=lambda t: len(t[1]))[:4]:
+                            print("DUMP     hit", h.symbol.name, "o", h.orient, "missing", len(ms), "of", len(h.symbol.pins),
+                                  [((round(t[0], 1), round(t[1], 1)), r) for t, r in ms[:4]])
+                        h0, ms0 = min(sup, key=lambda t: len(t[1]))
+                        for t, r in ms0[:2]:
+                            for q in pi.prims:
+                                if any(math.hypot(a - t[0], b - t[1]) <= 4 for a, b in q.pts):
+                                    print("DUMP       at", (round(t[0], 1), round(t[1], 1)), "prim", q.id, q.kind, cls.records[q.id].cls,
+                                          round(q.stroke_w, 2), len(q.pts), q.line_closed, [(round(a, 1), round(b, 1)) for a, b in q.pts][:4])
+                    if c_.pins:
+                        same = [g_ for g_ in vis if g_.ref == gp.ref][:3]
+                        print("DUMP     gt pins of", gp.ref, [(g_.number, round(g_.x, 1), round(g_.y, 1)) for g_ in same])
+            if near and sd_ok(gp):
+                from ecci.symbols import relaxations
+                by_r = {q.id: q for q in pi.prims}
+                sdr = lib.symbols.get(gp.lib_id.split(":")[-1]) or lib.symbols.get(gp.lib_id)
+                from ecci.template import diagnose_match as dm
+                for n_, (c_r, st_r) in enumerate(relaxations(near[0].cluster, by_r)):
+                    ln_ = dm(c_r, sdr)
+                    print("DUMP   relax", n_, ln_[0], "|", ln_[1][:90], "stubs", len(st_r))
+                    xs_ = sorted(c_r.prim_ids, key=lambda i_: min(a_[0] for a_ in by_r[i_].pts))
+                    for i_ in xs_[:2] + xs_[-2:]:
+                        q_ = by_r[i_]
+                        print("DUMP     rx", q_.id, round(q_.stroke_w, 2), getattr(q_, "stroke_color", None), len(q_.pts), q_.line_closed,
+                              [(round(a_, 1), round(b_, 1)) for a_, b_ in q_.pts][:2])
+            if near:
+                from ecci.symbols import strip_stubs
+                from ecci.template import diagnose_match
+                by_id_d = {q.id: q for q in pi.prims}
+                cl_d = near[0].cluster
+                sd = lib.symbols.get(gp.lib_id.split(":")[-1]) or lib.symbols.get(gp.lib_id)
+                for tag, c_ in (("raw", cl_d),
+                                ("stripped", (strip_stubs(cl_d, by_id_d) or (None,))[0])):
+                    if c_ is None or sd is None:
+                        print("DUMP   diag", tag, "n/a", "lib_known", sd is not None)
+                        continue
+                    for ln in diagnose_match(c_, sd)[:2]:
+                        print("DUMP   diag", tag, ln)
+                    if tag == "stripped":
+                        ps_ = sorted((by_id_d[i_] for i_ in c_.prim_ids), key=lambda q_: min(a_[0] for a_ in q_.pts))
+                        for q_ in ps_[:5] + ps_[-5:]:
+                            print("DUMP   edge", q_.id, cls.records[q_.id].cls, round(q_.stroke_w, 2), getattr(q_, "stroke_color", None),
+                                  len(q_.pts), q_.line_closed, [(round(a_, 1), round(b_, 1)) for a_, b_ in q_.pts][:3])
+            for q in pi.prims:
+                if any(math.hypot(a - gp.x, b - gp.y) <= 45 for a, b in q.pts) and cls.records[q.id].cls != "TEXT":
+                    print("DUMP   prim", q.id, cls.records[q.id].cls, round(q.stroke_w, 2), getattr(q, "stroke_color", None), len(q.pts),
+                          q.line_closed, [(round(a, 1), round(b, 1)) for a, b in q.pts][:5])
+        if not near:
+            miss["no_cluster"] += 1
+            miss_lib["no_cluster:" + gp.lib_id] += 1
+        else:
+            near.sort(key=lambda c: (c.cluster.bbox[2] - c.cluster.bbox[0]) * (c.cluster.bbox[3] - c.cluster.bbox[1]))
+            c = near[0]
+            big = len(c.cluster.prim_ids) > 150
+            miss[("giant_" if big else "") + c.resolution.status] += 1
+            miss_lib[("giant_" if big else "") + c.resolution.status + ":" + gp.lib_id] += 1
+    nets = res.nets
+    return {
+        "project": name, "seconds": round(time.time() - t0, 1), "gt": info,
+        "gt_pins": len(pins), "gt_pins_visible_with_net": len(vis),
+        "oracle_attached_pins": len(attached), "local_pins": n_local_pins, "local_pins_found": n_local_found, "miss_reasons": dict(miss), "miss_libs": dict(miss_lib), "detected_pins": len(tips), "detected_matched_gt": len(matched),
+        "prims": len(pi.prims), "wire_objects": sum(1 for o in g.objects if o.kind == "WIRE"),
+        "edges": dict(collections.Counter(e.rule for e in g.edges)), "sites": len(g.sites),
+        "dots": len(built.dots), "nets": len(nets), "open_nets": sum(n.closure == "OPEN" for n in nets),
+        "quarantined": len(res.quarantined), "library_symbols": len(lib.symbols),
+        "library_warnings": len(lib.warnings), "oracle": oracle, "detected": detected,
+        "oracle_fp_rules": dict(fp_rules), "oracle_fp_verified_detail": fp_v_detail, "oracle_fp_inferred_detail": fp_i_detail,
+        "cluster_status": dict(collections.Counter(c.resolution.status for c in clusters)),
+        "clusters": len(clusters), "wire_style": str(cls.wire_style), "style_notes": [n for n in cls.notes if "wire style" in n],
+        "library_names_sample": sorted(lib.symbols)[:3],
+        "dot_radii": sorted(round(v[1], 2) for v in built.dots.values())[:8],
+    }
+
+
+def _safe_plan(d: pathlib.Path) -> list[dict]:
+    try:
+        return plan_project(d)
+    except Exception as e:  # noqa: BLE001  one project must never hide the others
+        return [{"project": d.name, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-600:]}]
+
+
+def main(root: str) -> int:
+    tot = collections.Counter()
+    miss_libs_tot = collections.Counter()
+    dirs = sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir() and wanted(p.name))
+    workers = max(1, int(os.environ.get("GT_WORKERS", os.cpu_count() or 1)))
+    t0 = time.time()
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as ex:
+        plans = [ex.submit(_safe_plan, d) for d in dirs]
+        slots = [p.result() for p in plans]                 # deterministic: one list per project, in page order
+        t1 = time.time()
+        # one flat queue of pages: a project with many pages no longer occupies a single worker. Heavier pages
+        # (more PDF bytes per page) are submitted first so the longest page cannot be the last one started.
+        jobs = [(pi, si, slot["task"]) for pi, ps in enumerate(slots) for si, slot in enumerate(ps) if "task" in slot]
+
+        def weight(j):
+            try:
+                pdf = sorted(pathlib.Path(j[2]["pdir"]).glob("*.pdf"))
+                return -pdf[0].stat().st_size if pdf else 0
+            except OSError:
+                return 0
+
+        futs = {(pi, si): ex.submit(run_task, t) for pi, si, t in sorted(jobs, key=weight)}
+        for (pi, si), f in futs.items():
+            slots[pi][si] = f.result()
+    print(f"GT_TIMING plan_seconds={round(t1 - t0, 1)} eval_seconds={round(time.time() - t1, 1)} "
+          f"workers={workers} pages={len(futs)}", flush=True)
+    results = slots
+    for rs in results:
+        for r in rs:
+            print("GT_EVAL " + json.dumps(r, sort_keys=True), flush=True)
+            for k, v in (r.get("oracle", {}).get("split") or {}).items():
+                tot["split_" + k] += v
+            for k, v in (r.get("detected", {}).get("split") or {}).items():
+                tot["dsplit_" + k] += v
+            for k, v in (r.get("miss_libs") or {}).items():
+                miss_libs_tot[k] += v
+            for k, v in (r.get("miss_reasons") or {}).items():
+                tot["miss_" + k] += v
+            tot["local_pins"] += r.get("local_pins", 0)
+            tot["local_pins_found"] += r.get("local_pins_found", 0)
+            for mode in ("oracle", "detected"):
+                m = r.get(mode)
+                if m:
+                    for k in ("pos", "neg"):
+                        tot[f"{mode}_{k}"] += m[k]
+                    for lv in LEVELS:
+                        tot[f"{mode}_TP_{lv}"] += m[lv]["tp"]
+                        tot[f"{mode}_FP_{lv}"] += m[lv]["fp"]
+    out = {}
+    for mode in ("oracle", "detected"):
+        tpv, fpv = tot[f"{mode}_TP_VERIFIED"], tot[f"{mode}_FP_VERIFIED"]
+        tpi, fpi = tot[f"{mode}_TP_INFERRED"], tot[f"{mode}_FP_INFERRED"]
+        pos = max(1, tot[f"{mode}_pos"])
+        out[mode] = {"pos": tot[f"{mode}_pos"], "neg": tot[f"{mode}_neg"],
+                     "precision_V": round(tpv / max(1, tpv + fpv), 4), "recall_V": round(tpv / pos, 4),
+                     "precision_VI": round((tpv + tpi) / max(1, tpv + tpi + fpv + fpi), 4),
+                     "recall_VI": round((tpv + tpi) / pos, 4), "FP_V": fpv, "FP_I": fpi}
+    for k, v in miss_libs_tot.most_common(45):
+        print("MISSLIB", v, k)
+    sp = {k[6:]: v for k, v in tot.items() if k.startswith("split_")}
+    for kind in ("local", "nonlocal"):
+        n = max(1, sp.get(kind + "_pos", 0))
+        out["oracle_" + kind] = {"pos": sp.get(kind + "_pos", 0), "recall_V": round(sp.get(kind + "_V", 0) / n, 4),
+                                 "recall_VI": round(sp.get(kind + "_VI", 0) / n, 4)}
+    dsp = {k[7:]: v for k, v in tot.items() if k.startswith("dsplit_")}
+    n = max(1, dsp.get("local_pos", 0))
+    out["detected_local"] = {"pos": dsp.get("local_pos", 0), "recall_V": round(dsp.get("local_V", 0) / n, 4),
+                             "recall_VI": round(dsp.get("local_VI", 0) / n, 4),
+                             "pin_recall": round(tot["local_pins_found"] / max(1, tot["local_pins"]), 4),
+                             "pins": tot["local_pins"],
+                             "misses": {k[5:]: v for k, v in tot.items() if k.startswith("miss_")}}
+    cov = coverage(results, dirs)
+    out["coverage"] = cov
+    # "every page is accounted for as pinned", NOT "the corpus is fully measured": pages skipped for a pinned
+    # reason stay UNKNOWN and are counted in unevaluated_pages / page_coverage.
+    out["inventory_consistent"] = not cov["problems"]
+    print("GT_COVERAGE " + json.dumps(cov, sort_keys=True))
+    print("GT_TOTAL " + json.dumps(out, sort_keys=True))
+    if cov["problems"]:
+        # fail-closed: totals over an incomplete corpus are NOT a result; the missing pages are UNKNOWN
+        print("GT_INCOMPLETE " + "; ".join(cov["problems"]))
+        return 1
+    return 0
+
+
+PIN_FILES = ("gt_source.txt", "gt_pages.txt")
+
+
+def pins(paths=None) -> dict:
+    """The pinned corpus facts (KEY=value lines, comments ignored).
+
+    gt_source.txt holds what the exported DATA depends on and is part of the cache key; gt_pages.txt holds the
+    per-page bookkeeping and is not, so correcting an inventory pin does not force a 20-minute re-export."""
+    here = pathlib.Path(__file__).resolve().parent
+    out = {}
+    for f in (paths or [here / n for n in PIN_FILES]):
+        for line in pathlib.Path(f).read_text().splitlines():
+            if line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def coverage(results: list, dirs: list, pin: dict | None = None) -> dict:
+    """Account for EVERY page: evaluated, or skipped for a pinned reason. Anything else fails the run.
+
+    A page error or timeout is a failure. On a full run the disposition of each page must equal the pins in
+    the pins: a page that is skipped without being listed, a listed page that is now evaluated (the pin
+    is stale), a page count that does not add up, or a project set that differs from the pinned one all fail.
+    With GT_ONLY, every selected page must actually have been evaluated.
+    """
+    pin = pins() if pin is None else pin
+    flat = [r for rs in results for r in rs]
+    errors = sorted(r["project"] for r in flat if "error" in r)
+    ok = [r for r in flat if "error" not in r and "skipped" not in r and "task" not in r]
+    skipped = [r for r in flat if "skipped" in r]
+    projects = sorted(d.name for d in dirs if any(d.glob("*.xml")) and any(d.glob("*.pdf")))
+    evaluated_names = sorted(r["project"] for r in ok)
+    problems = [f"page error: {e}" for e in errors]
+    never_ran = sorted(r["task"]["name"] for rs in results for r in rs if "task" in r)
+    problems += [f"page never evaluated: {n}" for n in never_ran]
+
+    def plist(key):
+        return [x for x in (pin.get(key, "") or "").split(",") if x]
+
+    allowed_repeat = set(plist("SKIP_REPEATED_SHEET"))
+    allowed_no_export = set(plist("EXPECT_EXPORT_FAIL"))
+    disposition: dict[str, list] = collections.defaultdict(list)
+    for r in skipped:
+        reason = r["skipped"]
+        name = r["project"]
+        if "not mapped to one sheet" in reason:
+            bucket = "repeated_sheet" if name in allowed_repeat else "unlisted_unmapped"
+        elif "no pdf/netlist" in reason:
+            bucket = "no_export" if name in allowed_no_export else "unlisted_no_export"
+        else:
+            bucket = "unlisted_other"
+        disposition[bucket].append(name)
+    for bucket in ("unlisted_unmapped", "unlisted_no_export", "unlisted_other"):
+        for name in sorted(disposition.get(bucket, ())):
+            problems.append(f"page skipped but not pinned ({bucket}): {name}")
+    if not ONLY:
+        min_pages = int(pin.get("EXPECT_MIN_PAGES", "0") or 0)
+        exp_proj = int(pin.get("EXPECT_EXPORT_OK", "0") or 0)
+        total = int(pin.get("EXPECT_TOTAL_PAGES", "0") or 0)
+        if len(ok) < min_pages:
+            problems.append(f"{len(ok)} pages evaluated < pinned minimum {min_pages}")
+        if exp_proj and len(projects) != exp_proj:
+            problems.append(f"{len(projects)} exported projects != pinned {exp_proj}")
+        ok_list = sorted(plist("EXPECT_EXPORT_OK_LIST"))
+        if len(ok_list) != exp_proj or len(set(ok_list)) != len(ok_list):
+            problems.append(f"EXPECT_EXPORT_OK_LIST has {len(ok_list)} names != EXPECT_EXPORT_OK={exp_proj}")
+        if projects != ok_list:
+            problems.append(f"exported project set != pinned EXPECT_EXPORT_OK_LIST: "
+                            f"missing {sorted(set(ok_list) - set(projects))}, extra {sorted(set(projects) - set(ok_list))}")
+        if set(disposition.get("no_export", ())) != allowed_no_export:
+            problems.append(f"export-failure set {sorted(disposition.get('no_export', ()))} != pinned "
+                            f"{sorted(allowed_no_export)}")
+        stale = sorted(allowed_repeat & set(evaluated_names))
+        if stale:
+            problems.append(f"pinned as skipped but evaluated (update gt_pages.txt): {stale}")
+        missing = sorted(allowed_repeat - set(disposition.get("repeated_sheet", ())))
+        if missing:
+            problems.append(f"pinned as skipped but not reported at all: {missing}")
+        seen_pages = len(ok) + sum(len(v) for k, v in disposition.items() if k != "no_export")
+        if total and seen_pages != total:
+            problems.append(f"{seen_pages} pages accounted for != pinned total {total}")
+    else:
+        missed = []
+        for sel in ONLY:
+            base = sel.split("#")[0]
+            if "#p" in sel:
+                hit = sel in evaluated_names
+            else:
+                hit = any(n == base or n.startswith(base + "#p") for n in evaluated_names)
+            if not hit:
+                missed.append(sel)
+        if missed:
+            problems.append(f"GT_ONLY selected pages that were not evaluated: {sorted(missed)}")
+    unevaluated = sum(len(v) for k, v in disposition.items() if k != "no_export") + len(errors)
+    return {"evaluated": len(ok), "unevaluated_pages": unevaluated,
+            "page_coverage": round(len(ok) / max(1, len(ok) + unevaluated), 4),
+            "disposition": {k: sorted(v) for k, v in sorted(disposition.items())},
+            "errors": errors, "projects": len(projects), "full_run": not ONLY, "problems": problems}
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1]))

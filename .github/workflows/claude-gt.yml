@@ -1,0 +1,113 @@
+name: claude-gt
+# M4.0: independent ground truth. KiCad renders PDFs and computes netlists from open-source schematics.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude]
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/ecci/**']
+  pull_request:
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/ecci/**']
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache exported ground truth
+        id: gtcache
+        uses: actions/cache@v4
+        with:
+          path: gt_out
+          # everything the exported DATA depends on is pinned in gt_source.txt (KiCad source commit, KiCad
+          # build, expected export outcome), so hashing it with the export script makes the key depend on all of
+          # them. gt_pages.txt (page bookkeeping) is deliberately NOT in the key: it does not change the data.
+          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh', 'claude/tools/gt_source.txt') }}
+      - name: Install KiCad CLI
+        if: steps.gtcache.outputs.cache-hit != 'true'
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
+          sudo apt-get update -q
+          pkg=$(grep '^KICAD_PKG=' claude/tools/gt_source.txt | cut -d= -f2-)
+          sudo apt-get install -y --no-install-recommends "kicad=$pkg"
+          kicad-cli version
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pikepdf
+      - name: Export PDFs and netlists
+        if: steps.gtcache.outputs.cache-hit != 'true'
+        run: |
+          set -o pipefail
+          bash claude/tools/gt_export.sh gt_out 2>&1 | tee gt_export.log
+      - name: Verify ground-truth provenance and manifest (cached or fresh)
+        run: |
+          set -o pipefail
+          bash claude/tools/gt_verify.sh gt_out 2>&1 | tee gt_verify.log
+      - name: Summary
+        run: |
+          set -o pipefail
+          python claude/tools/gt_summary.py gt_out | tee gt_summary.log
+      - name: Profile heavy pages
+        if: ${{ contains(github.event.head_commit.message, '[profile]') }}
+        run: |
+          set -o pipefail
+          python claude/tools/gt_profile.py gt_out tinytapeout-demo 0 2>&1 | tee gt_profile.log
+      - name: Evaluate ECCI against KiCad ground truth
+        if: ${{ !contains(github.event.head_commit.message, '[profile-only]') }}
+        run: |
+          # claude/tools/gt_only.txt (comma list "proj" or "proj#pN"; empty = everything) restricts the run
+          # fail-closed: gt_eval reads the pins itself (gt_source.txt + gt_pages.txt) and exits 1 unless
+          # every page is accounted for exactly as pinned (see GT_COVERAGE in the log)
+          set -o pipefail
+          only=$(grep -v '^#' claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n' || true)
+          echo "GT_ONLY='$only'"
+          GT_DUMP_LIB="$(cat claude/tools/gt_dump.txt 2>/dev/null | tr -d ' \n')" GT_DUMP_MAX=1 GT_ONLY="$only" python claude/tools/gt_eval.py gt_out 2>&1 | tee gt_eval.log
+      - name: Coverage inventory and "did the evaluation actually run" gate
+        if: always()
+        run: |
+          set -o pipefail
+          python claude/tools/gt_inventory.py gt_eval.log 2>&1 | tee gt_inventory.log
+      - name: M4.0 regression gate (FP_V=FP_I=0, pin recall, full inventory; pins in gt_gate.txt)
+        if: always()
+        run: |
+          # M4.0 is FROZEN: every claude-gt run must pass the full gate. A GT_ONLY (partial) run fails here
+          # by design: it is a diagnostic, never evidence.
+          set -o pipefail
+          python claude/tools/gt_gate.py gt_eval.log 2>&1 | tee gt_gate.log
+      - name: Misses by library symbol
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
+        run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
+      - name: Probe
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
+        run: |
+          python claude/tools/gt_probe.py gt_out royer1 619.2 306 626.4 288 2>&1 | tee gt_probe.log
+          python claude/tools/gt_probe.py gt_out smps-com 396 214 2>&1 | tee -a gt_probe.log
+          python claude/tools/gt_probe.py gt_out 'sonde xilinx' 453.6 197 453.6 213 2>&1 | tee -a gt_probe.log
+      - name: Cluster diagnostics
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
+        run: |
+          python claude/tools/gt_clusters.py gt_out jetson-agx-thor-baseboard 2 C_100n_0402 2>&1 | tee gt_clusters.log
+          python claude/tools/gt_clusters.py gt_out jetson-agx-thor-baseboard 2 TP_0.75mm 2>&1 | tee -a gt_clusters.log
+          python claude/tools/gt_clusters.py gt_out multichannel_mixer 2 POT 2>&1 | tee -a gt_clusters.log
+          python claude/tools/gt_clusters.py gt_out kit-dev-coldfire-xilinx_5213 2 MCF5213 2>&1 | tee -a gt_clusters.log
+      - name: Style diagnostics
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
+        run: python claude/tools/gt_styles.py gt_out interf_u Q17ng "sonde xilinx" 2>&1 | tee gt_styles.log
+      - name: Format discovery (first lines of one sheet and one netlist)
+        if: ${{ contains(github.event.head_commit.message, '[diag]') }}
+        run: |
+          f=$(find gt_out -name '*.kicad_sch' | sort | head -1); echo "== $f"; head -60 "$f"
+          x=$(find gt_out -name '*.xml' | sort | head -1); echo "== $x"; head -80 "$x"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gt-export
+          path: |
+            gt_out
+            gt_export.log
+            gt_verify.log
+            gt_inventory.log
+            gt_gate.log
+            gt_summary.log
+            gt_eval.log
+            gt_probe.log
+            gt_styles.log
