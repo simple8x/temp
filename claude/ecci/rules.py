@@ -517,4 +517,3 @@ def analyze_page(pi: PageIngest, symbols, prm: RulesParams = RulesParams(),
                            frozenset(v[2] for v in dots.values()) | off_colour_body(pi, cls))
     built = build_conn_graph(pi, cls, clusters, prm, dots)
     return cls, clusters, built, solve(built.graph)
-[exit status 0]
