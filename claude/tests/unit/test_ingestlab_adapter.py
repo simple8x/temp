@@ -71,7 +71,7 @@ def test_list_blocks_are_retained_and_accounted():
     ], "bbox": {"x0": 10, "y0": 10, "x1": 80, "y1": 40}}])
     assert len(out["items"]) == 1
     assert out["items"][0]["kind"] == "list_item"
-    assert out["items"][0]["raw_text"] == "Unit: mm\\nMaker design"
+    assert out["items"][0]["raw_text"] == "Unit: mm\nMaker design"
     assert out["summary"]["source_blocks_seen"] == 1
     assert out["summary"]["source_blocks_accounted"] == 1
     assert out["summary"]["block_accounting_complete"] is True
@@ -86,7 +86,7 @@ def test_form_section_title_and_note_are_retained():
     out = run([{"type": "form_section", "title": "Checkboxes",
                 "note": "Select one", "bbox": {"x0": 10, "y0": 10, "x1": 80, "y1": 40}}])
     assert out["items"][0]["kind"] == "form_section"
-    assert out["items"][0]["raw_text"] == "Checkboxes\\nSelect one"
+    assert out["items"][0]["raw_text"] == "Checkboxes\nSelect one"
 
 def test_unsupported_or_empty_blocks_are_explicitly_unresolved():
     out = run([{"type": "unknown_extension", "value": "not silently dropped"},
