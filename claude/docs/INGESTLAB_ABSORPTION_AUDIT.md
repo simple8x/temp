@@ -8,7 +8,7 @@ Audited upstream: https://github.com/ingestlab-dev/ingestlab
 Upstream revision observed: `73f530c7415b815a8b6297ca24aad65a1351ca11` (release v1.1.3).
 Local baseline: branch `claude`, commit `b975692acdd2b002f44f80dc906df2943b0c1bfe`.
 
-This is a source review plus a local fail-closed adapter implementation. It is not an independent upstream execution or QI9 integration claim. No upstream package was installed and no QI9 result was generated.
+This began as a source review and fail-closed adapter implementation. The upstream v1.1.3 package was installed and executed in an isolated Box workspace against the real QI9 PDF; the parser and adapter measurements are recorded in `QI9_INGESTLAB_REAL_PDF_AUDIT.md`. This execution does not constitute electrical connectivity verification.
 
 ## Findings
 
@@ -56,7 +56,7 @@ The adapter consumes a serialized IngestLab `ParseResult` and the original PDF b
 - records missing bbox/provenance as unresolved and returns a nonzero CLI status;
 - hardcodes zero connectivity claims and zero VERIFIED items.
 
-The adapter is intentionally not wired into the production ECCI graph or writer. No upstream npm dependency is added. A caller must run IngestLab separately in a sandbox, serialize its ParseResult, and provide page dimensions from an independent PDF metadata reader. The adapter does not claim that this external invocation has been run.
+The adapter is intentionally not wired into the production ECCI graph or writer. No upstream npm dependency is added to this repository. IngestLab was run separately in a sandbox, its ParseResult was serialized, and page dimensions were supplied by independent PyMuPDF metadata. On QI9, all 212 returned blocks were accounted for: 23 candidate items and 189 unresolved due to missing source bboxes. The CLI returned its expected nonzero status because unresolved evidence remains.
 
 ## Security and supply-chain gates
 
@@ -93,8 +93,9 @@ Before enabling an upstream runtime in CI or production:
 ## Honest status
 
 - Source review: COMPLETE for the files listed in this audit.
-- Adapter implementation: COMMITTED; CI validation pending.
-- Independent upstream test execution: NOT RUN.
+- Adapter implementation: COMMITTED; 13 adapter tests passed in Box; latest GitHub Actions validation is pending.
+- Independent upstream execution: RUN; `npm ci` and `npm test` passed, with corpus-regression fixtures skipped where the external corpus was absent.
 - Dependency/security audit: NOT RUN.
-- QI9 integration: NOT IMPLEMENTED.
-- QI9 electrical connectivity promoted by this work: NONE.
+- QI9 parser and adapter execution: COMPLETE in Box; see `QI9_INGESTLAB_REAL_PDF_AUDIT.md`.
+- QI9 reference OCR cross-check: 166 BOM-matching candidates out of 209 BOM references; 43 not detected by the two OCR passes.
+- QI9 electrical connectivity promoted by this work: NONE; connectivity remains BLOCKED.
