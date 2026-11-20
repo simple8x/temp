@@ -285,8 +285,8 @@ def test_writer_rejects_duplicate_or_missing_arm_records_before_serialization():
 def test_reader_rejects_site_link_claiming_complete_with_one_missing_arm():
     pi, cls, cl, built, res = run(line(100, 100, 160, 100) + line(130, 70, 130, 130))
     (site,) = built.graph.sites
-    fixed = dataclasses.replace(site, fixed="ALL4")
-    G = dataclasses.replace(built.graph, sites=[fixed])
+    only_all4 = dataclasses.replace(site, options=tuple(op for op in site.options if op.name == "ALL4"))
+    G = dataclasses.replace(built.graph, sites=[only_all4])
     res = solve(G)
     doc = build_document(G, res, built=built, page=pi, clusters=cl, registry=cls.registry)
     link = doc["site_links"][0]
@@ -297,6 +297,40 @@ def test_reader_rejects_site_link_claiming_complete_with_one_missing_arm():
         arms[0]["geometry"] = None
     with pytest.raises(DocumentError, match="provenance block"):
         loads(tamper(doc, remove_one_arm_geometry))
+
+
+def test_reader_recomputes_site_resolution_and_rejects_forged_assumptions():
+    pi, cls, cl, built, res = run(line(100, 100, 160, 100) + line(130, 70, 130, 130))
+    doc = build_document(built.graph, res, built=built, page=pi, clusters=cl, registry=cls.registry)
+    sid = doc["sites"][0]["id"]
+
+    def forge_result(d):
+        d["sites"][0]["result"] = {"status": "INFERRED", "option": "ALL4", "reason": "FIXED_ASSUMPTION"}
+    with pytest.raises(DocumentError, match="result does not follow from solver premises"):
+        loads(tamper(doc, forge_result))
+
+    def forge_fixed(d):
+        d["sites"][0]["fixed"] = "ALL4"
+        d["sites"][0]["result"] = {"status": "INFERRED", "option": "ALL4", "reason": "FIXED_ASSUMPTION"}
+    with pytest.raises(DocumentError, match="fixed assumption"):
+        loads(tamper(doc, forge_fixed))
+
+    def forge_link(d):
+        site = d["sites"][0]
+        a, b = sorted({arm["obj"] for arm in site["arms"]})
+        prov = _link_provenance(site, a, b, {p["content_ref"] for p in d["primitives"]})
+        d["site_links"].append({"id": f"site:{sid}:{a}|{b}", "site": sid, "option": "ALL4",
+                                "a": a, "b": b, "status": "INFERRED",
+                                "origin": "solver.site_resolution", "provenance": prov})
+        d["site_links"].sort(key=lambda x: x["id"])
+    with pytest.raises(DocumentError, match="site_links are not exactly"):
+        loads(tamper(doc, forge_link))
+
+    fixed = dataclasses.replace(built.graph.sites[0], fixed="ALL4")
+    fixed_graph = dataclasses.replace(built.graph, sites=[fixed])
+    with pytest.raises(WriterError, match="fixed site assumptions"):
+        build_document(fixed_graph, solve(fixed_graph), built=built, page=pi,
+                       clusters=cl, registry=cls.registry)
 
 
 def test_solver_digest_is_documented_as_opaque_and_content_hash_bound():
@@ -313,8 +347,8 @@ def test_solver_digest_is_documented_as_opaque_and_content_hash_bound():
 def test_resolved_site_links_are_inferred_with_arm_provenance():
     pi, cls, cl, built, res = run(line(100, 100, 160, 100) + line(130, 70, 130, 130))
     (site,) = built.graph.sites
-    fixed = dataclasses.replace(site, fixed="ALL4")     # the domain collapses to ALL4 / NONE for two wires
-    G = dataclasses.replace(built.graph, sites=[fixed])
+    only_all4 = dataclasses.replace(site, options=tuple(op for op in site.options if op.name == "ALL4"))
+    G = dataclasses.replace(built.graph, sites=[only_all4])
     res = solve(G)
     d = loads(dumps(G, res, built=built, page=pi, clusters=cl, registry=cls.registry))
     (lk,) = d["site_links"]
@@ -326,8 +360,10 @@ def test_resolved_site_links_are_inferred_with_arm_provenance():
     with pytest.raises(DocumentError):                # a link nobody committed
         loads(tamper(d, lambda x: x.__setitem__("site_links", [])))
     # without arm geometry the link is kept, INFERRED, and marked incomplete
-    G2 = ConnGraph(W("a", "b"), [], [dataclasses.replace(fourway_site("site:1", {"N": "a", "S": "a", "E": "b",
-                                                                                 "W": "b"}), fixed="ALL4")])
+    G2 = ConnGraph(W("a", "b"), [], [
+        Site("site:1", "MULTI", (("N", "a"), ("S", "b")),
+             (Option("PAIR", frozenset({("a", "b")})),))
+    ])
     d2 = build_document(G2, solve(G2))
     (lk2,) = d2["site_links"]
     assert lk2["status"] == "INFERRED" and lk2["provenance"]["complete"] is False
