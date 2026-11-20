@@ -68,7 +68,7 @@ object that is not one of its edge's primitives / unrelated to the object's prim
 of one wire (straight through a crossing) are legal as long as they are distinct graph edges.
 
 ## Tests / mutations
-`tests/unit/test_writer.py` (20 tests): status preservation x4 with promotion attempts, missing provenance,
+`tests/unit/test_writer.py` (21 tests): status preservation x4 with promotion attempts, missing provenance,
 dangling refs, duplicate ids, determinism under shuffled input, write->read->write identity + all-pairs semantic
 equality, two-wire crossing arms, F2 audit, committed site links, nothing dropped, writer refusal, 15 malformed /
 tampered inputs, end to end on `lib_min.kicad_sym` + generated PDFs (TR1, TR2+dot, TR3 pins, crossing, T-junction).
@@ -79,6 +79,6 @@ Mutations M137-M143 (reader promotion / connectivity / hash / site-link / proven
 - A multi-arm object with one valid geometry and one missing geometry must produce `provenance.complete=false`.
 - Writer serialization rejects duplicate `(label, object)` records and incomplete/mismatched arm inventories before any dictionary indexing.
 - Reader rejects a site-link record that still claims complete provenance after one participating arm geometry is removed.
-- Reader rebuilds the graph and reruns `solve()`; forged site status/option, `fixed` assumptions and extra site links are rejected even after the content hash is recomputed.
+- Reader rebuilds the graph and reruns `solve()`; forged site status/option, `fixed` assumptions and extra site links are rejected even after the content hash is recomputed. Mutations M144-M146 disable each of these checks.
 - Non-null `fixed` is rejected at the writer/reader boundary until an external authorization mechanism exists.
 - `solver_digest` is intentionally opaque/informational; only accidental edits are caught by the content hash. It is not independently authenticated.
