@@ -97,5 +97,5 @@ Before enabling an upstream runtime in CI or production:
 - Independent upstream execution: RUN; `npm ci` and `npm test` passed, with corpus-regression fixtures skipped where the external corpus was absent.
 - Dependency/security audit: NOT RUN.
 - QI9 parser and adapter execution: COMPLETE in Box; see `QI9_INGESTLAB_REAL_PDF_AUDIT.md`.
-- QI9 reference OCR cross-check: 166 BOM-matching candidates out of 209 BOM references; 43 not detected by the two OCR passes.
+- QI9 reference OCR cross-check: 174 BOM-matching candidates out of 209 BOM references at confidence >= 30 (83.25% recall); 35 not detected by three Tesseract passes. At confidence >= 50, 168 match (80.38% recall) and 41 are not detected.
 - QI9 electrical connectivity promoted by this work: NONE; connectivity remains BLOCKED.
