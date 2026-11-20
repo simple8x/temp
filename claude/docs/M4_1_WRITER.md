@@ -30,22 +30,26 @@ This writer is the auditable intermediate those exporters should consume.
 | `constraints` | cannot_link, names, no_connect |
 | `unsupported`, `notes`, `warnings` | from the builder / solver, verbatim |
 | `unresolved_references` | evidence ids, prov refs, primitive ids, objects without primitives, sites without arm geometry |
-| `solver_digest`, `content_sha256` | `SolveResult.digest()`; sha256 of the canonical document without this field |
+| `solver_digest`, `content_sha256` | opaque informational `SolveResult.digest()` token; `content_sha256` hashes the canonical document without itself, including `solver_digest` |
 
 Example (crossing of two wires, trimmed): a FOURWAY site whose arms are `E w:3 / N w:4 / S w:4 / W w:3`, each
 with its own `graph_edge` (6, 4, 5, 3), `vector`, `direction` and `prov`; domain collapses to `ALL4 {(w:3,w:4)}` /
 `NONE`; result `UNKNOWN AMBIGUOUS_2_CONSISTENT_ASSIGNMENTS`; no site link; `pair_status(w:3, w:4) = UNKNOWN`.
 
 ## Why a forged file cannot pass (independent of the hash)
-The reader does not trust stored statuses. It re-runs `classify_edge` on the premise record of every edge, checks
-the stored status is one the solver can produce from that classification (VERIFIED->VERIFIED or
-CONFLICT/QUARANTINED; INFERRED->INFERRED, UNKNOWN/REJECTED_BY_CONSTRAINT or UNKNOWN/TOUCHES_CONFLICT_COMPONENT;
-UNKNOWN unchanged), runs `audit_verified` on every VERIFIED edge, recomputes every provenance block, recomputes the
-net / electrical / verified partitions from the edges, site links and attachments in the file, requires the site
-links to be exactly the links of the INFERRED sites' options, and requires every UNKNOWN edge, open site and
-unresolved terminal to appear in its net's `open_reasons` (so a dropped record is visible). Duplicate JSON keys,
-unknown or missing keys, non-canonical text and NaN are rejected. The writer validates its own output before
-returning it and raises `WriterError` rather than drop a status, site, edge or link it cannot represent.
+The reader reconstructs `ConnGraph` from serialized objects, pipeline edge premises, site domains and constraints,
+then calls the production solver again. It compares every site result, every edge status/reason and the exact
+committed site-link set against that fresh solve; it does not derive expected links from the document's claimed
+`site.result`. It separately re-runs `classify_edge` / `audit_verified`, recomputes provenance, and recomputes
+the net / electrical / verified partitions from edges, site links and attachments. Constraints are schema-checked
+before they become solver inputs. Duplicate JSON keys, unknown or missing keys, non-canonical text and NaN are
+rejected.
+
+A serialized `fixed` site choice is an assumption, not something a reader can authenticate from the same
+self-contained document. Therefore the writer and reader reject non-null `fixed` values. To accept such a choice
+in a future version it must be authorized by a separately trusted, externally verified record (not by rehashing
+this JSON). The finite option domain remains an explicit serialized premise; this recomputation proves the result
+follows from that domain and the other serialized premises, not that the domain itself is authentic PDF evidence.
 
 Missing provenance never promotes: the record stays, its `provenance.complete` is false with the reasons listed,
 and its status is what the solver gave (e.g. a SOUND edge without prov is INFERRED/MISSING_PROVENANCE).
@@ -64,8 +68,17 @@ object that is not one of its edge's primitives / unrelated to the object's prim
 of one wire (straight through a crossing) are legal as long as they are distinct graph edges.
 
 ## Tests / mutations
-`tests/unit/test_writer.py` (20 tests): status preservation x4 with promotion attempts, missing provenance,
+`tests/unit/test_writer.py` (21 tests): status preservation x4 with promotion attempts, missing provenance,
 dangling refs, duplicate ids, determinism under shuffled input, write->read->write identity + all-pairs semantic
 equality, two-wire crossing arms, F2 audit, committed site links, nothing dropped, writer refusal, 15 malformed /
 tampered inputs, end to end on `lib_min.kicad_sym` + generated PDFs (TR1, TR2+dot, TR3 pins, crossing, T-junction).
 Mutations M137-M143 (reader promotion / connectivity / hash / site-link / provenance checks, arm prov, arm audit).
+
+
+## Independent adversarial regressions added after review
+- A multi-arm object with one valid geometry and one missing geometry must produce `provenance.complete=false`.
+- Writer serialization rejects duplicate `(label, object)` records and incomplete/mismatched arm inventories before any dictionary indexing.
+- Reader rejects a site-link record that still claims complete provenance after one participating arm geometry is removed.
+- Reader rebuilds the graph and reruns `solve()`; forged site status/option, `fixed` assumptions and extra site links are rejected even after the content hash is recomputed. Mutations M144-M146 disable each of these checks.
+- Non-null `fixed` is rejected at the writer/reader boundary until an external authorization mechanism exists.
+- `solver_digest` is intentionally opaque/informational; only accidental edits are caught by the content hash. It is not independently authenticated.

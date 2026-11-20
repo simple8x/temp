@@ -331,6 +331,13 @@ MUTATIONS = [
     ("M142-arm-provenance-dropped", "ecci/rules.py", "prov_of(r[2]))", "())"),
     ("M143-arm-audit-accepts-duplicate-edge", "ecci/rules.py",
      "            if len(set(gedges)) != len(gedges):", "            if False:"),
+    # B1 — the reader must rerun site resolution, not trust stored results or links
+    ("M144-reader-trusts-site-result", "ecci/writer.py",
+     '        if site_by_id[sid]["result"] != expected:', "        if False:"),
+    ("M145-reader-accepts-fixed-assumption", "ecci/writer.py",
+     '        if s["fixed"] is not None:', "        if False:"),
+    ("M146-reader-accepts-uncommitted-site-link", "ecci/writer.py",
+     "    if got != want_links:", "    if False:"),
 ]
 
 
