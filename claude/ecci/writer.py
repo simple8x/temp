@@ -30,7 +30,8 @@ import json
 import math
 from collections import defaultdict
 
-from .solver import ConnGraph, SolveResult, _name_edges, audit_result
+from .constraints import Constraints, Name
+from .solver import (ConnGraph, Obj, Option, Site, SolveResult, _name_edges, audit_result, solve)
 from .rules import audit_site_arms
 from .status import (CONFLICT, CONVENTIONAL, INFERRED, RULES, SOUND, UNKNOWN, VERIFIED, Edge, RoleRef,
                      audit_verified, classify_edge)
@@ -122,6 +123,22 @@ def _edge_from_record(rec: dict) -> Edge:
                 tuple(rec["negative"]), tuple(rec["prov"]))
 
 
+def _solve_from_document(doc: dict):
+    """Rebuild and solve the serialized premises; never trust site.result or site_links."""
+    cons_doc = doc["constraints"]
+    names = {n["object"]: Name(n["text"], n["scope"], n["confirmed"]) for n in cons_doc["names"]}
+    cons = Constraints(names=names,
+                       cannot_link=tuple(tuple(x) for x in cons_doc["cannot_link"]),
+                       no_connect=frozenset(cons_doc["no_connect"]))
+    objects = [Obj(o["id"], o["kind"], o["attach"]) for o in doc["objects"]]
+    edges = [_edge_from_record(e) for e in doc["edges"] if e["origin"] == ORIGIN_PIPELINE]
+    sites = [Site(s["id"], s["kind"], tuple((a["label"], a["obj"]) for a in s["arms"]),
+                  tuple(Option(op["name"], frozenset(tuple(link) for link in op["links"]))
+                        for op in s["options"]), s["fixed"])
+             for s in doc["sites"]]
+    return solve(ConnGraph(objects, edges, sites, cons))
+
+
 def _edge_provenance(prov, ev_ids, prim_refs: set, ev_known: set) -> dict:
     missing = []
     if not prov:
@@ -169,6 +186,8 @@ def build_document(graph: ConnGraph, res: SolveResult, *, built=None, page=None,
     (classify registry) add provenance; without them the records are kept and their provenance is marked
     incomplete. Raises WriterError instead of dropping anything the result contains."""
     probs = audit_result(graph, res)
+    if any(s.fixed is not None for s in graph.sites):
+        raise WriterError("fixed site assumptions cannot be independently verified by a reader")
     if probs:
         raise WriterError("solver result fails audit_result: " + "; ".join(probs[:5]))
     edges = list(graph.edges) + _name_edges(graph)
@@ -538,6 +557,36 @@ def _validate(doc) -> list[str]:
     if sorted(o["id"] for o in doc["objects"] if o["prims"] is None) != unres["objects_without_primitives"]:
         P.append("objects_without_primitives does not match the objects")
 
+    # ---- constraints are solver inputs, so validate their complete shape before recomputation
+    cons = doc["constraints"]
+    if type(cons) is not dict or set(cons) != {"cannot_link", "names", "no_connect"}:
+        P.append("constraints malformed")
+    else:
+        if type(cons["cannot_link"]) is not list or any(
+                type(x) is not list or len(x) != 3 or not all(_is_str(v) for v in x)
+                or x[0] not in known or x[1] not in known for x in cons["cannot_link"]):
+            P.append("constraints.cannot_link malformed")
+        if type(cons["names"]) is not list:
+            P.append("constraints.names malformed")
+        else:
+            name_ids = []
+            for n in cons["names"]:
+                if type(n) is not dict or set(n) != {"object", "text", "scope", "confirmed"} \
+                        or not _is_str(n["object"]) or n["object"] not in known \
+                        or not _is_str(n["text"]) or not _is_str(n["scope"]) \
+                        or type(n["confirmed"]) is not bool:
+                    P.append("constraints.names contains a malformed record")
+                    continue
+                name_ids.append(n["object"])
+            if name_ids != sorted(set(name_ids)):
+                P.append("constraints.names are duplicated or not canonical")
+        if type(cons["no_connect"]) is not list or any(
+                not _is_str(x) or x not in known for x in cons["no_connect"]) \
+                or cons["no_connect"] != sorted(set(cons["no_connect"])):
+            P.append("constraints.no_connect malformed")
+    if P:
+        return P
+
     # ---- edges: premises re-classified, status transitions checked, provenance recomputed
     Q = set()
     for t in doc["quarantined"]:
@@ -661,21 +710,42 @@ def _validate(doc) -> list[str]:
             P.append(f"site {sid}: a site is never VERIFIED")
         if (r["status"] == INFERRED) != (r["option"] is not None) or r["option"] is not None and r["option"] not in names:
             P.append(f"site {sid}: option present iff INFERRED and must be in the domain")
-        if s["fixed"] is not None and s["fixed"] not in names:
-            P.append(f"site {sid}: fixed option not in domain")
+        if s["fixed"] is not None:
+            P.append(f"site {sid}: fixed assumption is not independently verifiable")
     _unique(doc["sites"], "id", "site", P)
     if sorted(s["id"] for s in doc["sites"] if any(a.get("geometry") is None for a in s["arms"])) \
             != unres["sites_without_arm_geometry"]:
         P.append("sites_without_arm_geometry does not match the sites")
 
-    # ---- site links: exactly the links of every INFERRED site's option
+    # ---- re-run the solver from serialized premises; claimed site results are not inputs
+    try:
+        recomputed = _solve_from_document(doc)
+    except Exception as exc:
+        P.append(f"solver premise recomputation failed: {type(exc).__name__}: {exc}")
+        return P
+    for sid, sr in recomputed.sites.items():
+        expected = {"status": STATUS_MAP[sr.status], "option": sr.option, "reason": sr.reason}
+        if site_by_id[sid]["result"] != expected:
+            P.append(f"site {sid}: result does not follow from solver premises; expected {expected}")
+    expected_edge_ids = set(recomputed.edge_status)
+    actual_edge_ids = {e["id"] for e in doc["edges"]}
+    if actual_edge_ids != expected_edge_ids:
+        P.append("edges do not match the independently recomputed solver graph")
+    else:
+        for e in doc["edges"]:
+            st, reason = recomputed.edge_status[e["id"]]
+            if (e["status"], e["reason"]) != (STATUS_MAP[st], reason):
+                P.append(f"edge {e['id']}: status/reason differs from solver recomputation")
     want_links = {}
-    for sid, s in site_by_id.items():
-        r = s["result"]
-        if type(r) is dict and r.get("status") == INFERRED:
-            op = next((o for o in s["options"] if o["name"] == r["option"]), None)
-            for a, b in (op or {"links": []})["links"]:
-                want_links[f"site:{sid}:{a}|{b}"] = (sid, r["option"], a, b)
+    for eid, a, b in recomputed.final_edges:
+        if not eid.startswith("site:"):
+            continue
+        sid = next((x for x in recomputed.sites if eid.startswith(f"site:{x}:")), None)
+        sr = recomputed.sites.get(sid)
+        if sid is None or sr is None or sr.status != INFERRED:
+            P.append(f"solver emitted invalid site link {eid}")
+            continue
+        want_links[eid] = (sid, sr.option, a, b)
     got = {}
     for i, l in enumerate(doc["site_links"]):
         if not _keys(l, "site_link", f"site_link[{i}]", P):
@@ -748,13 +818,6 @@ def _validate(doc) -> list[str]:
         for n in nets:
             if type(n) is dict and set(n.get("open_reasons", ())) != want_r.get(n["id"], set()):
                 P.append(f"net {n['id']}: open_reasons do not match the UNKNOWN edges / open sites / terminals")
-    cons = doc["constraints"]
-    if type(cons) is not dict or set(cons) != {"cannot_link", "names", "no_connect"}:
-        P.append("constraints malformed")
-    else:
-        for a, b, _ in cons["cannot_link"]:
-            if a not in known or b not in known:
-                P.append(f"cannot_link: dangling object {a!r}/{b!r}")
     for k in ("evidence", "provenance"):
         if unres[k] != sorted(set(unres[k])):
             P.append(f"unresolved_references.{k} not canonical")
