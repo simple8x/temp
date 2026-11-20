@@ -455,3 +455,79 @@ def test_b2_run_page_provenance_follows_the_pin_lines_audit(status, stage, tmp_p
     pi, cls, cl, built, res = sc.run()
     rec = run_page(tmp_path, pi, cls, cl, built, res, LIB, LIB_TEXT, {"name": sc.name}, None, None)
     assert rec["stages"]["provenance"] == stage and rec["pin_lines_audit"]["status"] == status
+
+
+# ---- B3 follow-up: GT UNKNOWN accounting (a geometric claim is not a score)
+def _crossing_gt():
+    sc = crossing()
+    pi, conn, syms, sch, man = export(sc)
+    return sc, man, _netlist_from(man)
+
+
+def _check_accounting(g):
+    n = g["gt_scoreable_pins"]
+    assert g["gt_pins_scored"] == g["exported_pins_mapped"]
+    assert g["gt_pins_not_exported_UNKNOWN"] == n - g["gt_pins_scored"] == len(g["unmatched_gt_pins"])
+    assert all(d["state"] == "UNKNOWN" and d["reason"] for d in g["unmatched_gt_pins"])
+    assert g["mapping_coverage"] == round(g["gt_pins_scored"] / n, 4)
+
+
+def test_b3_valid_geometric_and_electrical_match_is_scored():
+    sc, man, nl = _crossing_gt()
+    g = kr.compare_ground_truth(man, nl, sc.gt_pins())
+    _check_accounting(g)
+    assert g["gt_pins_scored"] == g["gt_scoreable_pins"] == 8 and g["gt_pins_not_exported_UNKNOWN"] == 0
+    assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 0 and g["unmatched_gt_pins"] == []
+
+
+def test_b3_unique_geometric_match_without_a_kicad_net_stays_unknown():
+    sc, man, nl = _crossing_gt()
+    d = next(d for d in man["symbols"] if d["decision"] == "PLACED")
+    ref, p = d["synthetic_reference"]["value"], d["pins"][0]
+    nl2 = copy.deepcopy(nl)
+    for k in list(nl2["nets"]):
+        nl2["nets"][k] = [x for x in nl2["nets"][k] if tuple(x) not in {(ref, n) for n in p["numbers"]}]
+    g = kr.compare_ground_truth(man, nl2, sc.gt_pins())
+    _check_accounting(g)
+    assert g["gt_pins_scored"] == 7 and g["gt_pins_not_exported_UNKNOWN"] == 1
+    assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 1
+    (u,) = g["unmatched_gt_pins"]
+    assert p["object"] in u["reason"] and "not on exactly one KiCad net" in u["reason"]
+    assert {"object": p["object"], "state": "UNKNOWN", "reason": "pin not on exactly one KiCad net"} \
+        in g["unmatched_exported_pins"]
+
+
+def test_b3_two_exported_pins_claiming_one_gt_pin():
+    sc, man, nl = _crossing_gt()
+    man2 = copy.deepcopy(man)
+    placed = [d for d in man2["symbols"] if d["decision"] == "PLACED"]
+    first, second = placed[0]["pins"][0], placed[1]["pins"][0]
+    second["page_tip"] = list(first["page_tip"])          # both now sit on the same GT pin
+    g = kr.compare_ground_truth(man2, nl, sc.gt_pins())
+    _check_accounting(g)
+    assert g["ambiguous_or_duplicate_matches"] == 1
+    assert {"object": second["object"], "state": "UNKNOWN", "reason": "GT pin already matched"} \
+        in g["unmatched_exported_pins"]
+    assert g["gt_pins_scored"] == 7                       # the GT pin is scored once; second's own GT pin is UNKNOWN
+    assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 0
+
+
+def test_b3_mixture_of_mapped_unmatched_and_unscored_pins():
+    sc, man, nl = _crossing_gt()
+    placed = [d for d in man["symbols"] if d["decision"] == "PLACED"]
+    off = placed[0]["pins"][0]                            # 1: no GT pin near it (its GT pin moved away)
+    nonet = placed[1]["pins"][0]                          # 2: geometric match, no KiCad net
+    ref = placed[1]["synthetic_reference"]["value"]
+    gt = [GtPin(x.ref, x.number, x.x + 50, x.y + 50, x.net, False, x.lib_id)
+          if abs(x.x - off["page_tip"][0]) < 1e-6 and abs(x.y - off["page_tip"][1]) < 1e-6 else x
+          for x in sc.gt_pins()]
+    nl2 = copy.deepcopy(nl)
+    for k in list(nl2["nets"]):
+        nl2["nets"][k] = [x for x in nl2["nets"][k] if tuple(x) not in {(ref, n) for n in nonet["numbers"]}]
+    g = kr.compare_ground_truth(man, nl2, gt)
+    _check_accounting(g)
+    assert g["gt_pins_scored"] == g["exported_pins_mapped"] == 6
+    assert g["exported_pins_unmatched"] == 2 and g["gt_pins_not_exported_UNKNOWN"] == 2
+    reasons = sorted(u["reason"].split(" ")[0] for u in g["unmatched_gt_pins"])
+    assert reasons == ["matched", "no"]
+    assert sum(g["pairs"].values()) == 6 * 5 // 2         # only the 6 scored pins are paired

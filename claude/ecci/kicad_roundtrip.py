@@ -141,7 +141,10 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
     for i, g in enumerate(scoreable):
         grid[(int(g.x // 4), int(g.y // 4))].append(i)
     net_of = {nd: name for name, nodes in netlist["nets"].items() for nd in nodes}
-    mapped, unmatched, used, dup = [], [], set(), 0
+    # claimed: GT indices an exported pin matched geometrically (duplicate-match protection: a GT pin is claimed at
+    # most once, by the first exported pin in manifest order). scored: claimed GT indices whose exported pin is on
+    # exactly one KiCad net, i.e. that enter the pair scoring. Every scoreable GT pin not in `scored` is UNKNOWN.
+    mapped, unmatched, claimed, scored, dup = [], [], {}, set(), 0
     for d in manifest["symbols"]:
         if d["decision"] != "PLACED":
             continue
@@ -150,17 +153,18 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
             x, y = p["page_tip"]
             cand = [i for gx in (-1, 0, 1) for gy in (-1, 0, 1) for i in grid[(int(x // 4) + gx, int(y // 4) + gy)]
                     if math.hypot(scoreable[i].x - x, scoreable[i].y - y) <= tol_pt]
-            if len(cand) != 1 or cand[0] in used:
+            if len(cand) != 1 or cand[0] in claimed:
                 why = ("no GT pin within tolerance" if not cand else
                        "several GT pins within tolerance" if len(cand) > 1 else "GT pin already matched")
                 unmatched.append((p["object"], why))
-                dup += len(cand) > 1 or (len(cand) == 1 and cand[0] in used)
+                dup += len(cand) > 1 or (len(cand) == 1 and cand[0] in claimed)
                 continue
-            used.add(cand[0])
+            claimed[cand[0]] = p["object"]
             ours = {net_of.get((ref, n)) for n in p["numbers"]}
             if len(ours) != 1 or None in ours:
                 unmatched.append((p["object"], "pin not on exactly one KiCad net"))
                 continue
+            scored.add(cand[0])                  # only now: the GT pin is electrically scored
             mapped.append((p["object"], next(iter(ours)), scoreable[cand[0]].net))
     c = collections.Counter()
     fp_examples, fn_examples = [], []
@@ -181,13 +185,19 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
     pos = c["TP"] + c["FN"]
     return {"gt_scoreable_pins": len(scoreable), "exported_pins_mapped": len(mapped),
             "exported_pins_unmatched": len(unmatched), "ambiguous_or_duplicate_matches": dup,
-            "gt_pins_not_exported_UNKNOWN": len(scoreable) - len(used),
+            # every scoreable GT pin that was NOT electrically scored (not claimed by any exported pin, or claimed by
+            # one that is not on exactly one KiCad net); semantics since the B3 fix: "not scored", not "not claimed"
+            "gt_pins_not_exported_UNKNOWN": len(scoreable) - len(scored),
+            "gt_pins_scored": len(scored),
+            "gt_pins_claimed_not_scored_UNKNOWN": len(set(claimed) - scored),
             # mapping coverage = GT scoreable pins that an exported pin was scored against (None: nothing to score)
             "mapping_coverage": round(len(mapped) / len(scoreable), 4) if scoreable else None,
             # unmatched pins are not scored and stay UNKNOWN: nothing is inferred about their connectivity
             "unmatched_exported_pins": [{"object": o, "state": "UNKNOWN", "reason": r} for o, r in sorted(unmatched)],
-            "unmatched_gt_pins": sorted([{"ref": g.ref, "number": g.number, "state": "UNKNOWN"}
-                                         for i, g in enumerate(scoreable) if i not in used],
+            "unmatched_gt_pins": sorted([{"ref": g.ref, "number": g.number, "state": "UNKNOWN",
+                                          "reason": "no exported pin matched" if i not in claimed else
+                                          f"matched by {claimed[i]} but that pin is not on exactly one KiCad net"}
+                                         for i, g in enumerate(scoreable) if i not in scored],
                                         key=lambda d: (str(d["ref"]), str(d["number"]))),
             "pairs": dict(TP=c["TP"], FP=c["FP"], FN=c["FN"], TN=c["TN"]),
             "precision": round(c["TP"] / (c["TP"] + c["FP"]), 4) if c["TP"] + c["FP"] else None,

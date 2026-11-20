@@ -111,14 +111,20 @@ so the mutation job installs KiCad and sets `ECCI_KICAD_TESTS=1`).
   `$M4_GT_POLICY` or `tools/m4_gt_policy.json`; absent → every page's `ground_truth` is BLOCKED and the
   `m4-kicad-export` job does not pass until the owner sets the threshold. The generated self-test scenes carry a
   test-only policy (`Scene.gt_min_coverage`: 1.0, 0.5 for `ambiguous_r` whose R is NOT_PLACED by design).
+- UNKNOWN accounting: a GT pin is *claimed* when exactly one exported pin matches it geometrically (first claim
+  wins; a second exported pin on the same GT pin is unmatched, "GT pin already matched") and *scored* only once
+  that exported pin is on exactly one KiCad net. `gt_pins_scored` = scored = `exported_pins_mapped`;
+  `gt_pins_not_exported_UNKNOWN` = scoreable − scored (since this fix: "not scored", previously "not claimed",
+  which hid claimed-but-unscored pins); `gt_pins_claimed_not_scored_UNKNOWN` counts the latter;
+  `unmatched_gt_pins[*].reason` says which. `mapping_coverage` = scored / scoreable.
 - Reported per page (`gt_report.json`, `rec["ground_truth"]`) and in the CI step summary of `claude-gt`:
   GT scoreable / mapped / unmatched pins, coverage, TP / FP / FN / TN, precision, recall, gate state + reason.
 
 ### Tests / mutations
-`tests/unit/test_m42_blockers.py` (53): B1 valid / unrelated primitive / foreign lineage / wrong endpoint /
+`tests/unit/test_m42_blockers.py` (57): B1 valid / unrelated primitive / foreign lineage / wrong endpoint /
 widened tolerance / reversed / malformed / degenerate / missing lineage (4 forms) / symbol reader / page audit
 without page / primitive missing from page; B2 valid / no promotion / wrong page / nonexistent / unrelated /
 non-line primitive / shifted endpoint / foreign content_ref / line removed from page / no geometry / record
 required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
 policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
-`tests/kicad`). Mutations M165–M185; M88 and M161 re-targeted to the refactored code (same bug class).
+`tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
