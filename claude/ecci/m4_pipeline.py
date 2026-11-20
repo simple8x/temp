@@ -16,10 +16,13 @@ from . import symrec
 from .writer import dumps as conn_dumps, loads as conn_loads
 
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
+INCONCLUSIVE = "INCONCLUSIVE"
 
 
 def run_page(out: Path, pi, cls, clusters, built, res, library, lib_text: str, source: dict,
-             gt_pins=None, cli: str | None = None) -> dict:
+             gt_pins=None, cli: str | None = None, gt_policy: dict | None = None) -> dict:
+    """`gt_policy` ({"min_mapping_coverage": x}) is required for the ground_truth stage to PASS: without it the stage
+    is BLOCKED (the project documents no M4.2 coverage threshold, so none is assumed)."""
     out.mkdir(parents=True, exist_ok=True)
     rec: dict = {"source": source, "stages": {}}
     S = rec["stages"]
@@ -35,10 +38,14 @@ def run_page(out: Path, pi, cls, clusters, built, res, library, lib_text: str, s
     syms = symrec.loads(st, conn, library)
     S["symbols_schema_roundtrip"] = PASS if symrec.dumps(syms) == st else FAIL
     audit = symrec.audit_against_page(syms, pi) + symrec.audit_evidence(conn, syms, pi, library)
+    pla = symrec.audit_pin_lines(syms, pi, cls)
+    rec["pin_lines_audit"] = {"status": pla["status"], "clusters": pla["clusters"], "problems": pla["problems"][:20]}
     ur = conn["unresolved_references"]
-    prov_problems = audit + [f"unresolved {k}: {v[:3]}" for k, v in ur.items()
-                             if v and k not in ("objects_without_primitives", "sites_without_arm_geometry")]
-    S["provenance"] = PASS if not prov_problems else FAIL
+    other = audit + [f"unresolved {k}: {v[:3]}" for k, v in ur.items()
+                     if v and k not in ("objects_without_primitives", "sites_without_arm_geometry")]
+    prov_problems = other + pla["problems"]
+    S["provenance"] = (FAIL if other or pla["status"] == symrec.PL_FAIL
+                       else BLOCKED if pla["status"] == symrec.PL_BLOCKED else PASS)
     rec["provenance_problems"] = prov_problems[:20]
     # 3. export + manifest re-derivation
     sch, man = kx.export(conn, syms, lib_text)
@@ -86,11 +93,14 @@ def run_page(out: Path, pi, cls, clusters, built, res, library, lib_text: str, s
         S["ground_truth"] = BLOCKED
         return rec
     g = kr.compare_ground_truth(man, nl, gt_pins)
+    gate = kr.ground_truth_gate(g, gt_policy)
+    g["gate"] = gate
     (out / "gt_report.json").write_text(json.dumps(g, indent=1, sort_keys=True))
-    S["ground_truth"] = PASS if g["pairs"]["FP"] == 0 else FAIL
+    S["ground_truth"] = gate["state"]          # PASS / FAIL / BLOCKED / INCONCLUSIVE (never PASS by default)
     rec["ground_truth"] = {k: g[k] for k in ("pairs", "precision", "recall_over_mapped_pairs", "gt_scoreable_pins",
                                              "exported_pins_mapped", "exported_pins_unmatched",
-                                             "gt_pins_not_exported_UNKNOWN")}
+                                             "gt_pins_not_exported_UNKNOWN", "mapping_coverage")}
+    rec["ground_truth"]["gate"] = {k: gate[k] for k in ("state", "reason", "min_mapping_coverage")}
     return rec
 
 
@@ -104,12 +114,13 @@ def _reasons(man) -> dict:
 
 
 def gate_table(records: list[dict], cli: str | None, extra: dict | None = None) -> dict:
-    """Aggregate per-stage states: PASS only if EVERY record passed that stage; BLOCKED if any could not run."""
+    """Aggregate per-stage states: PASS only if EVERY record passed that stage; FAIL if any failed; otherwise
+    (BLOCKED, INCONCLUSIVE or any unknown state) BLOCKED. Only the literal PASS counts as a pass."""
     gates = {}
     for st in ("connectivity_schema_roundtrip", "symbols_schema_roundtrip", "provenance", "manifest_rederived",
                "kicad_read", "netlist_roundtrip", "ground_truth"):
         vals = [r["stages"].get(st, BLOCKED) for r in records] or [BLOCKED]
-        gates[st] = FAIL if FAIL in vals else (BLOCKED if BLOCKED in vals else PASS)
+        gates[st] = FAIL if FAIL in vals else (PASS if all(v == PASS for v in vals) else BLOCKED)
     if extra:
         gates.update(extra)
     return {"kicad_cli": cli, "gates": gates, "overall": PASS if all(v == PASS for v in gates.values()) else

@@ -151,13 +151,15 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
             cand = [i for gx in (-1, 0, 1) for gy in (-1, 0, 1) for i in grid[(int(x // 4) + gx, int(y // 4) + gy)]
                     if math.hypot(scoreable[i].x - x, scoreable[i].y - y) <= tol_pt]
             if len(cand) != 1 or cand[0] in used:
-                unmatched.append(p["object"])
+                why = ("no GT pin within tolerance" if not cand else
+                       "several GT pins within tolerance" if len(cand) > 1 else "GT pin already matched")
+                unmatched.append((p["object"], why))
                 dup += len(cand) > 1 or (len(cand) == 1 and cand[0] in used)
                 continue
             used.add(cand[0])
             ours = {net_of.get((ref, n)) for n in p["numbers"]}
             if len(ours) != 1 or None in ours:
-                unmatched.append(p["object"])
+                unmatched.append((p["object"], "pin not on exactly one KiCad net"))
                 continue
             mapped.append((p["object"], next(iter(ours)), scoreable[cand[0]].net))
     c = collections.Counter()
@@ -180,7 +182,73 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
     return {"gt_scoreable_pins": len(scoreable), "exported_pins_mapped": len(mapped),
             "exported_pins_unmatched": len(unmatched), "ambiguous_or_duplicate_matches": dup,
             "gt_pins_not_exported_UNKNOWN": len(scoreable) - len(used),
+            # mapping coverage = GT scoreable pins that an exported pin was scored against (None: nothing to score)
+            "mapping_coverage": round(len(mapped) / len(scoreable), 4) if scoreable else None,
+            # unmatched pins are not scored and stay UNKNOWN: nothing is inferred about their connectivity
+            "unmatched_exported_pins": [{"object": o, "state": "UNKNOWN", "reason": r} for o, r in sorted(unmatched)],
+            "unmatched_gt_pins": sorted([{"ref": g.ref, "number": g.number, "state": "UNKNOWN"}
+                                         for i, g in enumerate(scoreable) if i not in used],
+                                        key=lambda d: (str(d["ref"]), str(d["number"]))),
             "pairs": dict(TP=c["TP"], FP=c["FP"], FN=c["FN"], TN=c["TN"]),
             "precision": round(c["TP"] / (c["TP"] + c["FP"]), 4) if c["TP"] + c["FP"] else None,
             "recall_over_mapped_pairs": round(c["TP"] / pos, 4) if pos else None,
             "fp_examples": fp_examples, "fn_examples": fn_examples}
+
+
+# ---- ground-truth gate -------------------------------------------------------------------------------------------
+GT_PASS, GT_FAIL, GT_BLOCKED, GT_INCONCLUSIVE = "PASS", "FAIL", "BLOCKED", "INCONCLUSIVE"
+GT_POLICY_KEYS = frozenset({"min_mapping_coverage"})
+
+
+def gt_policy_problems(policy) -> list[str]:
+    """A GT policy is {"min_mapping_coverage": x} with 0 < x <= 1. The project documents no M4.2 coverage threshold,
+    so none is assumed here: the caller must supply one (see docs/M4_2_KICAD_EXPORT.md)."""
+    if policy is None:
+        return ["no ground-truth policy (min_mapping_coverage) configured"]
+    if not isinstance(policy, dict) or set(policy) != GT_POLICY_KEYS:
+        return [f"ground-truth policy must have exactly the keys {sorted(GT_POLICY_KEYS)}"]
+    x = policy["min_mapping_coverage"]
+    if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or not 0 < x <= 1:
+        return [f"min_mapping_coverage {x!r} is not a number in (0, 1]"]
+    return []
+
+
+def load_gt_policy(path) -> dict | None:
+    """The policy file (JSON), or None if the path is unset / missing. A malformed file raises ValueError."""
+    import json
+    if not path or not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        pol = json.load(f, parse_constant=lambda c: (_ for _ in ()).throw(ValueError(f"constant {c}")))
+    probs = gt_policy_problems(pol)
+    if probs:
+        raise ValueError(f"{path}: {probs[0]}")
+    return pol
+
+
+def ground_truth_gate(g: dict, policy) -> dict:
+    """PASS needs ALL of: a valid policy, at least one scored pin pair (>= 2 mapped pins), mapping coverage >= the
+    policy minimum, and FP == 0. FP > 0 is FAIL whatever else holds (a wrong connection was exported); no policy
+    is BLOCKED; nothing scoreable is INCONCLUSIVE; coverage below the minimum is FAIL. Unmatched pins stay UNKNOWN."""
+    pairs = g["pairs"]
+    scored = sum(pairs.values())
+    rep = {"gt_scoreable_pins": g["gt_scoreable_pins"], "exported_pins_mapped": g["exported_pins_mapped"],
+           "exported_pins_unmatched": g["exported_pins_unmatched"], "mapping_coverage": g["mapping_coverage"],
+           "TP": pairs["TP"], "FP": pairs["FP"], "FN": pairs["FN"], "TN": pairs["TN"],
+           "precision": g["precision"], "recall": g["recall_over_mapped_pairs"],
+           "min_mapping_coverage": policy.get("min_mapping_coverage") if isinstance(policy, dict) else None}
+    if pairs["FP"] > 0:
+        return {**rep, "state": GT_FAIL, "reason": f"{pairs['FP']} false-positive pin pair(s)"}
+    pp = gt_policy_problems(policy)
+    if pp:
+        return {**rep, "state": GT_BLOCKED, "reason": pp[0]}
+    if g["exported_pins_mapped"] < 2 or scored == 0 or g["mapping_coverage"] is None:
+        return {**rep, "state": GT_INCONCLUSIVE,
+                "reason": f"{g['exported_pins_mapped']} exported pin(s) mapped to GT: no pin pair could be scored"}
+    if g["mapping_coverage"] < policy["min_mapping_coverage"]:
+        return {**rep, "state": GT_FAIL, "reason": f"mapping coverage {g['mapping_coverage']} below the policy "
+                                                   f"minimum {policy['min_mapping_coverage']}"}
+    if g["precision"] is None and pairs["TP"] == 0:
+        # only TN/FN pairs: no exported connection was confirmed, which is fine (FP = 0) but stated
+        return {**rep, "state": GT_PASS, "reason": "FP = 0, coverage met; no exported connection among mapped pins"}
+    return {**rep, "state": GT_PASS, "reason": "FP = 0 and coverage met"}

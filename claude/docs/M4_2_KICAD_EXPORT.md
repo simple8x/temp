@@ -42,8 +42,11 @@ pipeline's `provenance` stage).
   present; each manifest net classified OK / MISSING / SPLIT / MERGED; a pin the manifest leaves alone that KiCad
   connects is EXTRA.
 - V-G: exported pin ends matched 1:1 to GT pins (≤ 1 pt); pairs TP / FP / FN / TN; GT pins not exported are
-  counted `gt_pins_not_exported_UNKNOWN`. The `ground_truth` stage PASSes only with FP = 0; FN is reported.
-- Gates (`m4_pipeline.gate_table`): a gate is PASS only if every page passed it; any BLOCKED → not PASS.
+  counted `gt_pins_not_exported_UNKNOWN` and listed (`unmatched_gt_pins`, state UNKNOWN); exported pins that
+  could not be mapped are listed with a reason (`unmatched_exported_pins`, state UNKNOWN). `mapping_coverage` =
+  mapped exported pins / GT scoreable pins. The `ground_truth` stage is `ground_truth_gate` (see Hardening, B3).
+- Gates (`m4_pipeline.gate_table`): a gate is PASS only if every page passed it; any FAIL → FAIL; anything else
+  (BLOCKED, INCONCLUSIVE, unknown) → BLOCKED.
 
 ## Tests / mutations
 `tests/unit/test_m4_export.py` (25, no KiCad): multiple candidates, identity AMBIGUOUS/UNKNOWN, reference
@@ -57,10 +60,65 @@ so the mutation job installs KiCad and sets `ECCI_KICAD_TESTS=1`).
 
 ## Limits
 - No wire geometry and no designators/values in the output; nonlocal connectivity (labels, power, sheets) is
-  still unsolved upstream, so GT recall stays low; only FP is gated.
+  still unsolved upstream, so GT recall stays low; FP and mapping coverage are gated (B3), FN is reported.
 - Symbol choice is limited to what template matching supports: symmetric parts (R, C, …) stay NOT_PLACED.
 - Library: the GT run embeds the source design's exact `lib_symbols` text (an ASSUMPTION shared with M4.0:
   the library is known). Derived (`extends`) symbols are not supported by `kicad_lib`.
-- Not re-verifiable from files alone: PIN_LINES selection support (needs the page's pin lines).
+- Not re-verifiable from files alone: PIN_LINES selection support (needs the page's pin lines) — the file records
+  the lines and `audit_pin_lines` checks them against the page; without the page the result is BLOCKED.
 - PR #12 (reader recomputes site resolution) is not on this branch; the export only uses VERIFIED groups, which
   do not depend on site links.
+
+## Hardening (M4.2 blockers B1–B3)
+
+### B1 — S2 (`MEASURED_STUB`) lineage is geometric
+- `detect_pins` records the measured segment behind every S2 on the pin (`PinResult.stub`); the connectivity
+  document's pin record carries `stub` = `{prim, segment, a, b, orientation, tolerance}` (null without S2) and
+  the stub primitive is always a cited primitive. Stripped body stubs contribute their real segments (no chord).
+- `writer.s2_problems` (run by `writer.loads`, and by `symrec.loads` on the bound connectivity document): a pin
+  cites S2 iff it has a stub, only as its own `S2:<cluster>:<k>`; the S2 record is an underived VECTOR
+  `MEASURED_STUB` whose lineage is exactly `[geom:<stub.prim>]`; no S2 record is uncited; the segment is
+  finite and non-degenerate; the recorded orientation holds (`FORWARD`: a≈base, b≈tip; `REVERSED`: b≈base,
+  a≈tip) within the recorded tolerance; the tolerance is ≤ the documented policy
+  `max(S2_TAU_ABS_MAX = 0.05, S2_REL_MAX = 0.1 × pin length)` (the `PinParams` / `MatchParams` defaults;
+  a run with wider parameters is rejected, not trusted); both ends lie in the primitive's recorded bbox ± tol.
+- `symrec.audit_s2_against_page` (part of `audit_evidence`, pipeline `provenance` stage): the stub primitive is
+  on the page with the cited content_ref, its segment `segment` is exactly a→b, and it is not part of the
+  matched body (S1 lineage). No page → `BLOCKED`, never a pass.
+- Re-hashing a forged document does not help: every check is semantic. Nothing is promoted: the checks only
+  reject; `pos_state` is still what `decide_role` gave.
+
+### B2 — PIN_LINES selections are audited against the source page
+- `resolution.pin_lines` (symbols schema 1, new key): `[]` for `ALL`; for `PIN_LINES`, per selected candidate,
+  per pin `{number, tip, base, line: {prim, content_ref, end, far, tolerance}}` — the drawn line `detect_pins`
+  used (`pins.pin_line_support`, same rule as before: end at the tip, along the axis toward the base,
+  0.5–1.3 pin lengths, tolerance as in B1).
+- File level (`symrec.loads`): the record exists, covers every pin of every selected candidate with the
+  predicted tip/base, each line satisfies the rule, tolerance ≤ policy.
+- Page level (`symrec.audit_pin_lines(doc, page, cls=None)` → `VERIFIED_AGAINST_PAGE | FAIL | BLOCKED |
+  NOT_APPLICABLE` + reasons): page_index matches (else FAIL "wrong page"); each line primitive exists, is an
+  open 2-point non-text line, has the recorded content_ref; recorded end points equal the page line's (else
+  "displaced"); the page line satisfies the rule for its pin (else "does not support the pin"); every selected
+  candidate is fully drawn and every unselected one is not. No page / empty page / unknown page identity →
+  BLOCKED. Folded into the `provenance` stage (FAIL → FAIL, BLOCKED → BLOCKED).
+- Evidence in tests is the vector ingest of PDFs generated by the test helpers, not a real source PDF.
+
+### B3 — ground-truth gate (`kicad_roundtrip.ground_truth_gate`)
+- Order: FP > 0 → FAIL; no / malformed policy → BLOCKED; < 2 mapped pins or no scored pair → INCONCLUSIVE;
+  `mapping_coverage` < `min_mapping_coverage` → FAIL; else PASS. A zero-mapped result can never PASS.
+- Policy: `{"min_mapping_coverage": x}`, 0 < x ≤ 1. The project documents no M4.2 coverage threshold (the M4.0
+  `GATE_MIN_PIN_RECALL` in `gt_gate.txt` is a different quantity), so **none is shipped**: `tools/m4_gt.py` reads
+  `$M4_GT_POLICY` or `tools/m4_gt_policy.json`; absent → every page's `ground_truth` is BLOCKED and the
+  `m4-kicad-export` job does not pass until the owner sets the threshold. The generated self-test scenes carry a
+  test-only policy (`Scene.gt_min_coverage`: 1.0, 0.5 for `ambiguous_r` whose R is NOT_PLACED by design).
+- Reported per page (`gt_report.json`, `rec["ground_truth"]`) and in the CI step summary of `claude-gt`:
+  GT scoreable / mapped / unmatched pins, coverage, TP / FP / FN / TN, precision, recall, gate state + reason.
+
+### Tests / mutations
+`tests/unit/test_m42_blockers.py` (53): B1 valid / unrelated primitive / foreign lineage / wrong endpoint /
+widened tolerance / reversed / malformed / degenerate / missing lineage (4 forms) / symbol reader / page audit
+without page / primitive missing from page; B2 valid / no promotion / wrong page / nonexistent / unrelated /
+non-line primitive / shifted endpoint / foreign content_ref / line removed from page / no geometry / record
+required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
+policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
+`tests/kicad`). Mutations M165–M185; M88 and M161 re-targeted to the refactored code (same bug class).

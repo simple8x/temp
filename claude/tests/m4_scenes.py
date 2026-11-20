@@ -27,6 +27,12 @@ def tip(name, o, t, number):
 class Scene:
     def __init__(self, name):
         self.name, self.content, self.parts, self.nets = name, b"", [], []
+        # self-test GT policy (test data, not a project threshold): the construction GT names every drawn pin,
+        # so by default every one of them must be mapped; a scene that leaves a part unplaced BY DESIGN says so
+        self.gt_min_coverage = 1.0
+
+    def gt_policy(self) -> dict:
+        return {"min_mapping_coverage": self.gt_min_coverage}
 
     def add(self, ref, sym, o, t):
         self.content += _sym(sym, o, t)
@@ -104,6 +110,7 @@ def ambiguous_r() -> Scene:
     s.wire(tip("R", "r90", (100.0, 100.0), "1"), tip("D", "r0", (200.0, 100.0), "2"))
     rt = tip("R", "r90", (100.0, 100.0), "1")
     s.nets = [{("R1", "1"), ("D1", "2")}] if rt[0] < 100 else [{("R1", "2"), ("D1", "2")}]
+    s.gt_min_coverage = 0.5      # the R (2 of the 4 GT pins) is NOT_PLACED by design: its pins stay UNKNOWN
     return s
 
 
