@@ -52,7 +52,7 @@ All 189 unresolved blocks have reason `source bbox is missing`. The adapter exit
 
 ## Independent OCR and BOM reconciliation
 
-Two independent Tesseract passes were run on rendered schematic pages 5–11:
+Two Tesseract passes (same engine, different page-segmentation modes and render scales) were run on rendered schematic pages 5–11:
 
 - Tesseract 5, PSM 11, 3x render: 1,448 word observations; 1,019 with confidence >= 50.
 - Tesseract 5, PSM 6, 6x render: 1,783 word observations; 1,158 with confidence >= 50.
