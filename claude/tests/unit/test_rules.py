@@ -116,6 +116,22 @@ def test_tc_x3_filled_circle_that_is_part_of_a_symbol_is_not_a_junction_dot():
         assert res.pair_status(a, b) != VERIFIED
 
 
+def test_tc_x2_pdf_fill_and_stroke_companion_paths_still_form_a_dot():
+    # Real PDF exporters may paint a filled disc and its outline as separate paths.
+    # The outline is not an adjacent symbol body and must not suppress the marker.
+    pi, cls, cl, built, res = run(four_ends() + disc(100, 100, 1.0, "f") +
+                                  disc(100, 100, 1.0, "S"))
+    assert len(edges_by_rule(built, "TR2")) == 4
+    assert not built.graph.sites
+
+
+def test_tc_x3_companion_outline_does_not_hide_real_symbol_body_contact():
+    sym = b"0.9 w 101 95 m 111 95 l 111 105 l 101 105 l h S\n"
+    pi, cls, cl, built, res = run(four_ends() + disc(100, 100, 1.0, "f") +
+                                  disc(100, 100, 1.0, "S") + sym)
+    assert edges_by_rule(built, "TR2") == []
+
+
 def test_tc_h1_border_coincident_endpoint_creates_no_edge():
     border = b"0.9 w 2 2 296 196 re S\n"
     pi, cls, cl, built, res = run(border + line(2, 100, 60, 100), base=BASE)
@@ -301,3 +317,4 @@ def test_pipeline_generated_tr1_tr2_tr3_verified_edges_pass_the_independent_audi
             assert audit_verified(dataclasses.replace(e, n_prims=float(e.n_prims)))
             assert audit_verified(dataclasses.replace(e, coord=e.coord.split("@")[0] + "@nan,0.000"))
         assert audit_result(built.graph, res) == []
+[exit status 0]
