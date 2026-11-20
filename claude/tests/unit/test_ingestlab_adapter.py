@@ -63,3 +63,44 @@ def test_multi_page_rag_chunk_not_attributed_to_one_page():
 def test_invalid_page_dimensions_are_rejected():
     with pytest.raises(AdapterError):
         adapt_parse_result(PDF, result([]), [(0, 100)], extractor_version="1.1.3", extractor_config=CFG)
+
+def test_list_blocks_are_retained_and_accounted():
+    out = run([{"type": "list", "items": [
+        {"text": "Unit: mm", "ordered": False},
+        {"text": "Maker design", "ordered": False},
+    ], "bbox": {"x0": 10, "y0": 10, "x1": 80, "y1": 40}}])
+    assert len(out["items"]) == 1
+    assert out["items"][0]["kind"] == "list_item"
+    assert out["items"][0]["raw_text"] == "Unit: mm\\nMaker design"
+    assert out["summary"]["source_blocks_seen"] == 1
+    assert out["summary"]["source_blocks_accounted"] == 1
+    assert out["summary"]["block_accounting_complete"] is True
+
+def test_code_blocks_are_retained():
+    out = run([{"type": "code", "text": "A -> B",
+                "bbox": {"x0": 10, "y0": 10, "x1": 80, "y1": 40}}])
+    assert out["items"][0]["kind"] == "code"
+    assert out["items"][0]["raw_text"] == "A -> B"
+
+def test_form_section_title_and_note_are_retained():
+    out = run([{"type": "form_section", "title": "Checkboxes",
+                "note": "Select one", "bbox": {"x0": 10, "y0": 10, "x1": 80, "y1": 40}}])
+    assert out["items"][0]["kind"] == "form_section"
+    assert out["items"][0]["raw_text"] == "Checkboxes\\nSelect one"
+
+def test_unsupported_or_empty_blocks_are_explicitly_unresolved():
+    out = run([{"type": "unknown_extension", "value": "not silently dropped"},
+               {"type": "paragraph", "text": ""}])
+    assert out["items"] == []
+    assert [x["reason"] for x in out["unresolved"]] == [
+        "UNSUPPORTED_BLOCK_TYPE:unknown_extension", "NO_TEXT_CONTENT"
+    ]
+    assert out["summary"]["source_blocks_seen"] == 2
+    assert out["summary"]["source_blocks_accounted"] == 2
+    assert out["summary"]["block_accounting_complete"] is True
+
+def test_page_count_must_match_pages_array():
+    data = {"kind": "pdf", "stats": {"pages": 2}, "pages": [[]]}
+    with pytest.raises(AdapterError, match="one block list per declared page"):
+        adapt_parse_result(PDF, data, [(200.0, 100.0), (200.0, 100.0)],
+            extractor_version="1.1.3", extractor_config=CFG)
