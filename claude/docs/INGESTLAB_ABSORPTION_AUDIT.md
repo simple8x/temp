@@ -8,7 +8,7 @@ Audited upstream: https://github.com/ingestlab-dev/ingestlab
 Upstream revision observed: `73f530c7415b815a8b6297ca24aad65a1351ca11` (release v1.1.3).
 Local baseline: branch `claude`, commit `b975692acdd2b002f44f80dc906df2943b0c1bfe`.
 
-This is a source review, not an independent execution or reproducibility claim. No upstream package was installed, no upstream tests/benchmarks were run, and no QI9 result was generated in this audit.
+This is a source review plus a local fail-closed adapter implementation. It is not an independent upstream execution or QI9 integration claim. No upstream package was installed and no QI9 result was generated.
 
 ## Findings
 
@@ -36,31 +36,39 @@ The upstream corpus test asserts exact outputs for two LM358 datasheets. That is
 
 The current ECCI pipeline is already vector-first: `pikepdf` content-stream interpretation, normalized page geometry, transformed path primitives and operator provenance. It explicitly reports unsupported PDF features (including text-show operators and clipping not applied). The optional PyMuPDF cross-check is an independent extractor, but its own tests document that agreement does not prove universal correctness.
 
-Therefore, IngestLab should be an **optional text/layout sidecar**, not a replacement for ECCI vector ingestion or arrangement/topology logic.
+Therefore, IngestLab is an **optional text/layout sidecar**, not a replacement for ECCI vector ingestion or arrangement/topology logic.
 
-## Integration boundary
+## Implemented adapter
 
-1. Preserve original PDF bytes and SHA-256 before any parsing.
-2. Run IngestLab in an isolated, pinned, optional adapter process; no network fetches during parsing.
-3. Convert outputs into a neutral evidence sidecar. Every item must retain source page, bounding box, extractor/version, source digest and raw payload digest.
-4. Text-derived reference/value/net-label candidates may help locate evidence, but may not create or merge electrical graph edges.
-5. ECCI remains authoritative for vector geometry, candidate electrical edges and classification.
-6. Any disagreement between text/layout and vector evidence is recorded as CONFLICT/UNKNOWN and blocks promotion.
-7. No adapter output may transition UNKNOWN/INFERRED to VERIFIED. VERIFIED still requires the existing independent evidence rules and writer re-audit.
+Files:
+- `claude/ecci/ingestlab_adapter.py`
+- `claude/tests/unit/test_ingestlab_adapter.py`
+- `claude/docs/INGESTLAB_EVIDENCE_CONTRACT.json`
+
+The adapter consumes a serialized IngestLab `ParseResult` and the original PDF bytes. It:
+- binds the document and each evidence item to SHA-256 of the original PDF;
+- requires exact IngestLab version and a hash of the exact options/config;
+- requires independently obtained page dimensions before normalizing coordinates;
+- rejects malformed, non-finite, negative, reversed and out-of-page bboxes;
+- carries text/table/caption candidates only; it does not import Mermaid, SVG, graph edges or circuit/net names as connectivity;
+- marks OCR-derived text UNKNOWN;
+- refuses to attribute multi-page RAG chunks to a single page;
+- records missing bbox/provenance as unresolved and returns a nonzero CLI status;
+- hardcodes zero connectivity claims and zero VERIFIED items.
+
+The adapter is intentionally not wired into the production ECCI graph or writer. No upstream npm dependency is added. A caller must run IngestLab separately in a sandbox, serialize its ParseResult, and provide page dimensions from an independent PDF metadata reader. The adapter does not claim that this external invocation has been run.
 
 ## Security and supply-chain gates
 
-Before enabling the adapter in CI or production:
+Before enabling an upstream runtime in CI or production:
 - pin exact upstream release and resolved transitive dependency lock;
 - inspect license and all transitive packages;
-- disable runtime network access and remote model/API calls;
+- disable runtime network fetches and remote model/API calls;
 - enforce input byte, page, object, time, memory and output-size limits;
 - run untrusted PDF parsing in a sandbox with no credentials or writable repository mount;
 - reject malformed, non-finite, out-of-page or unbounded coordinates;
 - record parser errors/unsupported features; partial extraction cannot be reported as complete;
 - verify deterministic output or explicitly record nondeterministic fields.
-
-No dependency or runtime integration is added by this audit.
 
 ## Required validation before absorption
 
@@ -85,6 +93,7 @@ No dependency or runtime integration is added by this audit.
 ## Honest status
 
 - Source review: COMPLETE for the files listed in this audit.
+- Adapter implementation: COMMITTED; CI validation pending.
 - Independent upstream test execution: NOT RUN.
 - Dependency/security audit: NOT RUN.
 - QI9 integration: NOT IMPLEMENTED.
