@@ -1,0 +1,71 @@
+# M4.1 — connectivity writer (`ecci.connectivity`, schema 1) and F2 arm provenance
+
+## What it is
+`ecci/writer.py` serializes one solved page (`ConnGraph` + `SolveResult`, plus optionally the `BuildResult`,
+`PageIngest`, pin clusters and evidence registry of `rules.analyze_page`) into canonical JSON, and reads it back.
+
+- `build_document(graph, res, built=, page=, clusters=, registry=, source=) -> dict`
+- `dumps(...) -> str` (canonical JSON: sorted keys, compact separators, ASCII, no NaN, trailing newline)
+- `loads(text) -> dict` (fail closed: `DocumentError(problems)`), `validate(doc) -> [problems]`,
+  `pair_status(doc, p, q)` (= `SolveResult.pair_status` from the file alone), `reserialize(doc)`.
+
+Not in this batch: the `.kicad_sch` / KiCad netlist writer and the kicad-cli V-W round trip from HANDOFF "Next 1".
+This writer is the auditable intermediate those exporters should consume.
+
+## Schema (top level)
+| key | content |
+|---|---|
+| `format`, `schema_version` | `"ecci.connectivity"`, `1` |
+| `status_vocabulary` | internal -> file mapping; identity `VERIFIED/INFERRED/UNKNOWN/CONFLICT`, checked on read |
+| `coordinates` | normalized page space, PDF pt x UserUnit, origin top-left of visible page, x right, y down |
+| `source` | `document` (caller-supplied identity, e.g. name/sha256, or null), `page_index`, `page_size` |
+| `primitives` | id, content_ref, page, source, chain, first_op, bbox of every referenced PDF primitive |
+| `evidence` | EvidenceItems named by roles / pins, closed over `derived_from` |
+| `objects` | id, kind, attach, prims, pin detail (tip, base, numbers, states, evidence), dot detail |
+| `edges` | every candidate edge (pipeline + solver TR6): rule, rule_kind, origin, roles (obj, kind, status, evidence, weak), coord, n_prims, negative, prov, `classified` (classify_edge), final `status`/`reason`, `provenance {complete, missing, refs}` |
+| `site_links` | links committed by site resolution: always INFERRED, origin `solver.site_resolution`, arm provenance |
+| `attachments` | UnresolvedTerminal -> wire, `electrical: false` |
+| `sites` | kind, arms (label, obj, F2 `geometry`), options, fixed, result |
+| `nets`, `quarantined`, `connectivity` | solver nets; quarantine records; per object `net` / `electrical_group` / `verified_group` |
+| `constraints` | cannot_link, names, no_connect |
+| `unsupported`, `notes`, `warnings` | from the builder / solver, verbatim |
+| `unresolved_references` | evidence ids, prov refs, primitive ids, objects without primitives, sites without arm geometry |
+| `solver_digest`, `content_sha256` | `SolveResult.digest()`; sha256 of the canonical document without this field |
+
+Example (crossing of two wires, trimmed): a FOURWAY site whose arms are `E w:3 / N w:4 / S w:4 / W w:3`, each
+with its own `graph_edge` (6, 4, 5, 3), `vector`, `direction` and `prov`; domain collapses to `ALL4 {(w:3,w:4)}` /
+`NONE`; result `UNKNOWN AMBIGUOUS_2_CONSISTENT_ASSIGNMENTS`; no site link; `pair_status(w:3, w:4) = UNKNOWN`.
+
+## Why a forged file cannot pass (independent of the hash)
+The reader does not trust stored statuses. It re-runs `classify_edge` on the premise record of every edge, checks
+the stored status is one the solver can produce from that classification (VERIFIED->VERIFIED or
+CONFLICT/QUARANTINED; INFERRED->INFERRED, UNKNOWN/REJECTED_BY_CONSTRAINT or UNKNOWN/TOUCHES_CONFLICT_COMPONENT;
+UNKNOWN unchanged), runs `audit_verified` on every VERIFIED edge, recomputes every provenance block, recomputes the
+net / electrical / verified partitions from the edges, site links and attachments in the file, requires the site
+links to be exactly the links of the INFERRED sites' options, and requires every UNKNOWN edge, open site and
+unresolved terminal to appear in its net's `open_reasons` (so a dropped record is visible). Duplicate JSON keys,
+unknown or missing keys, non-canonical text and NaN are rejected. The writer validates its own output before
+returning it and raises `WriterError` rather than drop a status, site, edge or link it cannot represent.
+
+Missing provenance never promotes: the record stays, its `provenance.complete` is false with the reasons listed,
+and its status is what the solver gave (e.g. a SOUND edge without prov is INFERRED/MISSING_PROVENANCE).
+
+## F2 — independent geometric provenance of site arms
+Finding (baseline c5f7cdf): `Site.arms` was `(label, obj)` only. The arrangement node, graph edge, direction
+vector and PDF operators of each arm were discarded in `rules.build_conn_graph`; with overlapping wire primitives on
+one arm edge only `min(prim_id)` survived, silently. A site link (an electrical assertion) therefore could not be
+traced to its geometry, so this was a writer-integrity dependency and was fixed here.
+
+Fix (backward compatible, solver and digest unchanged): `BuildResult.site_arms[site_id] = (ArmRecord, ...)` in the
+order of `Site.arms` with `node, graph_edge, other_node, prim_ids (all covering prims), chosen_prim, direction,
+vector, prov`. `rules.audit_site_arms` and the reader check: missing records, label/object mismatch, arms not at the
+site node, one graph edge on two arms, contradictory FOURWAY directions, direction not fitting the vector, an arm
+object that is not one of its edge's primitives / unrelated to the object's primitives, missing arm prov. Two arms
+of one wire (straight through a crossing) are legal as long as they are distinct graph edges.
+
+## Tests / mutations
+`tests/unit/test_writer.py` (20 tests): status preservation x4 with promotion attempts, missing provenance,
+dangling refs, duplicate ids, determinism under shuffled input, write->read->write identity + all-pairs semantic
+equality, two-wire crossing arms, F2 audit, committed site links, nothing dropped, writer refusal, 15 malformed /
+tampered inputs, end to end on `lib_min.kicad_sym` + generated PDFs (TR1, TR2+dot, TR3 pins, crossing, T-junction).
+Mutations M137-M143 (reader promotion / connectivity / hash / site-link / provenance checks, arm prov, arm audit).

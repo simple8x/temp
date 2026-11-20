@@ -53,6 +53,65 @@ class BuildResult:
     dots: dict = field(default_factory=dict)          # dot object id -> (centre, radius, attached node or None)
     obj_prims: dict = field(default_factory=dict)     # object id -> tuple of prim ids (traceability, I8)
     pin_tips: dict = field(default_factory=dict)      # pin object id -> tip (normalized page space)
+    # F2: site id -> (ArmRecord, ...) in the order of Site.arms. Side table so Site / solver / digest stay unchanged.
+    site_arms: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ArmRecord:
+    """Independent geometric provenance of one site arm (F2): which arrangement node and edge the arm is, which
+    primitives cover that edge, the direction it leaves the node in, and the PDF operators behind it."""
+    label: str                      # = the label in Site.arms
+    obj: str                        # = the object in Site.arms ("w:<chosen_prim>")
+    node: int                       # arrangement node the site sits on
+    graph_edge: int                 # arrangement edge this arm is
+    other_node: int                 # far end of that edge
+    prim_ids: tuple                 # every primitive covering the edge (sorted); > 1 = overlapping wires
+    chosen_prim: int                # the primitive the arm object was named after (min of prim_ids)
+    direction: str | None           # _dir_label of the arm vector, None if not axis-aligned
+    vector: tuple                   # (dx, dy) node -> other node, normalized page space (y down)
+    prov: tuple                     # content_ref of every primitive in prim_ids
+
+
+def audit_site_arms(graph: ConnGraph, site_arms: dict, obj_prims: dict | None = None) -> list[str]:
+    """F2 checks: every site has one arm record per arm, naming the same label/object, a real wire primitive, a
+    distinct arrangement edge, and a direction that fits its vector. Arms sharing one wire object are legal (a wire
+    passing straight through a crossing occupies two arms) as long as they are distinct graph edges. Total."""
+    problems: list[str] = []
+    try:
+        sids = {s.id for s in graph.sites}
+        for extra in sorted(set(site_arms) - sids):
+            problems.append(f"F2 {extra}: arm records for a site that is not in the graph")
+        for s in sorted(graph.sites, key=lambda s: s.id):
+            recs = site_arms.get(s.id)
+            if not recs:
+                problems.append(f"F2 {s.id}: missing arm provenance")
+                continue
+            if tuple((r.label, r.obj) for r in recs) != tuple(s.arms):
+                problems.append(f"F2 {s.id}: arm records do not match the site arms")
+            nodes = {r.node for r in recs}
+            if len(nodes) != 1 or s.id != f"site:{next(iter(nodes))}":
+                problems.append(f"F2 {s.id}: arms do not all start at the site node")
+            gedges = [r.graph_edge for r in recs]
+            if len(set(gedges)) != len(gedges):
+                problems.append(f"F2 {s.id}: duplicate arm evidence (one graph edge on two arms)")
+            dirs = [r.direction for r in recs if r.direction is not None]
+            if s.kind == "FOURWAY" and len(set(dirs)) != len(recs):
+                problems.append(f"F2 {s.id}: contradictory arm directions")
+            for r in recs:
+                if not r.prim_ids or r.chosen_prim not in r.prim_ids or r.obj != f"w:{r.chosen_prim}":
+                    problems.append(f"F2 {s.id}/{r.label}: arm object is not one of the edge's primitives")
+                if obj_prims is not None and r.chosen_prim not in obj_prims.get(r.obj, ()):
+                    problems.append(f"F2 {s.id}/{r.label}: arm refers to an unrelated graph object")
+                if r.direction != _dir_label(*r.vector):
+                    problems.append(f"F2 {s.id}/{r.label}: direction {r.direction!r} does not fit vector {r.vector}")
+                if s.kind == "FOURWAY" and r.label != r.direction:
+                    problems.append(f"F2 {s.id}/{r.label}: FOURWAY label is not the arm direction")
+                if len(r.prov) != len(r.prim_ids) or not all(isinstance(x, str) and x for x in r.prov):
+                    problems.append(f"F2 {s.id}/{r.label}: missing arm provenance")
+    except Exception as x:          # malformed record: a violation, never a crash
+        problems.append(f"F2: arm records unreadable ({type(x).__name__})")
+    return problems
 
 
 def _role(obj: str, kind: str, status: str, items, weak: bool) -> RoleRef:
@@ -143,6 +202,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
     cannot: list[tuple[str, str, str]] = []
     obj_prims: dict[str, tuple] = {}
     pin_tips: dict[str, tuple] = {}
+    site_arms: dict[str, tuple] = {}
 
     def prov_of(pids) -> tuple[str, ...]:
         return tuple(by_id[i].prov.content_ref for i in sorted(set(pids)) if i in by_id)
@@ -234,6 +294,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
             elif arms >= 4:
                 lab: dict[str, str] = {}
                 arm_objs: list[str] = []
+                raw: list[tuple] = []
                 ok = arms == 4
                 for eid in n.edges:
                     e = eby[eid]
@@ -242,14 +303,22 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                     pid = min(r.prim_id for r in e.refs)
                     arm_objs.append(f"w:{pid}")
                     L = _dir_label(ox - xy[0], oy - xy[1])
+                    ps = tuple(sorted({r.prim_id for r in e.refs}))
+                    raw.append((eid, other, ps, pid, L, (ox - xy[0], oy - xy[1])))
                     if L is None or L in lab:
                         ok = False
                     else:
                         lab[L] = f"w:{pid}"
                 sid = f"site:{n.id}"
+
+                def arm_rec(label, r):
+                    return ArmRecord(label, f"w:{r[3]}", n.id, r[0], r[1], r[2], r[3], r[4], r[5], prov_of(r[2]))
                 if ok and set(lab) == {"N", "E", "S", "W"}:
                     sites.append(fourway_site(sid, lab))
+                    by_l = {r[4]: r for r in raw}
+                    site_arms[sid] = tuple(arm_rec(L, by_l[L]) for L, _ in sites[-1].arms)
                 else:
+                    site_arms[sid] = tuple(arm_rec(f"a{i}", r) for i, r in enumerate(raw))
                     objs_ = sorted(set(arm_objs))
                     allp = frozenset(_pair(x, y) for i, x in enumerate(objs_) for y in objs_[i + 1:])
                     sites.append(Site(sid, "MULTI", tuple((f"a{i}", o) for i, o in enumerate(arm_objs)),
@@ -372,7 +441,7 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                    "no-connect markers not detected: C5 inactive on PDFs",
                    "sheet-scope, power symbols and hierarchical labels not modelled"]
     return BuildResult(ConnGraph(objects, edges, sites, Constraints(cannot_link=tuple(cannot))),
-                       notes, unsupported, dot_info, obj_prims, pin_tips)
+                       notes, unsupported, dot_info, obj_prims, pin_tips, site_arms)
 
 
 def _is_end(p, pt, tol: float) -> bool:

@@ -317,6 +317,20 @@ MUTATIONS = [
      "or a == b or a not in arm_set", "or a not in arm_set"),
     ("M136-site-link-outside-arms-allowed", "ecci/solver.py",
      "or a == b or a not in arm_set or b not in arm_set", "or a == b"),
+    # M4.1 writer / reader and F2 arm provenance
+    ("M137-reader-accepts-status-promotion", "ecci/writer.py", "        if not ok:", "        if False:"),
+    ("M138-reader-ignores-connectivity-recompute", "ecci/writer.py",
+     '        if (r["net"], r["electrical_group"], r["verified_group"]) != (net[o], elec[o], vg.get(o)):',
+     "        if False:"),
+    ("M139-reader-ignores-content-hash", "ecci/writer.py",
+     '    if doc["content_sha256"] != content_hash(doc):', "    if False:"),
+    ("M140-reader-accepts-verified-site-link", "ecci/writer.py",
+     '        if l["status"] != INFERRED or l["origin"] != ORIGIN_SITE:', '        if l["origin"] != ORIGIN_SITE:'),
+    ("M141-reader-ignores-provenance-block", "ecci/writer.py",
+     '        if e["provenance"] != exp_prov:', "        if False:"),
+    ("M142-arm-provenance-dropped", "ecci/rules.py", "prov_of(r[2]))", "())"),
+    ("M143-arm-audit-accepts-duplicate-edge", "ecci/rules.py",
+     "            if len(set(gedges)) != len(gedges):", "            if False:"),
 ]
 
 

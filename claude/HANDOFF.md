@@ -81,9 +81,14 @@ assertions; no auto UNKNOWN->VERIFIED; report SHA + run URL + PASS/FAIL/UNKNOWN 
 - `strip_stubs` indexed: tinytapeout-demo#p0 211s -> 67.6s, no longer times out. Same test stated twice
   (`strip_stubs_reference`) with a property test and a cell-boundary test; mutations M98/M99.
 
+## M4.1 writer (this batch, see docs/M4_1_WRITER.md)
+- `ecci/writer.py`: canonical JSON `ecci.connectivity` schema 1 + fail-closed reader that re-derives every status,
+  partition and provenance block from the file. F2 fixed: `BuildResult.site_arms` (ArmRecord) + `audit_site_arms`.
+  Solver / status / GT untouched. Tests `tests/unit/test_writer.py`, mutations M137-M143.
+
 ## Next
-1. M4 writer (approved, started then parked): .kicad_sch + netlist writer, V-W round-trip through kicad-cli,
-   V-G against the GT netlist. M4.0 is FROZEN: GT is a regression gate now (FP=0, pin recall >= 55%,
+1. M4 KiCad export (parked): .kicad_sch + netlist writer consuming `ecci.connectivity`, V-W round-trip through
+   kicad-cli, V-G against the GT netlist. M4.0 is FROZEN: GT is a regression gate now (FP=0, pin recall >= 55%,
    inventory_consistent true), not a target to keep chasing symbol by symbol.
 2. tinytapeout-demo#p0: now evaluated but 1/421 local pins found - diagnose (103k prims, giant clusters).
 3. giant_NONE / NONE by symbol: SN74VMEH22501, HARTING, XC4005, BT812, SN74LV595; `UNIQUE` misses rose to 144.
