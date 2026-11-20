@@ -89,9 +89,15 @@ assertions; no auto UNKNOWN->VERIFIED; report SHA + run URL + PASS/FAIL/UNKNOWN 
 ## M4.1 writer hardening follow-up (PR #11)
 - `ecci/writer.py`: writer now runs `audit_site_arms` before serialization when a `BuildResult` is supplied and rejects duplicate `(label, object)` records before indexing.
 - Site-link provenance is checked per arm. One missing arm geometry or missing arm provenance prevents `complete=true`.
-- Added four adversarial regressions in `tests/unit/test_writer.py` and clarified the digest contract in `docs/M4_1_WRITER.md`.
-- `solver_digest` remains an opaque informational token: reader cannot recompute it without original solver inputs; `content_sha256` is an unkeyed integrity checksum, not an authenticity signature.
-- PR: https://github.com/simple8x/temp/pull/11 (draft). CI status still needs confirmation; do not claim suite/mutation/GT PASS for this patch until a run is observed.
+- CI on PR #11 head `df9f0b2`: Python 3.11/3.12/3.13 each 1003 tests PASS; isolation PASS; mutation 140/140 killed; GT M4 gate PASS. GT measured 100/142 pages, so this is not a full-coverage claim.
+- `solver_digest` remains opaque; `content_sha256` is an unkeyed integrity checksum, not an authenticity signature.
+
+## B1 — reader must recompute site resolution (follow-up branch)
+- Reader rebuilds `ConnGraph` from the serialized premises and reruns `solve()`; site result, edge statuses and site links are compared against the fresh result.
+- Non-null `fixed` site choices are rejected: they are assumptions that cannot be authenticated by the same self-contained JSON. A future implementation needs a separately trusted authorization record.
+- Constraint records are validated before being used as solver inputs.
+- Adversarial tests rehash forged site status, fixed assumption and injected site link; each must fail closed.
+- Branch: `fix/ecci-reader-recompute-site-resolution`. CI pending.
 
 ## Next
 1. M4 KiCad export (parked): .kicad_sch + netlist writer consuming `ecci.connectivity`, V-W round-trip through
