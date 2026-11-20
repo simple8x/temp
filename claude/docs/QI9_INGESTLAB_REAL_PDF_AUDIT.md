@@ -52,21 +52,28 @@ All 189 unresolved blocks have reason `source bbox is missing`. The adapter exit
 
 ## Independent OCR and BOM reconciliation
 
-Two Tesseract passes (same engine, different page-segmentation modes and render scales) were run on rendered schematic pages 5–11:
+Three Tesseract passes (same engine, different page-segmentation modes and render scales/crops) were run on rendered schematic pages 5–11:
 
-- Tesseract 5, PSM 11, 3x render: 1,448 word observations; 1,019 with confidence >= 50.
-- Tesseract 5, PSM 6, 6x render: 1,783 word observations; 1,158 with confidence >= 50.
+- Tesseract 5, PSM 11, 3x full-page render: 1,448 word observations; 1,019 with confidence >= 50.
+- Tesseract 5, PSM 6, 6x full-page render: 1,783 word observations; 1,158 with confidence >= 50.
+- Tesseract 5, PSM 6, 6x schematic-body crop: 1,594 word observations; 958 with confidence >= 50.
 
 These counts are per-pass observations and must not be added as unique words. OCR boxes and confidence are retained as UNKNOWN evidence.
 
 The BOM reference list was extracted from the PDF's native text layer on pages 2–4:
 
 - 209 unique component references in the BOM.
-- 174 unique OCR reference candidates across both passes, after normalizing recognized IC unit suffixes against BOM references.
-- 166 candidates match a BOM reference.
-- 8 candidates do not match the BOM.
-- 43 BOM references were not found by the two OCR passes.
-- Candidate recall against the BOM: 79.43%.
+At confidence >= 30, after BOM-aware normalization of recognized IC unit suffixes:
+- 185 unique OCR reference candidates.
+- 174 candidates match a BOM reference; 11 remain unmatched.
+- 35 BOM references were not detected.
+- Candidate recall: 83.25%; candidate precision: 94.05%.
+
+At confidence >= 50:
+- 176 unique OCR reference candidates.
+- 168 candidates match a BOM reference; 8 remain unmatched.
+- 41 BOM references were not detected.
+- Candidate recall: 80.38%; candidate precision: 95.45%.
 
 This is reference-name cross-checking only. It does not prove that a component symbol or pin was correctly located, nor does it establish any net membership.
 
@@ -76,7 +83,7 @@ PyMuPDF independently inspected schematic pages 5–11:
 
 - 68,400 vector drawing paths.
 - 70,286 straight-line primitives.
-- A heuristic filter produced 2,097 wire-like line candidates after text-box masking.
+- A heuristic filter using all three OCR passes produced 1,762 wire-like line candidates after text-box masking.
 - Endpoint clustering and endpoint-to-segment analysis remain candidate geometry only. Crossings, junction dots, symbol pins, and label attachment have not been independently resolved.
 
 The current candidate graph is not a netlist and must not be used to create or modify ECCI nets.
