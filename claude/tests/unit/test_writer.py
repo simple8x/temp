@@ -11,8 +11,8 @@ from ecci.constraints import Constraints
 from ecci.rules import ArmRecord, audit_site_arms
 from ecci.solver import ConnGraph, Obj, Option, Site, audit_result, fourway_site, solve
 from ecci.status import CONFLICT, INFERRED, UNKNOWN, VERIFIED, Edge, RoleRef
-from ecci.writer import (DocumentError, WriterError, build_document, canonical, content_hash, dumps, loads,
-                         pair_status, reserialize, validate)
+from ecci.writer import (DocumentError, WriterError, _link_provenance, build_document, canonical, content_hash,
+                         dumps, loads, pair_status, reserialize, validate)
 
 from test_rules import TIP_DN, TIP_UP, disc, four_ends, line, r_content, run, wid
 
@@ -248,6 +248,66 @@ def test_audit_site_arms_detects_missing_contradictory_and_unrelated_arms():
     noprov = dataclasses.replace(recs[0], prov=())
     assert any("missing arm provenance" in p
                for p in audit_site_arms(built.graph, {site.id: (noprov,) + recs[1:]}, built.obj_prims))
+
+
+def test_link_provenance_requires_geometry_for_every_arm_of_each_endpoint():
+    site = {"arms": [
+        {"label": "E", "obj": "w:3", "geometry": {"prov": ["pdf#3"]}},
+        {"label": "W", "obj": "w:3", "geometry": None},
+        {"label": "N", "obj": "w:7", "geometry": {"prov": ["pdf#7"]}},
+    ]}
+    result = _link_provenance(site, "w:3", "w:7", {"pdf#3", "pdf#7"})
+    assert result == {
+        "complete": False,
+        "missing": ["MISSING_ARM_GEOMETRY:W:w:3"],
+        "refs": ["pdf#3", "pdf#7"],
+    }
+
+
+def test_writer_rejects_duplicate_or_missing_arm_records_before_serialization():
+    pi, cls, cl, built, res = run(four_ends())
+    (site,) = built.graph.sites
+    recs = built.site_arms[site.id]
+
+    duplicate = dict(built.site_arms)
+    duplicate[site.id] = recs + (recs[0],)
+    bad_duplicate = dataclasses.replace(built, site_arms=duplicate)
+    with pytest.raises(WriterError, match="duplicate"):
+        build_document(built.graph, res, built=bad_duplicate, page=pi, clusters=cl, registry=cls.registry)
+
+    missing = dict(built.site_arms)
+    missing[site.id] = recs[:-1]
+    bad_missing = dataclasses.replace(built, site_arms=missing)
+    with pytest.raises(WriterError, match="site arm audit failed"):
+        build_document(built.graph, res, built=bad_missing, page=pi, clusters=cl, registry=cls.registry)
+
+
+def test_reader_rejects_site_link_claiming_complete_with_one_missing_arm():
+    pi, cls, cl, built, res = run(line(100, 100, 160, 100) + line(130, 70, 130, 130))
+    (site,) = built.graph.sites
+    fixed = dataclasses.replace(site, fixed="ALL4")
+    G = dataclasses.replace(built.graph, sites=[fixed])
+    res = solve(G)
+    doc = build_document(G, res, built=built, page=pi, clusters=cl, registry=cls.registry)
+    link = doc["site_links"][0]
+    target_obj = link["a"]
+    def remove_one_arm_geometry(d):
+        arms = [arm for arm in d["sites"][0]["arms"] if arm["obj"] == target_obj]
+        assert len(arms) >= 2
+        arms[0]["geometry"] = None
+    with pytest.raises(DocumentError, match="provenance block"):
+        loads(tamper(doc, remove_one_arm_geometry))
+
+
+def test_solver_digest_is_documented_as_opaque_and_content_hash_bound():
+    G, res, doc = doc_of(ConnGraph(W("a", "b"), [edge("e", "a", "b")]))
+    changed = tamper(doc, lambda d: d.__setitem__("solver_digest", "not-the-original"), rehash=False)
+    with pytest.raises(DocumentError, match="content_sha256"):
+        loads(changed)
+    # The reader has no solver inputs with which to recompute this opaque digest. Rehashing
+    # therefore remains possible; callers must not treat solver_digest as a verified signature.
+    accepted = tamper(doc, lambda d: d.__setitem__("solver_digest", "not-the-original"), rehash=True)
+    assert loads(accepted)["solver_digest"] == "not-the-original"
 
 
 def test_resolved_site_links_are_inferred_with_arm_provenance():

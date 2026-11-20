@@ -86,6 +86,13 @@ assertions; no auto UNKNOWN->VERIFIED; report SHA + run URL + PASS/FAIL/UNKNOWN 
   partition and provenance block from the file. F2 fixed: `BuildResult.site_arms` (ArmRecord) + `audit_site_arms`.
   Solver / status / GT untouched. Tests `tests/unit/test_writer.py`, mutations M137-M143.
 
+## M4.1 writer hardening follow-up (PR #11)
+- `ecci/writer.py`: writer now runs `audit_site_arms` before serialization when a `BuildResult` is supplied and rejects duplicate `(label, object)` records before indexing.
+- Site-link provenance is checked per arm. One missing arm geometry or missing arm provenance prevents `complete=true`.
+- Added four adversarial regressions in `tests/unit/test_writer.py` and clarified the digest contract in `docs/M4_1_WRITER.md`.
+- `solver_digest` remains an opaque informational token: reader cannot recompute it without original solver inputs; `content_sha256` is an unkeyed integrity checksum, not an authenticity signature.
+- PR: https://github.com/simple8x/temp/pull/11 (draft). CI status still needs confirmation; do not claim suite/mutation/GT PASS for this patch until a run is observed.
+
 ## Next
 1. M4 KiCad export (parked): .kicad_sch + netlist writer consuming `ecci.connectivity`, V-W round-trip through
    kicad-cli, V-G against the GT netlist. M4.0 is FROZEN: GT is a regression gate now (FP=0, pin recall >= 55%,
