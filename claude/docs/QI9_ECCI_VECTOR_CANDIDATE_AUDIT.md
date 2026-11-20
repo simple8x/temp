@@ -32,8 +32,8 @@ The 1,590 count is a count of unresolved terminal-contact records, not a count o
 ## Validation
 
 - `claude/tests/unit/test_rules.py`: **27 passed**.
-- Full `claude/tests` run, excluding an unrelated pre-existing property-test failure in `test_text_vs_symbols.py` and an untracked test file not part of this branch: **1,013 passed**.
-- The failing property test concerns glyph/text classification and does not import or exercise the modified `find_dots` path.
+- Full `claude/tests` run with an isolated, clean Hypothesis example store, excluding only an untracked test file not part of this branch: **1,014 passed**.
+- An initial run replayed a failing example from the existing local Hypothesis store in `test_text_vs_symbols.py`; that property test passed with clean Hypothesis storage and also passed on the base commit.
 - `git diff --check`: passed.
 
 ## Authority boundary and remaining blockers
