@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [claude]
-    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/ecci/**']
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/tools/m4_*', 'claude/ecci/**']
   pull_request:
-    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/ecci/**']
+    paths: ['.github/workflows/claude-gt.yml', 'claude/tools/gt_*', 'claude/tools/m4_*', 'claude/ecci/**']
 jobs:
   export:
     runs-on: ubuntu-24.04
@@ -111,3 +111,42 @@ jobs:
             gt_eval.log
             gt_probe.log
             gt_styles.log
+
+  m4-kicad-export:
+    # M4.2 on the ground-truth corpus: every page gt_eval plans -> .kicad_sch -> FRESH kicad-cli netlist ->
+    # V-W round trip -> V-G partition vs KiCad's netlist of the source design. Runs beside `export` on the SAME
+    # cached GT (restore only; a cache miss fails here = BLOCKED, it never falls back to anything).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore exported ground truth (no fallback)
+        uses: actions/cache/restore@v4
+        with:
+          path: gt_out
+          key: gt-out-${{ hashFiles('claude/tools/gt_export.sh', 'claude/tools/gt_source.txt') }}
+          fail-on-cache-miss: true
+      - name: Install KiCad CLI (pinned)
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
+          sudo apt-get update -q
+          pkg=$(grep '^KICAD_PKG=' claude/tools/gt_source.txt | cut -d= -f2-)
+          sudo apt-get install -y --no-install-recommends "kicad=$pkg"
+          mkdir -p claude/out/m4
+          { kicad-cli version; dpkg-query -W kicad; } | tee claude/out/m4/kicad_version.txt
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pikepdf
+      - name: Verify ground-truth provenance and manifest
+        run: |
+          set -o pipefail
+          bash claude/tools/gt_verify.sh gt_out 2>&1 | tee claude/out/m4/gt_verify.log
+      - name: M4 export on the GT corpus
+        run: |
+          set -o pipefail
+          M4_WORKERS=4 python claude/tools/m4_gt.py gt_out 2>&1 | tee claude/out/m4/m4_gt.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m4-kicad-gt
+          path: claude/out/m4/
