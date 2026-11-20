@@ -17,7 +17,8 @@ Layout (all lists sorted, all keys sorted, no timestamps, no random ids):
   sites        arms (+ F2 arm provenance), finite domain, result
   nets, quarantined, connectivity (net / electrical group / verified group of every object), constraints
   unsupported / notes / warnings / unresolved_references
-  solver_digest (SolveResult.digest()), content_sha256 (of everything else)
+  solver_digest (opaque informational SolveResult.digest token; reader cannot recompute it without solver inputs),
+  content_sha256 (of everything else; detects accidental edits but is not an authenticity signature)
 
 Status mapping internal -> file is the identity (STATUS_MAP); it is written into the file and checked on read.
 """
@@ -30,6 +31,7 @@ import math
 from collections import defaultdict
 
 from .solver import ConnGraph, SolveResult, _name_edges, audit_result
+from .rules import audit_site_arms
 from .status import (CONFLICT, CONVENTIONAL, INFERRED, RULES, SOUND, UNKNOWN, VERIFIED, Edge, RoleRef,
                      audit_verified, classify_edge)
 
@@ -130,16 +132,24 @@ def _edge_provenance(prov, ev_ids, prim_refs: set, ev_known: set) -> dict:
 
 
 def _link_provenance(site: dict | None, a: str, b: str, prim_refs: set) -> dict:
+    """Require provenance on every arm belonging to either endpoint, not merely one arm per object."""
     missing, refs = [], set()
     if site is None:
         return {"complete": False, "missing": ["UNKNOWN_SITE"], "refs": []}
-    for o in (a, b):
+    for o in dict.fromkeys((a, b)):
         arms = [arm for arm in site["arms"] if arm["obj"] == o]
-        geo = [arm["geometry"] for arm in arms if arm["geometry"] is not None]
-        if not geo:
+        if not arms:
             missing.append(f"NO_ARM_PROVENANCE:{o}")
-        for g in geo:
-            refs |= set(g["prov"])
+            continue
+        for arm in arms:
+            label = arm["label"]
+            g = arm["geometry"]
+            if g is None:
+                missing.append(f"MISSING_ARM_GEOMETRY:{label}:{o}")
+                continue
+            if not g["prov"]:
+                missing.append(f"NO_ARM_PROVENANCE:{label}:{o}")
+            refs.update(g["prov"])
     missing += [f"UNRESOLVED_PROV:{p}" for p in sorted(refs) if p not in prim_refs]
     return {"complete": not missing, "missing": sorted(missing), "refs": sorted(refs)}
 
@@ -176,6 +186,17 @@ def build_document(graph: ConnGraph, res: SolveResult, *, built=None, page=None,
     obj_prims = dict(getattr(built, "obj_prims", {}) or {})
     site_arms = dict(getattr(built, "site_arms", {}) or {})
     dots = dict(getattr(built, "dots", {}) or {})
+
+    # Validate the builder's complete arm inventory before indexing it. A dict comprehension below
+    # would otherwise silently discard duplicate (label, object) records.
+    if built is not None:
+        for sid, recs in site_arms.items():
+            keys = [(r.label, r.obj) for r in recs]
+            if len(keys) != len(set(keys)):
+                raise WriterError(f"site {sid} has duplicate (label, object) arm records")
+        arm_problems = audit_site_arms(graph, site_arms, obj_prims)
+        if arm_problems:
+            raise WriterError("site arm audit failed: " + "; ".join(arm_problems[:5]))
 
     # ---- primitives (only those something refers to)
     prims_by_id = {p.id: p for p in (page.prims if page is not None else ())}
