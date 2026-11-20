@@ -341,3 +341,10 @@ def test_m4_gate_table_never_passes_blocked_or_failed_stages():
     bad["stages"]["ground_truth"] = "FAIL"
     assert gate_table([ok, bad], "x")["overall"] == "FAIL"
     assert gate_table([], "x")["overall"] != "PASS"
+
+
+def test_pin_lines_selection_uses_the_pipelines_part_rule():
+    # KiCad embeds duplicates of one part as "lib:SIM4X32", "SIM4X32_1", "SIM4X32#u2": one part, so a PIN_LINES
+    # unit choice among them is legal on read (found by the GT run: the reader had its own, narrower rule)
+    assert len({symrec.part_stem(n) for n in ("video_schlib:SIM4X32", "SIM4X32_1", "SIM4X32_7", "SIM4X32#u2")}) == 1
+    assert symrec.part_stem("R") != symrec.part_stem("C")

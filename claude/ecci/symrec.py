@@ -27,6 +27,7 @@ import hashlib
 import json
 import math
 
+from .pins import _part_stem
 from .symbols import Cluster
 from .template import D4, MatchParams, match_cluster, resolve
 
@@ -84,6 +85,12 @@ def _hit_key(c: dict) -> tuple:
 def _number_map(c: dict, tau: float) -> list:
     return sorted((p["number"], round(p["tip"][0] / max(tau, 1e-9)), round(p["tip"][1] / max(tau, 1e-9)))
                   for p in c["pins"])
+
+
+def part_stem(name: str) -> str:
+    """The part a symbol name belongs to, by the SAME rule pins.detect_pins used to allow a PIN_LINES choice
+    (library nickname, unit suffix '#uN' and KiCad's duplicate-embedding suffixes '_N' ignored)."""
+    return _part_stem(name)
 
 
 def derive_identity(selected: list[dict]) -> dict:
@@ -306,7 +313,7 @@ def _validate(doc, conn_doc, library) -> list[str]:
         if r["selection"] != sel_kind:
             P.append(f"{w}: selection {r['selection']!r} but {len(selected)}/{len(cands)} candidates selected")
         if sel_kind == SEL_PIN_LINES:
-            stems = {c["symbol"].split(":")[-1].split("#")[0] for c in cands}
+            stems = {part_stem(c["symbol"]) for c in cands}
             if not selected or len(stems) != 1:
                 P.append(f"{w}: a PIN_LINES selection may only choose among units of ONE part")
         res = resolve(cl, sel_hits, params)
