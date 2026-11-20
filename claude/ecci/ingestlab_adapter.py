@@ -6,7 +6,7 @@ from typing import Any
 
 SCHEMA = "ecci.ingestlab-evidence"
 ALLOWED = {"CANDIDATE", "INFERRED", "UNKNOWN", "CONFLICT"}
-TEXT_TYPES = {"heading", "paragraph", "aside", "form_section"}
+TEXT_TYPES = {"heading", "paragraph", "aside", "form_section", "code"}
 TABLE_TYPES = {"table", "form_grid", "form_matrix", "worksheet", "kv_panel"}
 
 class AdapterError(ValueError):
@@ -29,8 +29,24 @@ def _bbox(raw: Any, width: float, height: float) -> list[float]:
 
 def _text(block: dict[str, Any]) -> str | None:
     typ = block.get("type")
-    if typ in TEXT_TYPES and isinstance(block.get("text"), str):
-        return block["text"]
+    if typ in TEXT_TYPES:
+        value = block.get("text")
+        if typ == "form_section":
+            value = "\\n".join(
+                str(v) for v in (block.get("title"), block.get("note"))
+                if isinstance(v, str) and v.strip()
+            )
+        if typ == "code" and not isinstance(value, str):
+            value = block.get("code")
+        return value if isinstance(value, str) else None
+    if typ == "list" and isinstance(block.get("items"), list):
+        values = []
+        for item in block["items"]:
+            if isinstance(item, dict) and isinstance(item.get("text"), str):
+                values.append(item["text"])
+            elif isinstance(item, str):
+                values.append(item)
+        return "\\n".join(values) if values else None
     if typ in TABLE_TYPES and isinstance(block.get("rows"), list):
         cells = []
         for row in block["rows"]:
@@ -106,22 +122,34 @@ def adapt_parse_result(pdf_bytes: bytes, result: dict[str, Any],
                       "status": status, "source_sha256": source_hash})
 
     pages = result.get("pages")
+    source_blocks_seen = 0
+    malformed_pages = 0
     if isinstance(pages, list):
+        if len(pages) != page_count:
+            raise AdapterError("ParseResult.pages must contain one block list per declared page")
         for pi, blocks in enumerate(pages):
             if not isinstance(blocks, list):
+                malformed_pages += 1
                 unresolved.append({"id": f"page:{pi}", "reason": "MALFORMED_PAGE_BLOCKS"})
                 continue
             for bi, block in enumerate(blocks):
+                source_blocks_seen += 1
                 item_id = f"ingestlab:p{pi}:b{bi}"
                 if not isinstance(block, dict):
                     unresolved.append({"id": item_id, "reason": "MALFORMED_BLOCK"})
                     continue
+                typ = block.get("type")
                 value = _text(block)
                 if value is None or not value.strip():
+                    supported = typ in (TEXT_TYPES | TABLE_TYPES | {"list", "figure", "image"})
+                    reason = "NO_TEXT_CONTENT" if supported else f"UNSUPPORTED_BLOCK_TYPE:{typ}"
+                    unresolved.append({"id": item_id, "reason": reason})
                     continue
-                typ = block.get("type")
                 kind = ("ocr_text" if block.get("ocr") or block.get("viaVision") else
                         "table_cell" if typ in TABLE_TYPES else
+                        "list_item" if typ == "list" else
+                        "code" if typ == "code" else
+                        "form_section" if typ == "form_section" else
                         "figure" if typ in ("figure", "image") else "text")
                 add(item_id, kind, pi, block.get("bbox"), value, block,
                     "UNKNOWN" if kind == "ocr_text" else "CANDIDATE")
@@ -156,7 +184,12 @@ def adapt_parse_result(pdf_bytes: bytes, result: dict[str, Any],
         "summary": {"candidate_items": sum(x["status"] == "CANDIDATE" for x in items),
                     "unknown_items": sum(x["status"] == "UNKNOWN" for x in items),
                     "unresolved_items": len(unresolved), "connectivity_claims": 0,
-                    "verified_items": 0},
+                    "verified_items": 0, "source_blocks_seen": source_blocks_seen,
+                    "source_blocks_accounted": sum(x["id"].startswith("ingestlab:p") for x in items) +
+                                               sum(x["id"].startswith("ingestlab:p") for x in unresolved),
+                    "block_accounting_complete": (malformed_pages == 0 and
+                        source_blocks_seen == sum(x["id"].startswith("ingestlab:p") for x in items) +
+                                               sum(x["id"].startswith("ingestlab:p") for x in unresolved))},
         "authority": {"may_create_or_modify_nets": False, "may_promote_verified": False,
                       "promotion_authority": "ECCI independent verifier only"},
     }
