@@ -86,9 +86,14 @@ assertions; no auto UNKNOWN->VERIFIED; report SHA + run URL + PASS/FAIL/UNKNOWN 
   partition and provenance block from the file. F2 fixed: `BuildResult.site_arms` (ArmRecord) + `audit_site_arms`.
   Solver / status / GT untouched. Tests `tests/unit/test_writer.py`, mutations M137-M143.
 
+## M4.2 KiCad export (branch claude-m4.2-kicad-export, draft PR, see docs/M4_2_KICAD_EXPORT.md)
+- `ecci/symrec.py` (`ecci.symbols` schema 1), `ecci/kicad_export.py` (.kicad_sch + manifest, fail-closed),
+  `ecci/kicad_roundtrip.py` (fresh kicad-cli netlist, V-W, V-G), `ecci/m4_pipeline.py`, tools `m4_selftest.py`,
+  `m4_gt.py`. CI: claude-m1 job `kicad` (+ KiCad in `mutation`), claude-gt job `m4-kicad-export`.
+- Only VERIFIED groups become nets (labels on pin ends, no wires); designators are SYNTHETIC `ECCI<n>`.
+
 ## Next
-1. M4 KiCad export (parked): .kicad_sch + netlist writer consuming `ecci.connectivity`, V-W round-trip through
-   kicad-cli, V-G against the GT netlist. M4.0 is FROZEN: GT is a regression gate now (FP=0, pin recall >= 55%,
+1. M4 follow-ups: wire geometry in the connectivity doc, designator reader, nonlocal nets. M4.0 is FROZEN: GT is a regression gate now (FP=0, pin recall >= 55%,
    inventory_consistent true), not a target to keep chasing symbol by symbol.
 2. tinytapeout-demo#p0: now evaluated but 1/421 local pins found - diagnose (103k prims, giant clusters).
 3. giant_NONE / NONE by symbol: SN74VMEH22501, HARTING, XC4005, BT812, SN74LV595; `UNIQUE` misses rose to 144.

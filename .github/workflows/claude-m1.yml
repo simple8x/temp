@@ -72,8 +72,11 @@ jobs:
             claude/out/
             claude/env.log
 
-  mutation:
-    runs-on: ubuntu-latest
+  kicad:
+    # M4.2: native .kicad_sch export read back by the REAL kicad-cli (pinned build, see gt_source.txt).
+    # tests/kicad is collected only here (ECCI_KICAD_TESTS=1); a missing CLI fails these steps, never skips.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: claude
@@ -82,10 +85,58 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install KiCad CLI (pinned)
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
+          sudo apt-get update -q
+          pkg=$(grep '^KICAD_PKG=' tools/gt_source.txt | cut -d= -f2-)
+          sudo apt-get install -y --no-install-recommends "kicad=$pkg"
+          mkdir -p out/m4
+          { kicad-cli version; dpkg-query -W kicad; } | tee out/m4/kicad_version.txt
+      - run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+      - name: KiCad round-trip tests (real kicad-cli)
+        run: |
+          set -o pipefail
+          ECCI_KICAD_TESTS=1 python -m pytest -rA tests/kicad --junitxml=out/m4/junit_kicad.xml 2>&1 | tee out/m4/pytest_kicad.log
+      - name: Summarize (SKIPPED counts as UNKNOWN and fails the job)
+        if: always()
+        run: python tools/summarize_junit.py out/m4/junit_kicad.xml out/m4 | tee out/m4/summary_kicad.log
+      - name: M4 self-test (scenes -> .kicad_sch -> fresh netlist -> V-W + V-G)
+        if: always()
+        run: |
+          set -o pipefail
+          python tools/m4_selftest.py 2>&1 | tee out/m4/m4_selftest.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m4-kicad-selftest
+          path: claude/out/m4/
+
+  mutation:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: claude
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install KiCad CLI (pinned; M156/M157 are only detectable by the real round trip)
+        run: |
+          sudo add-apt-repository -y ppa:kicad/kicad-9.0-releases
+          sudo apt-get update -q
+          pkg=$(grep '^KICAD_PKG=' tools/gt_source.txt | cut -d= -f2-)
+          sudo apt-get install -y --no-install-recommends "kicad=$pkg"
+          kicad-cli version
       - run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[test]"
       - name: Mutation check (every injected bug must make the suite fail)
+        env:
+          ECCI_KICAD_TESTS: "1"
         run: |
           set -o pipefail
           mkdir -p out
