@@ -46,7 +46,7 @@ def _text(block: dict[str, Any]) -> str | None:
                 values.append(item["text"])
             elif isinstance(item, str):
                 values.append(item)
-        return "\\n".join(values) if values else None
+        return "\n".join(values) if values else None
     if typ in TABLE_TYPES and isinstance(block.get("rows"), list):
         cells = []
         for row in block["rows"]:
