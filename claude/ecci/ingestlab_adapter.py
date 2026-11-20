@@ -32,7 +32,7 @@ def _text(block: dict[str, Any]) -> str | None:
     if typ in TEXT_TYPES:
         value = block.get("text")
         if typ == "form_section":
-            value = "\\n".join(
+            value = "\n".join(
                 str(v) for v in (block.get("title"), block.get("note"))
                 if isinstance(v, str) and v.strip()
             )
