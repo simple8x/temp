@@ -305,15 +305,23 @@ def test_reader_recomputes_site_resolution_and_rejects_forged_assumptions():
     sid = doc["sites"][0]["id"]
 
     def forge_result(d):
-        d["sites"][0]["result"] = {"status": "INFERRED", "option": "ALL4", "reason": "FIXED_ASSUMPTION"}
+        # Change only the reason: no partition/open-site invariant can mask this attack.
+        d["sites"][0]["result"]["reason"] = "FORGED_REASON"
     with pytest.raises(DocumentError, match="result does not follow from solver premises"):
         loads(tamper(doc, forge_result))
 
+    # Forge a fixed assumption on an otherwise fully consistent committed document.
+    # The links and connectivity already match ALL4; only independent authorization is absent.
+    site = built.graph.sites[0]
+    only_all4 = dataclasses.replace(site, options=tuple(op for op in site.options if op.name == "ALL4"))
+    committed_graph = dataclasses.replace(built.graph, sites=[only_all4])
+    committed_doc = build_document(committed_graph, solve(committed_graph), built=built,
+                                   page=pi, clusters=cl, registry=cls.registry)
     def forge_fixed(d):
         d["sites"][0]["fixed"] = "ALL4"
-        d["sites"][0]["result"] = {"status": "INFERRED", "option": "ALL4", "reason": "FIXED_ASSUMPTION"}
+        d["sites"][0]["result"]["reason"] = "FIXED_ASSUMPTION"
     with pytest.raises(DocumentError, match="fixed assumption"):
-        loads(tamper(doc, forge_fixed))
+        loads(tamper(committed_doc, forge_fixed))
 
     def forge_link(d):
         site = d["sites"][0]
