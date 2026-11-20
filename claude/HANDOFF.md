@@ -96,8 +96,8 @@ assertions; no auto UNKNOWN->VERIFIED; report SHA + run URL + PASS/FAIL/UNKNOWN 
 - Reader rebuilds `ConnGraph` from the serialized premises and reruns `solve()`; site result, edge statuses and site links are compared against the fresh result.
 - Non-null `fixed` site choices are rejected: they are assumptions that cannot be authenticated by the same self-contained JSON. A future implementation needs a separately trusted authorization record.
 - Constraint records are validated before being used as solver inputs.
-- Adversarial tests rehash forged site status, fixed assumption and injected site link; each must fail closed.
-- Branch: `fix/ecci-reader-recompute-site-resolution`. CI pending.
+- Adversarial tests rehash forged site status, fixed assumption and injected site link; each must fail closed. Mutations M144-M146 disable the corresponding reader checks and must be killed.
+- Branch: `fix/ecci-reader-recompute-site-resolution`. PR #12; CI pending.
 
 ## Next
 1. M4 KiCad export (parked): .kicad_sch + netlist writer consuming `ecci.connectivity`, V-W round-trip through
