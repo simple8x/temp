@@ -58,4 +58,3 @@ PYTHONPATH=claude python claude/tools/qi9_vector_candidate_audit.py \
 ```
 
 The generated JSON includes page summaries, dot candidates, rule candidates, ambiguity sites, unresolved terminal-contact records, and the source PDF hash.
-[exit status 0]
