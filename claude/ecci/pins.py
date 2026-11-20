@@ -43,6 +43,9 @@ class PinResult:
     evidence: tuple[str, ...]
     independent_items: tuple[str, ...]
     excluded: tuple[tuple[str, str], ...]
+    # the measured segment behind S2 (None without S2): (prim id, segment index, a, b, orientation, tolerance);
+    # orientation FORWARD = a at the base and b at the tip, REVERSED = the other way round
+    stub: tuple | None = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +72,8 @@ class ClusterResult:
     pins: list[PinResult] = field(default_factory=list)
     unresolved: list[UnresolvedTerminal] = field(default_factory=list)
     conflicts: list[PinConflict] = field(default_factory=list)
+    # PIN_LINES selection only: for every selected hit, the drawn line behind every pin (see pin_line_support)
+    pin_lines: list = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -77,6 +82,43 @@ class PinParams:
     cluster_gap_frac: float = 0.1     # see symbols.body_clusters; 0.5 chained whole KiCad sheets (gap sweep in CI), 0.1 does not (ASSUMPTION)
     s2_rel: float = 0.1               # endpoint tolerance as a fraction of the pin length
     contact_abs: float = 0.05
+
+
+# Documented S2 / pin-line tolerance policy (the defaults above): a pin end may be off by at most
+# max(S2_TAU_ABS_MAX, S2_REL_MAX * pin length). Readers reject a recorded tolerance wider than this.
+S2_TAU_ABS_MAX = MatchParams().tau_abs
+S2_REL_MAX = PinParams().s2_rel
+FORWARD, REVERSED = "FORWARD", "REVERSED"
+
+
+def s2_tolerance(plen: float, tau_abs: float = S2_TAU_ABS_MAX, s2_rel: float = S2_REL_MAX) -> float:
+    return max(tau_abs, s2_rel * plen)
+
+
+def stub_orientation(a, b, base, tip, tol: float) -> str | None:
+    """FORWARD if a~base and b~tip, REVERSED if b~base and a~tip (both within tol), else None."""
+    if math.hypot(a[0] - base[0], a[1] - base[1]) <= tol and math.hypot(b[0] - tip[0], b[1] - tip[1]) <= tol:
+        return FORWARD
+    if math.hypot(b[0] - base[0], b[1] - base[1]) <= tol and math.hypot(a[0] - tip[0], a[1] - tip[1]) <= tol:
+        return REVERSED
+    return None
+
+
+def pin_line_check(tip, base, end, far, t2: float) -> str | None:
+    """None if the line end..far is a drawn pin line of the pin base->tip (the rule of stub_support), else why not."""
+    plen = math.hypot(tip[0] - base[0], tip[1] - base[1])
+    if not (math.isfinite(plen) and plen > 0):
+        return "zero length pin"
+    if math.hypot(end[0] - tip[0], end[1] - tip[1]) > t2:
+        return "no line end at tip"
+    vx, vy = far[0] - end[0], far[1] - end[1]
+    ln = math.hypot(vx, vy)
+    if not (0.5 * plen <= ln <= 1.3 * plen):
+        return f"line length {ln:.2f} vs pin {plen:.2f}"
+    ux, uy = (base[0] - tip[0]) / plen, (base[1] - tip[1]) / plen
+    if abs(vx * uy - vy * ux) <= t2 and vx * ux + vy * uy > 0:
+        return None
+    return "line not along the pin axis"
 
 
 def _add(reg, item: EvidenceItem) -> None:
@@ -127,52 +169,53 @@ def _part_stem(name: str) -> str:
 
 
 def _line_index(pi: PageIngest, cls: PageClassification, cell: float = 20.0):
-    """Grid over the end points of every open 2-point non-text line (pin lines are plotted as plain lines)."""
-    grid: dict[tuple[int, int], list[tuple[tuple[float, float], tuple[float, float]]]] = {}
+    """Grid over the end points of every open 2-point non-text line (pin lines are plotted as plain lines).
+    Entries are (end, far, prim id)."""
+    grid: dict[tuple[int, int], list[tuple[tuple[float, float], tuple[float, float], int]]] = {}
     for q in pi.prims:
         if q.kind != "polyline" or q.line_closed or len(q.pts) != 2 or cls.records[q.id].cls == "TEXT":
             continue
         a, b = q.pts[0], q.pts[-1]
         for end, far in ((a, b), (b, a)):
-            grid.setdefault((math.floor(end[0] / cell), math.floor(end[1] / cell)), []).append((end, far))
+            grid.setdefault((math.floor(end[0] / cell), math.floor(end[1] / cell)), []).append((end, far, q.id))
     return grid, cell
 
 
-def stub_support(hit, lines, params: "PinParams") -> list[tuple[tuple[float, float], str]]:
-    """Pins of `hit` WITHOUT a drawn pin line: (tip, reason). A pin line has one end at the tip, is collinear with
-    the pin axis and has a length of 0.5 to 1.3 pin lengths (a bubble may shorten the line). Uses only measured
-    lines, no library data other than the predicted pin positions. Empty list = every pin is drawn."""
+def pin_line_support(hit, lines, params: "PinParams") -> list[dict]:
+    """For every pin of `hit` (library order): the drawn pin line behind it, or why there is none. A pin line has
+    one end at the tip, is collinear with the pin axis and has a length of 0.5 to 1.3 pin lengths (a bubble may
+    shorten the line). Uses only measured lines, no library data other than the predicted pin positions.
+    Deterministic: the first supporting line in (prim id, end) order is reported."""
     grid, cell = lines
-    pins = [(hit.place(*p.tip), hit.place(*p.base)) for p in hit.symbol.pins]
-    if not pins:
-        return [((0.0, 0.0), "no pins")]
-    missing = []
-    for tip, base in pins:
+    out = []
+    for p in hit.symbol.pins:
+        tip, base = hit.place(*p.tip), hit.place(*p.base)
         plen = math.hypot(tip[0] - base[0], tip[1] - base[1])
+        rec = {"number": p.number, "tip": tip, "base": base, "line": None, "why": "no line end at tip"}
         if plen <= 0:
-            missing.append((tip, "zero length"))
+            rec["why"] = "zero length"
+            out.append(rec)
             continue
-        t2 = max(params.match.tau_abs, params.s2_rel * plen)
-        ux, uy = (base[0] - tip[0]) / plen, (base[1] - tip[1]) / plen
-        ok, why = False, "no line end at tip"
+        t2 = s2_tolerance(plen, params.match.tau_abs, params.s2_rel)
         gx, gy = math.floor(tip[0] / cell), math.floor(tip[1] / cell)
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                for end, far in grid.get((gx + dx, gy + dy), ()):
-                    if math.hypot(end[0] - tip[0], end[1] - tip[1]) > t2:
-                        continue
-                    vx, vy = far[0] - end[0], far[1] - end[1]
-                    ln = math.hypot(vx, vy)
-                    why = f"line length {ln:.2f} vs pin {plen:.2f}"
-                    if not (0.5 * plen <= ln <= 1.3 * plen):
-                        continue
-                    if abs(vx * uy - vy * ux) <= t2 and vx * ux + vy * uy > 0:
-                        ok = True
-                    else:
-                        why = "line not along the pin axis"
-        if not ok:
-            missing.append((tip, why))
-    return missing
+        near = sorted((e for dx in (-1, 0, 1) for dy in (-1, 0, 1) for e in grid.get((gx + dx, gy + dy), ())),
+                      key=lambda e: (e[2], e[0], e[1]))
+        for end, far, pid in near:
+            why = pin_line_check(tip, base, end, far, t2)
+            if why is None:
+                rec.update(line=(pid, end, far), why=None, tol=t2)
+                break
+            if why != "no line end at tip":
+                rec["why"] = why
+        out.append(rec)
+    return out
+
+
+def stub_support(hit, lines, params: "PinParams") -> list[tuple[tuple[float, float], str]]:
+    """Pins of `hit` WITHOUT a drawn pin line: (tip, reason) (see pin_line_support). Empty list = every pin is drawn."""
+    if not hit.symbol.pins:
+        return [((0.0, 0.0), "no pins")]
+    return [(r["tip"], r["why"]) for r in pin_line_support(hit, lines, params) if r["line"] is None]
 
 
 def _stub_supported(hit, lines, params: "PinParams") -> bool:
@@ -210,6 +253,8 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                 if res2.status == "UNIQUE":
                     res, hits, stub_selected = res2, sel, True
         cr = ClusterResult(cl, res)
+        if stub_selected:
+            cr.pin_lines = [pin_line_support(h, lines, params) for h in res.hits]
         tau = tolerance(cl, params.match)
         body_ids = set(cl.prim_ids)
         diag = math.hypot(cl.bbox[2] - cl.bbox[0], cl.bbox[3] - cl.bbox[1])
@@ -228,23 +273,26 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                 plen = math.hypot(rp.tip[0] - rp.base[0], rp.tip[1] - rp.base[1])
                 explained.append((rp.base, max(params.match.tau_abs, params.s2_rel * plen)))
                 if plen > 0 and not stub_selected:
-                    t2 = max(params.match.tau_abs, params.s2_rel * plen)
-                    stub_segs = [(sid, 0, q.pts[0], q.pts[-1]) for sid in stub_ids for q in [prim_by_id[sid]]]
+                    t2 = s2_tolerance(plen, params.match.tau_abs, params.s2_rel)
+                    # every drawn segment of a stripped stub (not a chord between its first and last points)
+                    stub_segs = [(sid, si, a, b) for sid in stub_ids for si, a, b in prim_by_id[sid].segments()]
                     for pid, si, a, b in list(wires) + stub_segs:
-                        fwd = math.hypot(a[0] - rp.base[0], a[1] - rp.base[1]) <= t2 and \
-                            math.hypot(b[0] - rp.tip[0], b[1] - rp.tip[1]) <= t2
-                        rev = math.hypot(b[0] - rp.base[0], b[1] - rp.base[1]) <= t2 and \
-                            math.hypot(a[0] - rp.tip[0], a[1] - rp.tip[1]) <= t2
-                        if fwd or rev:
+                        orient = stub_orientation(a, b, rp.base, rp.tip, t2)
+                        if orient is not None:
                             s2 = EvidenceItem(f"S2:{cl.id}:{k}", "MEASURED_STUB", SRC_VECTOR,
                                               frozenset({f"geom:{pid}"}))
                             _add(reg, s2)
                             items.append(s2.id)
+                            stub = (pid, si, tuple(a), tuple(b), orient, t2)
                             break
+                    else:
+                        stub = None
+                else:
+                    stub = None
                 dec = decide_role(items, reg)
                 state = {"CONFIRMED": POS_CONFIRMED, "CANDIDATE": POS_CANDIDATE}.get(dec.status, POS_NONE)
                 cr.pins.append(PinResult(cl.id, rp.tip, rp.base, rp.numbers, state, res.id_state,
-                                         tuple(items), dec.independent_items, dec.excluded))
+                                         tuple(items), dec.independent_items, dec.excluded, stub))
 
         # S3: contacts of WIRE-class segment ends with the body outline
         for pid, si, a, b in wires:

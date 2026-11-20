@@ -23,7 +23,8 @@ def test_kicad_cli_is_installed():
 @pytest.mark.parametrize("scene", all_scenes(), ids=lambda s: s.name)
 def test_scene_round_trips_through_kicad_cli(scene, tmp_path):
     pi, cls, cl, built, res = scene.run()
-    rec = run_page(tmp_path, pi, cls, cl, built, res, LIB, LIB_TEXT, {"name": scene.name}, scene.gt_pins(), CLI)
+    rec = run_page(tmp_path, pi, cls, cl, built, res, LIB, LIB_TEXT, {"name": scene.name}, scene.gt_pins(), CLI,
+                   gt_policy=scene.gt_policy())
     assert rec["stages"] == {s: "PASS" for s in rec["stages"]}, rec
     assert (tmp_path / "netlist.xml").exists() and (tmp_path / "roundtrip.json").exists()
 

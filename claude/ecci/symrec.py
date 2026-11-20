@@ -27,7 +27,7 @@ import hashlib
 import json
 import math
 
-from .pins import _part_stem
+from .pins import S2_REL_MAX, S2_TAU_ABS_MAX, _part_stem, pin_line_check, s2_tolerance
 from .symbols import Cluster
 from .template import D4, MatchParams, match_cluster, resolve
 
@@ -45,6 +45,9 @@ CLUSTER_KEYS = frozenset({"id", "primitives", "bbox", "verts", "segs", "resoluti
                           "transform", "pins", "reference", "value", "unresolved_terminals", "pin_conflicts"})
 CAND_KEYS = frozenset({"symbol", "lib_token", "orient", "matrix", "scale", "tx", "ty", "residual", "selected", "pins"})
 PIN_KEYS = frozenset({"object", "tip", "base", "numbers", "pos_state", "id_state"})
+RES_KEYS = frozenset({"status", "id_state", "note", "selection", "pin_lines"})
+PL_PIN_KEYS = frozenset({"number", "tip", "base", "line"})
+PL_LINE_KEYS = frozenset({"prim", "content_ref", "end", "far", "tolerance"})
 FIELD_KEYS = frozenset({"value", "state", "evidence"})
 
 
@@ -171,7 +174,8 @@ def build_symbols(clusters, page, library, conn_doc: dict, match_params: MatchPa
             "segs": [[_pt(a), _pt(b)] for a, b in cl.segs],
             "resolution": {"status": cr.resolution.status, "id_state": cr.resolution.id_state,
                            "note": cr.resolution.note,
-                           "selection": SEL_ALL if len(selected) == len(cands) else SEL_PIN_LINES},
+                           "selection": SEL_ALL if len(selected) == len(cands) else SEL_PIN_LINES,
+                           "pin_lines": [] if len(selected) == len(cands) else _pin_lines(cr, cands, prov)},
             "candidates": cands,
             "identity": derive_identity(selected),
             "transform": derive_transform(selected, tau),
@@ -194,6 +198,65 @@ def build_symbols(clusters, page, library, conn_doc: dict, match_params: MatchPa
     if problems:
         raise ValueError("symbol writer produced an invalid document: " + "; ".join(problems[:5]))
     return doc
+
+
+def _pin_lines(cr, cands: list, prov: dict) -> list:
+    """The drawn line behind every pin of every selected candidate (in candidate order), from detect_pins."""
+    support = list(getattr(cr, "pin_lines", None) or [])
+    selected = [c for c in cands if c["selected"]]
+    if len(support) != len(selected):
+        raise ValueError(f"cluster {cr.cluster.id}: PIN_LINES selection without per-candidate pin-line support")
+    out = []
+    for c, sup in zip(selected, support):
+        pins = []
+        for cp, r in zip(c["pins"], sup):
+            if r["line"] is None or r["number"] != cp["number"]:
+                raise ValueError(f"cluster {cr.cluster.id}: selected pin {cp['number']} has no drawn line")
+            pid, end, far = r["line"]
+            pins.append({"number": cp["number"], "tip": cp["tip"], "base": cp["base"],
+                         "line": {"prim": int(pid), "content_ref": prov.get(pid), "end": _pt(end), "far": _pt(far),
+                                  "tolerance": _f(r["tol"])}})
+        out.append(pins)
+    return out
+
+
+def pin_lines_problems(rec: dict, params: MatchParams) -> list[str]:
+    """File-level check of a cluster's recorded pin-line support: for ALL, none; for PIN_LINES, one entry per
+    selected candidate naming every one of its pins (number, tip, base exactly as predicted) and a line that
+    satisfies the pin-line rule (pins.pin_line_check) within a tolerance no wider than the documented policy.
+    Whether the line is drawn on the page is audit_pin_lines' job."""
+    w = f"cluster {rec['id']}"
+    r = rec["resolution"]
+    pl = r["pin_lines"]
+    selected = [c for c in rec["candidates"] if c["selected"]]
+    if r["selection"] == SEL_ALL:
+        return [] if pl == [] else [f"{w}: pin_lines recorded for an ALL selection"]
+    if not isinstance(pl, list) or len(pl) != len(selected):
+        return [f"{w}: PIN_LINES selection must record pin-line support for each of its {len(selected)} candidates"]
+    P = []
+    for c, sup in zip(selected, pl):
+        if not isinstance(sup, list) or len(sup) != len(c["pins"]):
+            P.append(f"{w}: pin-line support does not cover every pin of {c['symbol']}")
+            continue
+        for cp, x in zip(c["pins"], sup):
+            if not (isinstance(x, dict) and set(x) == PL_PIN_KEYS and isinstance(x["line"], dict)
+                    and set(x["line"]) == PL_LINE_KEYS and isinstance(x["line"]["prim"], int)
+                    and not isinstance(x["line"]["prim"], bool) and _pt_ok(x["line"]["end"])
+                    and _pt_ok(x["line"]["far"]) and _num(x["line"]["tolerance"]) and x["line"]["tolerance"] > 0):
+                P.append(f"{w}: pin-line record malformed (missing line)")
+                continue
+            if [x["number"], x["tip"], x["base"]] != [cp["number"], cp["tip"], cp["base"]]:
+                P.append(f"{w}: pin-line record {x['number']} is not pin {cp['number']} of {c['symbol']}")
+                continue
+            ln = x["line"]
+            plen = math.hypot(cp["tip"][0] - cp["base"][0], cp["tip"][1] - cp["base"][1])
+            if ln["tolerance"] > s2_tolerance(plen, min(params.tau_abs, S2_TAU_ABS_MAX), S2_REL_MAX) * (1 + 1e-12):
+                P.append(f"{w}: pin {cp['number']}: line tolerance wider than the policy")
+                continue
+            why = pin_line_check(cp["tip"], cp["base"], ln["end"], ln["far"], ln["tolerance"])
+            if why:
+                P.append(f"{w}: pin {cp['number']}: recorded line {ln['prim']} fails the pin-line rule: {why}")
+    return P
 
 
 def dumps(doc: dict) -> str:
@@ -248,6 +311,8 @@ def _validate(doc, conn_doc, library) -> list[str]:
         P.append("content_sha256 mismatch")
     if doc["connectivity_sha256"] != conn_doc.get("content_sha256"):
         P.append("connectivity_sha256 does not bind to the given connectivity document")
+    from .writer import s2_problems
+    P += [f"connectivity: {x}" for x in s2_problems(conn_doc)]     # S2 lineage vs pin geometry, same rule
     if doc["library"] != {"sha256": library.sha256, "n_symbols": len(library.symbols)}:
         P.append("library hash / size does not match the given library")
     mp = doc["match_params"]
@@ -306,7 +371,7 @@ def _validate(doc, conn_doc, library) -> list[str]:
         selected = [c for c in cands if c["selected"]]
         sel_hits = [h for h, c in zip(hits, cands) if c["selected"]]
         r = rec["resolution"]
-        if not isinstance(r, dict) or set(r) != {"status", "id_state", "note", "selection"}:
+        if not isinstance(r, dict) or set(r) != RES_KEYS:
             P.append(f"{w}: resolution malformed")
             continue
         sel_kind = SEL_ALL if len(selected) == len(cands) else SEL_PIN_LINES
@@ -322,6 +387,7 @@ def _validate(doc, conn_doc, library) -> list[str]:
                      f"({res.status}/{res.id_state})")
         if sel_kind == SEL_PIN_LINES and res.status != "UNIQUE":
             P.append(f"{w}: PIN_LINES selection must resolve UNIQUE")
+        P += pin_lines_problems(rec, params)
         if rec["identity"] != derive_identity(selected):
             P.append(f"{w}: identity is not derived from the selected candidates")
         if rec["transform"] != derive_transform(selected, tau):
@@ -418,7 +484,122 @@ def audit_evidence(conn: dict, syms: dict, page, library) -> list[str]:
                 P.append(f"evidence {ev['id']}: a measured stub is one primitive")
             elif kind == "S3" and not body <= set(lin):
                 P.append(f"evidence {ev['id']}: a terminal contact names the cluster geometry")
+    return P + audit_s2_against_page(conn, page)
+
+
+def audit_s2_against_page(conn: dict, page) -> list[str]:
+    """S2 lineage against the page: the file-level geometric checks (writer.s2_problems) AND, for every pin
+    stub, the cited primitive is on the page with the cited content_ref, its segment `segment` is exactly the
+    recorded segment a->b, and the primitive is not part of the pin's own body cluster (S1 already used those).
+    A missing page is not a pass: callers must not call this without one."""
+    from .writer import s2_problems
+    if page is None or not getattr(page, "prims", None):
+        return ["S2 audit BLOCKED: source-page geometry unavailable"]
+    P = list(s2_problems(conn))
+    by_id = {q.id: q for q in page.prims}
+    ev = {e["id"]: e for e in conn["evidence"]}
+    for o in conn["objects"]:
+        pin = o.get("pin")
+        if not pin or not pin.get("stub"):
+            continue
+        st = pin["stub"]
+        w = f"pin {o['id']}"
+        q = by_id.get(st.get("prim"))
+        if q is None:
+            P.append(f"{w}: stub primitive {st.get('prim')} is not on the page")
+            continue
+        refs = {p["id"]: p["content_ref"] for p in conn["primitives"]}
+        if refs.get(q.id) != q.prov.content_ref:
+            P.append(f"{w}: stub primitive {q.id} content_ref differs from the page")
+        segs = {si: (a, b) for si, a, b in q.segments()}
+        seg = segs.get(st.get("segment"))
+        if seg is None:
+            P.append(f"{w}: primitive {q.id} has no segment {st.get('segment')}")
+        elif [list(map(float, seg[0])), list(map(float, seg[1]))] != [st["a"], st["b"]]:
+            P.append(f"{w}: stub segment {st['a']}->{st['b']} is not segment {st['segment']} of primitive {q.id} "
+                     f"on the page {list(seg[0])}->{list(seg[1])}")
+        body = next((ev[x]["lineage"] for x in pin["evidence"] if x.startswith("S1:") and x in ev), [])
+        if f"geom:{q.id}" in body:
+            P.append(f"{w}: stub primitive {q.id} is part of the matched body (not independent)")
     return P
+
+
+PL_VERIFIED, PL_FAIL, PL_BLOCKED, PL_NA = "VERIFIED_AGAINST_PAGE", "FAIL", "BLOCKED", "NOT_APPLICABLE"
+
+
+def audit_pin_lines(doc: dict, page, cls=None) -> dict:
+    """The check a PIN_LINES selection needs and the file cannot give: against the source page (`ir.PageIngest`)
+      - the page is the document's page (page_index) and every recorded line primitive exists on it, with the
+        recorded content_ref, as an open 2-point non-text line (the only kind detect_pins counts as a pin line);
+      - the recorded end/far points are exactly that line's end points on the page (no displaced copy);
+      - the page line satisfies the pin-line rule for the pin it claims (end at the tip, along the axis toward the
+        base, 0.5-1.3 pin lengths) - an existing but unrelated line fails here;
+      - the selection follows from the page: every selected candidate has a drawn line for every pin, every
+        unselected candidate lacks one for at least one pin.
+    Result: {"status": VERIFIED_AGAINST_PAGE | FAIL | BLOCKED | NOT_APPLICABLE, "problems": [...], "clusters": [...]}.
+    No page geometry -> BLOCKED, never verified. Deterministic (sorted inputs, first-failure reasons)."""
+    from .classify import classify_page
+    from .pins import _line_index
+    pl = sorted((c for c in doc["clusters"] if c["resolution"]["selection"] == SEL_PIN_LINES), key=lambda c: c["id"])
+    ids = [c["id"] for c in pl]
+    if not pl:
+        return {"status": PL_NA, "problems": [], "clusters": []}
+    if page is None or not getattr(page, "prims", None):
+        return {"status": PL_BLOCKED, "problems": ["source-page geometry unavailable: PIN_LINES support not audited"],
+                "clusters": ids}
+    want_pi = doc["source"]["page_index"]
+    have_pi = getattr(getattr(page, "geom", None), "page_index", None)
+    if want_pi is None or have_pi is None:
+        return {"status": PL_BLOCKED, "problems": [f"page identity unknown (document {want_pi}, page {have_pi})"],
+                "clusters": ids}
+    if want_pi != have_pi:
+        return {"status": PL_FAIL, "problems": [f"wrong page: document is page {want_pi}, audited page is {have_pi}"],
+                "clusters": ids}
+    cls = cls if cls is not None else classify_page(page)
+    by_id = {q.id: q for q in page.prims}
+    grid, cell = _line_index(page, cls)
+    eligible = {pid for es in grid.values() for _, _, pid in es}
+    tau_abs = min(float(doc["match_params"]["tau_abs"]), S2_TAU_ABS_MAX)
+    P: list[str] = []
+
+    def drawn(tip, base) -> bool:
+        plen = math.hypot(tip[0] - base[0], tip[1] - base[1])
+        t2 = s2_tolerance(plen, tau_abs, S2_REL_MAX)
+        gx, gy = math.floor(tip[0] / cell), math.floor(tip[1] / cell)
+        return any(pin_line_check(tip, base, end, far, t2) is None
+                   for dx in (-1, 0, 1) for dy in (-1, 0, 1) for end, far, _ in grid.get((gx + dx, gy + dy), ()))
+
+    for c in pl:
+        w = f"cluster {c['id']}"
+        selected = [x for x in c["candidates"] if x["selected"]]
+        for cand, sup in zip(selected, c["resolution"]["pin_lines"]):
+            for x in sup:
+                ln = x["line"]
+                q = by_id.get(ln["prim"])
+                tag = f"{w} {cand['symbol']} pin {x['number']}"
+                if q is None:
+                    P.append(f"{tag}: line primitive {ln['prim']} does not exist on the page")
+                    continue
+                if q.id not in eligible:
+                    P.append(f"{tag}: primitive {q.id} is not an open 2-point non-text line")
+                    continue
+                if q.prov.content_ref != ln["content_ref"]:
+                    P.append(f"{tag}: primitive {q.id} content_ref {ln['content_ref']!r} != page {q.prov.content_ref!r}")
+                    continue
+                a, b = [float(v) for v in q.pts[0]], [float(v) for v in q.pts[-1]]
+                if [ln["end"], ln["far"]] not in ([a, b], [b, a]):
+                    P.append(f"{tag}: recorded line {ln['end']}->{ln['far']} is displaced from page line {a}->{b}")
+                    continue
+                why = pin_line_check(x["tip"], x["base"], ln["end"], ln["far"], ln["tolerance"])
+                if why:
+                    P.append(f"{tag}: page line {q.id} does not support the pin: {why}")
+        for cand in c["candidates"]:
+            ok = all(drawn(p["tip"], p["base"]) for p in cand["pins"])
+            if cand["selected"] and not ok:
+                P.append(f"{w}: selected {cand['symbol']} (orient {cand['orient']}) lacks a drawn line on the page")
+            if not cand["selected"] and ok:
+                P.append(f"{w}: unselected {cand['symbol']} (orient {cand['orient']}) is fully drawn on the page too")
+    return {"status": PL_FAIL if P else PL_VERIFIED, "problems": P, "clusters": ids}
 
 
 def build_symbols_like(doc: dict, conn_doc: dict) -> dict:

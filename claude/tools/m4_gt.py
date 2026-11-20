@@ -7,12 +7,15 @@ The GT data is the cached export of claude-gt (its provenance is checked by gt_v
 the KiCad netlist of OUR schematic is always produced fresh here (the file is deleted first and must be newer
 than the call). Prints M4_GT_PAGE lines and M4_GT_SUMMARY; writes out/m4/gt/<page>/* + summary.json.
 Exit 0 only if every page was evaluated and every gate is PASS. Env: M4_ONLY (comma list like GT_ONLY),
-M4_WORKERS, M4_PAGE_SECONDS.
+M4_WORKERS, M4_PAGE_SECONDS, M4_GT_POLICY (JSON {"min_mapping_coverage": x}; default tools/m4_gt_policy.json).
+The project documents no M4.2 mapping-coverage threshold, so no policy file is shipped: without one every
+ground_truth gate is BLOCKED (never PASS) until the owner sets the threshold.
 """
 import concurrent.futures
 import json
 import os
 import pathlib
+import re
 import signal
 import sys
 import tempfile
@@ -33,6 +36,7 @@ from ecci.m4_pipeline import FAIL, PASS, env_cli, gate_table, run_page  # noqa: 
 from ecci.rules import analyze_page  # noqa: E402
 
 PAGE_SECONDS = int(os.environ.get("M4_PAGE_SECONDS", "600"))
+POLICY_PATH = os.environ.get("M4_GT_POLICY") or str(ROOT / "tools" / "m4_gt_policy.json")
 OUT = ROOT / "out" / "m4" / "gt"
 
 
@@ -40,7 +44,7 @@ def _alarm(signum, frame):
     raise TimeoutError(f"page exceeded {PAGE_SECONDS}s")
 
 
-def one(t: dict, cli: str | None) -> dict:
+def one(t: dict, cli: str | None, policy: dict | None) -> dict:
     name = t["name"]
     safe = name.replace("/", "_").replace("#", "__").replace(" ", "_")
     t0 = time.time()
@@ -62,7 +66,7 @@ def one(t: dict, cli: str | None) -> dict:
             pi = ingest_pdf(str(pdf), pages=[t["page"]]).pages[0]
             cls, clusters, built, res = analyze_page(pi, lib.symbols.values())
             rec = run_page(out, pi, cls, clusters, built, res, lib, lib_text,
-                           {"name": pdf.name, "page": t["page"], "project": pdir.name}, pins, cli)
+                           {"name": pdf.name, "page": t["page"], "project": pdir.name}, pins, cli, gt_policy=policy)
         finally:
             signal.alarm(0)
     except Exception as e:  # noqa: BLE001  never hides: an error is a FAIL record for this page
@@ -76,6 +80,7 @@ def one(t: dict, cli: str | None) -> dict:
 def main(root: str) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     cli = env_cli()
+    policy = kr.load_gt_policy(POLICY_PATH)       # malformed -> raises (fail closed); missing -> None -> BLOCKED
     version = kr.kicad_version(cli) if cli else None
     dirs = sorted(p for p in pathlib.Path(root).iterdir() if p.is_dir() and gt_eval.wanted(p.name))
     workers = max(1, int(os.environ.get("M4_WORKERS", os.cpu_count() or 1)))
@@ -84,7 +89,7 @@ def main(root: str) -> int:
         slots = list(ex.map(gt_eval._safe_plan, dirs))
         tasks = [s["task"] for ps in slots for s in ps if "task" in s]
         skipped = [s for ps in slots for s in ps if "task" not in s]
-        futs = [ex.submit(one, t, cli) for t in tasks]
+        futs = [ex.submit(one, t, cli, policy) for t in tasks]
         records = []
         for f in concurrent.futures.as_completed(futs):
             r = f.result()
@@ -106,11 +111,22 @@ def main(root: str) -> int:
         for k in ("gt_scoreable_pins", "exported_pins_mapped", "gt_pins_not_exported_UNKNOWN"):
             agg[k] += g.get(k, 0)
     errors = [r["page"] for r in records if r.get("error")]
+    gt_states, gt_reasons = {}, {}
+    for r in records:
+        gate = (r.get("ground_truth") or {}).get("gate") or {"state": r["stages"].get("ground_truth", "BLOCKED"),
+                                                              "reason": r.get("blocked") or r.get("error") or "not run"}
+        gt_states[gate["state"]] = gt_states.get(gate["state"], 0) + 1
+        key = f'{gate["state"]}: ' + re.sub(r"\d+(\.\d+)?", "N", gate["reason"])   # reasons grouped, numbers elided
+        gt_reasons[key] = gt_reasons.get(key, 0) + 1
+    agg["mapping_coverage"] = round(agg["exported_pins_mapped"] / agg["gt_scoreable_pins"], 4) \
+        if agg["gt_scoreable_pins"] else None
     summary = gate_table(records, cli, {"all_planned_pages_evaluated": PASS if records and not errors else FAIL})
     summary.update({"kicad_version": version, "pages_planned": len(tasks), "pages_skipped_by_plan": len(skipped),
                     "pages_with_error": errors, "pairs": tot, "aggregate": agg,
                     "precision": round(tot["TP"] / (tot["TP"] + tot["FP"]), 4) if tot["TP"] + tot["FP"] else None,
                     "recall_over_mapped_pairs": round(tot["TP"] / (tot["TP"] + tot["FN"]), 4) if tot["TP"] + tot["FN"] else None,
+                    "gt_policy": policy, "gt_gate_states": dict(sorted(gt_states.items())),
+                    "gt_gate_reasons": dict(sorted(gt_reasons.items())),
                     "seconds": round(time.time() - t0, 1), "partial_selection": os.environ.get("GT_ONLY", ""),
                     "pages": records})
     if summary["partial_selection"]:
@@ -119,6 +135,7 @@ def main(root: str) -> int:
     print("M4_GT_SUMMARY " + json.dumps({k: summary[k] for k in ("kicad_version", "gates", "overall", "pages_planned",
                                                                  "pages_skipped_by_plan", "pages_with_error", "pairs",
                                                                  "aggregate", "precision", "recall_over_mapped_pairs",
+                                                                 "gt_policy", "gt_gate_states", "gt_gate_reasons",
                                                                  "seconds", "partial_selection")}))
     return 0 if summary["overall"] == PASS else 1
 

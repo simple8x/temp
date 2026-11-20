@@ -29,6 +29,7 @@ import json
 import math
 from collections import defaultdict
 
+from .pins import FORWARD, REVERSED, S2_REL_MAX, S2_TAU_ABS_MAX, s2_tolerance, stub_orientation
 from .solver import ConnGraph, SolveResult, _name_edges, audit_result
 from .status import (CONFLICT, CONVENTIONAL, INFERRED, RULES, SOUND, UNKNOWN, VERIFIED, Edge, RoleRef,
                      audit_verified, classify_edge)
@@ -153,6 +154,104 @@ def _vgroups(objs, V, Q) -> dict:
 
 
 # ----------------------------------------------------------------------------------------------- writer
+def _stub_record(stub) -> dict | None:
+    if stub is None:
+        return None
+    pid, si, a, b, orient, tol = stub
+    return {"prim": int(pid), "segment": int(si), "a": [float(a[0]), float(a[1])], "b": [float(b[0]), float(b[1])],
+            "orientation": orient, "tolerance": float(tol)}
+
+
+STUB_KEYS = frozenset({"prim", "segment", "a", "b", "orientation", "tolerance"})
+
+
+def s2_problems(doc) -> list[str]:
+    """S2 (MEASURED_STUB) lineage must name the measured segment that supports the pin, geometrically:
+      - a pin cites S2 iff it records a stub, and only its own id S2:<cluster>:<k> (object p:<cluster>:<k>);
+      - the S2 evidence record is MEASURED_STUB / VECTOR, not derived, not connectivity-dependent, and its
+        lineage is exactly [geom:<stub prim>]; no S2 record is left uncited;
+      - the stub segment is finite and non-degenerate, its recorded orientation is the one that holds
+        (FORWARD: a~base, b~tip; REVERSED: b~base, a~tip), within its recorded tolerance, and that tolerance is
+        not wider than the documented policy max(S2_TAU_ABS_MAX, S2_REL_MAX * pin length);
+      - the stub primitive is a cited primitive and both segment ends lie in its recorded bbox (+ tolerance).
+    Whether the segment is really drawn on the page is checked by symrec.audit_evidence (needs the page).
+    A passing check never promotes anything: it only rejects."""
+    P: list[str] = []
+    ev = {e["id"]: e for e in doc["evidence"]}
+    prims = {p["id"]: p for p in doc["primitives"]}
+    cited = set()
+    for o in doc["objects"]:
+        pin = o.get("pin") if isinstance(o, dict) else None
+        if pin is None:
+            continue
+        w = f"pin {o['id']}"
+        if not isinstance(pin, dict) or "stub" not in pin:
+            P.append(f"{w}: no stub field")
+            continue
+        s2 = [x for x in pin["evidence"] + pin["independent_items"] if isinstance(x, str) and x.startswith("S2:")]
+        stub = pin["stub"]
+        own = "S2:" + o["id"][2:] if o["id"].startswith("p:") else None
+        if stub is None:
+            if s2:
+                P.append(f"{w}: cites {sorted(set(s2))} without a measured stub (missing lineage)")
+            continue
+        if not s2 or set(s2) != {own}:
+            P.append(f"{w}: a stub must be cited as exactly its own {own}, got {sorted(set(s2))}")
+            continue
+        cited.add(own)
+        e = ev.get(own)
+        if e is None:
+            P.append(f"{w}: {own} has no evidence record (missing lineage)")
+            continue
+        if (e["kind"], e["source"], e["derived_from"], e["uses_connectivity"]) != ("MEASURED_STUB", "VECTOR", [], False):
+            P.append(f"{w}: {own} is not an underived VECTOR MEASURED_STUB")
+        if not (type(stub) is dict and set(stub) == STUB_KEYS and type(stub["prim"]) is int
+                and type(stub["segment"]) is int and stub["segment"] >= 0
+                and all(type(q) is list and len(q) == 2 and all(_num(v) for v in q) for q in (stub["a"], stub["b"]))
+                and stub["orientation"] in (FORWARD, REVERSED) and _num(stub["tolerance"]) and stub["tolerance"] > 0):
+            P.append(f"{w}: stub record malformed")
+            continue
+        if e["lineage"] != [f"geom:{stub['prim']}"]:
+            P.append(f"{w}: {own} lineage {e['lineage']} is not the stub primitive geom:{stub['prim']}")
+        a, b = stub["a"], stub["b"]
+        tip, base = pin["tip"], pin["base"]
+        if not (all(type(q) is list and len(q) == 2 and all(_num(v) for v in q) for q in (tip, base))):
+            P.append(f"{w}: pin tip/base malformed")
+            continue
+        if math.hypot(a[0] - b[0], a[1] - b[1]) == 0.0:
+            P.append(f"{w}: stub segment is degenerate")
+            continue
+        plen = math.hypot(tip[0] - base[0], tip[1] - base[1])
+        if plen <= 0:
+            P.append(f"{w}: zero-length pin cannot have a measured stub")
+            continue
+        tol = stub["tolerance"]
+        if tol > s2_tolerance(plen, S2_TAU_ABS_MAX, S2_REL_MAX) * (1 + 1e-12):
+            P.append(f"{w}: stub tolerance {tol} wider than the policy {s2_tolerance(plen):.6g}")
+            continue
+        got = stub_orientation(a, b, base, tip, tol)
+        if got is None:
+            P.append(f"{w}: stub segment {a}->{b} does not span base {base} -> tip {tip} within {tol:.6g}")
+        elif got != stub["orientation"]:
+            P.append(f"{w}: stub orientation recorded {stub['orientation']} but the geometry is {got}")
+        pr = prims.get(stub["prim"])
+        if pr is None:
+            P.append(f"{w}: stub primitive {stub['prim']} is not a cited primitive")
+            continue
+        x0, y0, x1, y1 = pr["bbox"]
+        if not all(x0 - tol <= q[0] <= x1 + tol and y0 - tol <= q[1] <= y1 + tol for q in (a, b)):
+            P.append(f"{w}: stub segment lies outside the bbox of primitive {stub['prim']}")
+    for i in ev:
+        if i.startswith("S2:") and i not in cited:
+            P.append(f"evidence {i}: S2 record cited by no pin stub")
+        elif i.startswith("S2:") and ev[i]["kind"] != "MEASURED_STUB":
+            P.append(f"evidence {i}: S2 record is not MEASURED_STUB")
+    for i, e in ev.items():
+        if e["kind"] == "MEASURED_STUB" and not i.startswith("S2:"):
+            P.append(f"evidence {i}: MEASURED_STUB outside the S2 namespace")
+    return P
+
+
 def build_document(graph: ConnGraph, res: SolveResult, *, built=None, page=None, clusters=None, registry=None,
                    source: dict | None = None) -> dict:
     """Serialize one solved page. `built` (rules.BuildResult), `page` (ir.PageIngest), `clusters` and `registry`
@@ -191,6 +290,10 @@ def build_document(graph: ConnGraph, res: SolveResult, *, built=None, page=None,
     for e in edges:
         for ref in e.prov:
             want |= set(by_ref.get(ref, ()))
+    for cr in clusters or ():                 # the measured segment behind every S2 is a cited primitive
+        for pin in cr.pins:
+            if getattr(pin, "stub", None) is not None:
+                want.add(int(pin.stub[0]))
     primitives = []
     for i in sorted(want):
         p = prims_by_id.get(i)
@@ -238,7 +341,8 @@ def build_document(graph: ConnGraph, res: SolveResult, *, built=None, page=None,
                 "cluster": pin.cluster_id, "tip": [float(v) for v in pin.tip], "base": [float(v) for v in pin.base],
                 "numbers": list(pin.numbers), "pos_state": pin.pos_state, "id_state": pin.id_state,
                 "evidence": sorted(pin.evidence), "independent_items": sorted(pin.independent_items),
-                "excluded": sorted([list(x) for x in pin.excluded])},
+                "excluded": sorted([list(x) for x in pin.excluded]),
+                "stub": _stub_record(getattr(pin, "stub", None))},
             "dot": None if d is None else {"centre": [float(v) for v in d[0]], "radius": float(d[1]), "node": d[2]},
         })
 
@@ -516,6 +620,7 @@ def _validate(doc) -> list[str]:
                     P.append(f"object {o['id']}: dangling evidence {x!r}")
     if sorted(o["id"] for o in doc["objects"] if o["prims"] is None) != unres["objects_without_primitives"]:
         P.append("objects_without_primitives does not match the objects")
+    P += s2_problems(doc)               # S2 lineage must be the geometry that supports the pin
 
     # ---- edges: premises re-classified, status transitions checked, provenance recomputed
     Q = set()

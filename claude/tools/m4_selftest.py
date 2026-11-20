@@ -57,7 +57,7 @@ def main() -> int:
         pi, cls, cl, built, res = sc.run()
         try:
             rec = run_page(out / sc.name, pi, cls, cl, built, res, LIB, lib_text, {"name": f"{sc.name}.pdf"},
-                           sc.gt_pins(), cli)
+                           sc.gt_pins(), cli, gt_policy=sc.gt_policy())
         except Exception as e:  # noqa: BLE001  a crash is a FAIL of that scene, with its reason
             rec = {"source": sc.name, "stages": {"connectivity_schema_roundtrip": FAIL}, "error": f"{type(e).__name__}: {e}"}
         rec["scene"] = sc.name

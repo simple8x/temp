@@ -145,6 +145,26 @@ jobs:
         run: |
           set -o pipefail
           M4_WORKERS=4 python claude/tools/m4_gt.py gt_out 2>&1 | tee claude/out/m4/m4_gt.log
+      - name: M4 GT gate summary (coverage, gate states and reasons)
+        if: always()
+        run: |
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p = pathlib.Path("claude/out/m4/gt/summary.json")
+          if not p.exists():
+              print("## M4.2 GT: NO SUMMARY (the run did not finish) -> not PASS"); raise SystemExit(0)
+          s = json.loads(p.read_text())
+          a = s.get("aggregate", {})
+          print(f"## M4.2 GT: overall {s.get('overall')}")
+          print(f"- policy: {s.get('gt_policy')} (none configured = ground_truth BLOCKED)")
+          print(f"- GT scoreable pins {a.get('gt_scoreable_pins')}, mapped {a.get('exported_pins_mapped')}, "
+                f"coverage {a.get('mapping_coverage')}, unmatched GT pins UNKNOWN {a.get('gt_pins_not_exported_UNKNOWN')}")
+          print(f"- pairs {s.get('pairs')}, precision {s.get('precision')}, recall {s.get('recall_over_mapped_pairs')}")
+          print(f"- gates {s.get('gates')}")
+          print(f"- ground_truth states {s.get('gt_gate_states')}")
+          for k, v in (s.get('gt_gate_reasons') or {}).items():
+              print(f"  - {v} x {k}")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
