@@ -217,8 +217,8 @@ def _validate(G: ConnGraph) -> None:
             arm_objects.append(obj)
         if len(set(labels)) != len(labels):
             raise GraphError(f"site {s.id}: duplicate arm label")
-        if len(set(arm_objects)) != len(arm_objects):
-            raise GraphError(f"site {s.id}: duplicate arm object")
+        # A wire passing straight through a site legitimately occupies two arms (N and S of a
+        # crossing); arms are distinguished by label, option links by distinct OBJECTS below.
         arm_set = set(arm_objects)
 
         for opt in s.options:

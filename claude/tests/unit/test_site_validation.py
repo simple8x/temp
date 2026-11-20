@@ -41,13 +41,14 @@ def test_site_rejects_duplicate_arm_labels():
         solve(graph(site))
 
 
-def test_site_rejects_duplicate_arm_objects():
-    site = Site(
-        "s1", "MULTI", (("N", "a"), ("S", "a")),
-        (Option("NONE", frozenset()),),
-    )
-    with pytest.raises(GraphError, match="duplicate arm object"):
-        solve(graph(site))
+def test_site_allows_through_wire_on_two_arms_but_not_self_link():
+    ok = Site("s1", "MULTI", (("N", "a"), ("S", "a"), ("E", "b")),
+              (Option("NONE", frozenset()),))
+    solve(graph(ok))
+    bad = Site("s1", "MULTI", (("N", "a"), ("S", "a")),
+               (Option("SELF", frozenset({("a", "a")})),))
+    with pytest.raises(GraphError, match="distinct site arms"):
+        solve(graph(bad))
 
 
 def test_valid_fourway_domain_uses_only_its_declared_arms():
