@@ -181,7 +181,46 @@ def find_dots(pi: PageIngest, cls: PageClassification, prm: RulesParams = RulesP
     cand = {i: d for i, d in cand.items() if d is not None}
     if not cand:
         return {}
-    g = build_arrangement(body, prm.eps)
+
+    # Some PDF producers paint one circular marker as two separate paths: a filled,
+    # closed disc and a stroke-only path with the same contour.  The latter
+    # is only the disc's outline, not a neighbouring symbol body.  Treating it as an
+    # independent BODY primitive makes every such marker look like TC-X3 (a disc
+    # touching a symbol) and silently suppresses all junction dots.  Exclude only
+    # exact geometric companions from this *contact test*; keep them in the page IR
+    # and in every other stage.  A real third body primitive still suppresses the dot.
+    by_id = {p.id: p for p in body}
+
+    def outline_companion(disc, outline) -> bool:
+        if (outline.id == disc.id or outline.kind != "polyline" or
+                not outline.stroke or outline.fill):
+            return False
+        # Depending on the producer, the companion outline is either explicitly
+        # closed (same vertices as the fill path) or repeats its first vertex.
+        # Compare both traversal directions within the geometry
+        # tolerance; do not use source operator adjacency as a requirement.
+        path = outline.pts
+        if len(path) == len(disc.pts) + 1:
+            if math.dist(path[0], path[-1]) > prm.eps:
+                return False
+            path = path[:-1]
+        if len(path) != len(disc.pts) or math.dist(path[0], disc.pts[0]) > prm.eps:
+            return False
+        direct = all(math.dist(a, b) <= prm.eps for a, b in zip(path, disc.pts))
+        reverse = all(math.dist(a, b) <= prm.eps for a, b in zip(path,
+                       [disc.pts[0], *reversed(disc.pts[1:])]))
+        if not (direct or reverse):
+            return False
+        db = (min(x for x, _ in disc.pts), min(y for _, y in disc.pts),
+              max(x for x, _ in disc.pts), max(y for _, y in disc.pts))
+        ob = (min(x for x, _ in outline.pts), min(y for _, y in outline.pts),
+              max(x for x, _ in outline.pts), max(y for _, y in outline.pts))
+        return all(abs(a - b) <= prm.eps for a, b in zip(db, ob))
+
+    companion_ids = {q.id for did in cand for q in body
+                     if outline_companion(by_id[did], q)}
+    contact_body = [p for p in body if p.id not in companion_ids]
+    g = build_arrangement(contact_body, prm.eps)
     touched: set[int] = set()
     for n in g.nodes:
         ids = independent_prims_at(g, n.id)
@@ -478,3 +517,4 @@ def analyze_page(pi: PageIngest, symbols, prm: RulesParams = RulesParams(),
                            frozenset(v[2] for v in dots.values()) | off_colour_body(pi, cls))
     built = build_conn_graph(pi, cls, clusters, prm, dots)
     return cls, clusters, built, solve(built.graph)
+[exit status 0]
