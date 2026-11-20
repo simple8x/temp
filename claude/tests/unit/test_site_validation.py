@@ -54,3 +54,13 @@ def test_site_allows_through_wire_on_two_arms_but_not_self_link():
 def test_valid_fourway_domain_uses_only_its_declared_arms():
     site = fourway_site("s1", {"N": "a", "E": "b", "S": "c", "W": "d"})
     assert solve(graph(site)).sites["s1"].status == "UNKNOWN"
+
+
+def test_two_through_wires_on_opposite_arms_only_ever_link_each_other():
+    site = fourway_site("s1", {"N": "a", "S": "a", "E": "b", "W": "b"})
+    for o in site.options:
+        assert o.links <= {("a", "b")}
+    assert {o.links for o in site.options} == {frozenset(), frozenset({("a", "b")})}
+    res = solve(graph(site))
+    assert res.sites["s1"].status == "UNKNOWN"
+    assert res.pair_status("a", "b") == "UNKNOWN"

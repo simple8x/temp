@@ -313,6 +313,10 @@ MUTATIONS = [
     ("M134-pins-list-count-ignored", "tools/gt_eval.py",
      '        problems.append(f"EXPECT_EXPORT_OK_LIST has {len(ok_list)} names != EXPECT_EXPORT_OK={exp_proj}")',
      "        pass"),
+    ("M135-site-self-link-allowed", "ecci/solver.py",
+     "or a == b or a not in arm_set", "or a not in arm_set"),
+    ("M136-site-link-outside-arms-allowed", "ecci/solver.py",
+     "or a == b or a not in arm_set or b not in arm_set", "or a == b"),
 ]
 
 
