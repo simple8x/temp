@@ -30,7 +30,7 @@ This writer is the auditable intermediate those exporters should consume.
 | `constraints` | cannot_link, names, no_connect |
 | `unsupported`, `notes`, `warnings` | from the builder / solver, verbatim |
 | `unresolved_references` | evidence ids, prov refs, primitive ids, objects without primitives, sites without arm geometry |
-| `solver_digest`, `content_sha256` | `SolveResult.digest()`; sha256 of the canonical document without this field |
+| `solver_digest`, `content_sha256` | opaque informational `SolveResult.digest()` token; `content_sha256` hashes the canonical document without itself, including `solver_digest` |
 
 Example (crossing of two wires, trimmed): a FOURWAY site whose arms are `E w:3 / N w:4 / S w:4 / W w:3`, each
 with its own `graph_edge` (6, 4, 5, 3), `vector`, `direction` and `prov`; domain collapses to `ALL4 {(w:3,w:4)}` /
@@ -69,3 +69,10 @@ dangling refs, duplicate ids, determinism under shuffled input, write->read->wri
 equality, two-wire crossing arms, F2 audit, committed site links, nothing dropped, writer refusal, 15 malformed /
 tampered inputs, end to end on `lib_min.kicad_sym` + generated PDFs (TR1, TR2+dot, TR3 pins, crossing, T-junction).
 Mutations M137-M143 (reader promotion / connectivity / hash / site-link / provenance checks, arm prov, arm audit).
+
+
+## Independent adversarial regression added after review
+- A multi-arm object with one valid geometry and one missing geometry must produce `provenance.complete=false`.
+- Writer serialization rejects duplicate `(label, object)` records and incomplete/mismatched arm inventories before any dictionary indexing.
+- Reader rejects a site-link record that still claims complete provenance after one participating arm geometry is removed.
+- `solver_digest` is intentionally opaque/informational; only accidental edits are caught by the content hash. It is not independently authenticated.
