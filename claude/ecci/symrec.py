@@ -185,9 +185,79 @@ def build_symbols(clusters, page, library, conn_doc: dict, match_params: MatchPa
             "transform": derive_transform(selected, tau),
             "pins": pins,
             "reference": _unknown_field(), "value": _unknown_field(),
-            "unresolved_
-[... 4326 bytes omitted ...]
-["base"], ln["end"], ln["far"], ln["tolerance"])
+            "unresolved_terminals": len(cr.unresolved), "pin_conflicts": len(cr.conflicts),
+        })
+    doc = {
+        "format": FORMAT, "schema_version": SCHEMA_VERSION,
+        "connectivity_sha256": conn_doc["content_sha256"],
+        "library": {"sha256": library.sha256, "n_symbols": len(syms)},
+        "match_params": {"tau_rel": match_params.tau_rel, "tau_abs": match_params.tau_abs,
+                         "scale_isotropy": match_params.scale_isotropy, "min_scale": match_params.min_scale},
+        "source": {"page_index": conn_doc["source"]["page_index"], "page_size": conn_doc["source"]["page_size"]},
+        "clusters": recs,
+        "not_reverifiable_from_file": list(NOT_FROM_FILE),
+    }
+    doc["content_sha256"] = content_hash(doc)
+    problems = validate(doc, conn_doc, library) if check else []     # check=False: the caller runs loads()
+    if problems:
+        raise ValueError("symbol writer produced an invalid document: " + "; ".join(problems[:5]))
+    return doc
+
+
+def _pin_lines(cr, cands: list, prov: dict) -> list:
+    """The drawn line behind every pin of every selected candidate (in candidate order), from detect_pins."""
+    support = list(getattr(cr, "pin_lines", None) or [])
+    selected = [c for c in cands if c["selected"]]
+    if len(support) != len(selected):
+        raise ValueError(f"cluster {cr.cluster.id}: PIN_LINES selection without per-candidate pin-line support")
+    out = []
+    for c, sup in zip(selected, support):
+        pins = []
+        for cp, r in zip(c["pins"], sup):
+            if r["line"] is None or r["number"] != cp["number"]:
+                raise ValueError(f"cluster {cr.cluster.id}: selected pin {cp['number']} has no drawn line")
+            pid, end, far = r["line"]
+            pins.append({"number": cp["number"], "tip": cp["tip"], "base": cp["base"],
+                         "line": {"prim": int(pid), "content_ref": prov.get(pid), "end": _pt(end), "far": _pt(far),
+                                  "tolerance": _f(r["tol"])}})
+        out.append(pins)
+    return out
+
+
+def pin_lines_problems(rec: dict, params: MatchParams) -> list[str]:
+    """File-level check of a cluster's recorded pin-line support: for ALL, none; for PIN_LINES, one entry per
+    selected candidate naming every one of its pins (number, tip, base exactly as predicted) and a line that
+    satisfies the pin-line rule (pins.pin_line_check) within a tolerance no wider than the documented policy.
+    Whether the line is drawn on the page is audit_pin_lines' job."""
+    w = f"cluster {rec['id']}"
+    r = rec["resolution"]
+    pl = r["pin_lines"]
+    selected = [c for c in rec["candidates"] if c["selected"]]
+    if r["selection"] == SEL_ALL:
+        return [] if pl == [] else [f"{w}: pin_lines recorded for an ALL selection"]
+    if not isinstance(pl, list) or len(pl) != len(selected):
+        return [f"{w}: PIN_LINES selection must record pin-line support for each of its {len(selected)} candidates"]
+    P = []
+    for c, sup in zip(selected, pl):
+        if not isinstance(sup, list) or len(sup) != len(c["pins"]):
+            P.append(f"{w}: pin-line support does not cover every pin of {c['symbol']}")
+            continue
+        for cp, x in zip(c["pins"], sup):
+            if not (isinstance(x, dict) and set(x) == PL_PIN_KEYS and isinstance(x["line"], dict)
+                    and set(x["line"]) == PL_LINE_KEYS and isinstance(x["line"]["prim"], int)
+                    and not isinstance(x["line"]["prim"], bool) and _pt_ok(x["line"]["end"])
+                    and _pt_ok(x["line"]["far"]) and _num(x["line"]["tolerance"]) and x["line"]["tolerance"] > 0):
+                P.append(f"{w}: pin-line record malformed (missing line)")
+                continue
+            if [x["number"], x["tip"], x["base"]] != [cp["number"], cp["tip"], cp["base"]]:
+                P.append(f"{w}: pin-line record {x['number']} is not pin {cp['number']} of {c['symbol']}")
+                continue
+            ln = x["line"]
+            plen = math.hypot(cp["tip"][0] - cp["base"][0], cp["tip"][1] - cp["base"][1])
+            if ln["tolerance"] > s2_tolerance(plen, min(params.tau_abs, S2_TAU_ABS_MAX), S2_REL_MAX) * (1 + 1e-12):
+                P.append(f"{w}: pin {cp['number']}: line tolerance wider than the policy")
+                continue
+            why = pin_line_check(cp["tip"], cp["base"], ln["end"], ln["far"], ln["tolerance"])
             if why:
                 P.append(f"{w}: pin {cp['number']}: recorded line {ln['prim']} fails the pin-line rule: {why}")
     return P
