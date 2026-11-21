@@ -342,6 +342,7 @@ def test_b3_zero_mapped_pins_with_zero_fp_does_not_pass():
 def test_b3_electrically_equivalent_passive_pin_permutation_is_mapped_by_physical_position():
     g = _gt(ambiguous_r())
     assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
+    assert g["pairs"]["TP"] == 1 and g["pairs"]["FN"] == 0
     gate = kr.ground_truth_gate(g, POL)
     assert gate["state"] == kr.GT_PASS and gate["mapping_coverage"] == 1.0
 
