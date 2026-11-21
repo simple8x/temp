@@ -30,6 +30,9 @@ class PinDef:
     y: float
     angle: float          # degrees, direction from tip toward body (library space, y up)
     length: float
+    electrical_type: str = ""
+    shape: str = "line"
+    hidden: bool = False
 
     @property
     def tip(self) -> tuple[float, float]:
@@ -160,7 +163,10 @@ def _read_symbol(node: list, lib_token: str) -> list[SymbolDef]:
                 pins.append(PinDef(
                     number=str(child(g, "number")[1]), name=str(child(g, "name")[1]),
                     x=num(at[1]), y=num(at[2]), angle=num(at[3]) if len(at) > 3 else 0.0,
-                    length=num(child(g, "length")[1])))
+                    length=num(child(g, "length")[1]), electrical_type=str(g[1]) if len(g) > 1 else "",
+                    shape=str(g[2]) if len(g) > 2 else "line",
+                    hidden=(child(g, "hide") is not None and (len(child(g, "hide")) < 2 or
+                            str(child(g, "hide")[1]).lower() == "yes"))))
     common_pins, common_body = per_unit.get("0", ([], []))
     units = sorted((u for u in per_unit if u != "0"), key=int) or ["0"]
     out: list[SymbolDef] = []
