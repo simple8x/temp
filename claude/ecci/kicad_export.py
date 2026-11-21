@@ -165,84 +165,7 @@ def library_symbol_text(lib_text: str, name: str, lib_id: str) -> str:
 
 def implicit_connection_reasons(sym_node: list) -> list[str]:
     """Library features that make KiCad connect a pin without any drawn connection."""
-    out = []
-    if child(sym_node, "power") is not None:
-        out.append("power symbol (KiCad joins power symbols of one value into a global net)")
-    for sub in children(sym_node, "symbol"):
-        for pin in children(sub, "pin"):
-            typ = str(pin[1]) if len(pin) > 1 else ""
-            hidden = any(x == "hide" for x in pin) or any(isinstance(x, list) and x and x[0] == "hide" and
-                                                         (len(x) < 2 or str(x[1]) == "yes") for x in pin)
-            if typ == "power_in" and hidden:
-                num = child(pin, "number")
-                out.append(f"hidden power_in pin {num[1] if num else '?'} (KiCad joins it to a global net by name)")
-    return out
-
-
-# ------------------------------------------------------------------------------------------- planning
-def _iu(v: float) -> int:
-    return int(round(v * IU_PER_MM))
-
-
-def _split_unit(name: str) -> tuple[str, int]:
-    if "#u" in name:
-        base, u = name.rsplit("#u", 1)
-        if u.isdigit():
-            return base, int(u)
-    return name, 1
-
-
-def _lib_id(base: str) -> str:
-    return base if ":" in base else f"ecci:{base}"
-
-
-def _uuid(seed: str) -> str:
-    return str(uuid.uuid5(NS, seed))
-
-
-def _lib_pin_iu(sym_node: list, unit: int) -> dict[str, tuple[int, int]]:
-    """pin number -> library pin end in IU (y up), units 0 and `unit`, body style 1, as KiCad instantiates."""
-    out: dict[str, tuple[int, int]] = {}
-    for sub in children(sym_node, "symbol"):
-        parts = str(sub[1]).rsplit("_", 2)
-        if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
-            u, style = int(parts[1]), int(parts[2])
-        else:
-            u, style = 0, 0
-        if style >= 2 or u not in (0, unit):
-            continue
-        for pin in children(sub, "pin"):
-            at = child(pin, "at")
-            num = child(pin, "number")
-            if at is None or num is None:
-                continue
-            out.setdefault(str(num[1]), (_iu(float(at[1])), _iu(float(at[2]))))
-    return out
-
-
-def withdraw_coincident(decisions: list[dict]) -> None:
-    """Withdraw (NOT_PLACED) every placed symbol with a pin end on the same KiCad point as a pin of another
-    net or of no net: KiCad joins coincident pin ends, so placing both would create an unverified connection."""
-    while True:
-        at_pos: dict[tuple, set] = {}
-        for d in decisions:
-            if d["decision"] != PLACED:
-                continue
-            for p in d["pins"]:
-                at_pos.setdefault(tuple(p["kicad_iu"]), set()).add((d["cluster"], p["object"], p["verified_group"]))
-        bad = set()
-        for pos, occ in at_pos.items():
-            groups = {g if g is not None else ("solo", o) for _, o, g in occ}
-            if len(occ) > 1 and len(groups) > 1:
-                bad |= {cid for cid, _, _ in occ}
-        if not bad:
-            return
-        for d in decisions:
-            if d["cluster"] in bad and d["decision"] == PLACED:
-                d["decision"] = NOT_PLACED
-                d["reasons"].append("a pin end coincides with a pin of another net (KiCad would connect them)")
-                for key in ("lib_symbol", "lib_id", "lib_base", "unit", "at_iu", "rot", "mirror",
-                            "transform_choice", "synthetic_reference"):
+    outã~4o+^²‰¢¶×                 "transform_choice", "synthetic_reference"):
                     d.pop(key, None)
                 d["pins"] = []
 
@@ -278,7 +201,10 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
         R = d["reasons"]
         if c["identity"]["state"] != "CONFIRMED":
             R.append(f"identity {c['identity']['state']} ({len(c['identity']['names'])} symbol names)")
-        pin_equivalent = c["resolution"]["status"] == "UNIQUE" and c["resolution"]["id_state"] == "EQUIVALENT"
+        pin_equivalent = (c["resolution"]["status"] == "UNIQUE" and
+                          c["resolution"]["id_state"] == "EQUIVALENT" and
+                          len(c["pins"]) == 2 and
+                          all(len(x.get("pins", [])) == 2 for x in c["candidates"] if x.get("selected")))
         if c["transform"]["state"] not in ("UNIQUE", "EQUIVALENT") and not pin_equivalent:
             R.append(f"transform {c['transform']['state']} ({c['transform']['n_candidates']} candidates)")
         if c["resolution"]["status"] != "UNIQUE" or c["resolution"]["id_state"] not in ("CONFIRMED", "EQUIVALENT"):

@@ -28,6 +28,11 @@ D4 = (
 )
 DIM_EPS = 1e-9
 COVER_SAMPLES = 5
+# Explicitly non-polarized, two-terminal primitives whose terminal numbers may be
+# canonically exchanged without changing the electrical meaning of the symbol.
+# This is intentionally an allowlist, not a rule inferred from passive pin types.
+PIN_NUMBER_EXCHANGE_ALLOWLIST = frozenset({"R", "R_US", "C", "C_Small", "L", "L_Small",
+                                           "L_Core", "Fuse", "Fuse_Small"})
 
 
 @dataclass(frozen=True)
@@ -172,7 +177,7 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
     # numbers per tip across all hits; id is CONFIRMED only if every hit agrees on every number
     pins: list[ResolvedPin] = []
     agree = True
-    electrically_equivalent = len(names) == 1
+    electrically_equivalent = len(names) == 1 and names[0] in PIN_NUMBER_EXCHANGE_ALLOWLIST
     for num0, tip0, base0 in first:
         nums = set()
         signatures = []
@@ -186,7 +191,14 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
                 electrically_equivalent = False
             else:
                 pin = defs[0]
-                signatures.append((pin.name, pin.electrical_type, pin.shape, pin.hidden, round(pin.length, 9)))
+                # Compare the pin's direction in page coordinates as well as its electrical
+                # attributes. A matching tip alone is not sufficient evidence of an identical pin.
+                placed_tip = hit.place(*pin.tip)
+                placed_base = hit.place(*pin.base)
+                direction = (round(placed_base[0] - placed_tip[0], 6),
+                             round(placed_base[1] - placed_tip[1], 6))
+                signatures.append((pin.name, pin.electrical_type, pin.shape, pin.hidden,
+                                   round(pin.length, 9), direction))
         if nums != {num0}:
             agree = False
             if len(signatures) != len(hits) or len(set(signatures)) != 1:
@@ -194,9 +206,9 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
         pins.append(ResolvedPin(tip0, base0, tuple(sorted(nums))))
     if agree:
         id_state, note = "CONFIRMED", ""
-    elif electrically_equivalent:
+    elif electrically_equivalent and len(first) == 2 and all(len(h.symbol.pins) == 2 for h in hits):
         id_state = "EQUIVALENT"
-        note = "pin numbers permute only among pins with identical electrical signatures; candidate 0 is the explicit canonical export mapping"
+        note = "pin numbers permute only on an allowlisted, non-polarized two-terminal symbol with matching pin signatures; candidate 0 is synthetic canonical numbering, not source identity"
     else:
         id_state = "AMBIGUOUS"
         note = "pin numbers cannot be assigned from geometry without an electrically equivalent pin mapping"

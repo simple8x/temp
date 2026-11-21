@@ -7,8 +7,9 @@ netlist and the schematic text are read back and compared with the manifest:
   nets      each manifest net is exactly one KiCad net; a pin the manifest leaves unconnected is alone in its
             KiCad net; classified as OK / MISSING / SPLIT / MERGED / EXTRA
 V-G: exported pins are mapped to independent ground-truth pins (KiCad's own netlist of the source design) by
-page position; every pair of mapped pins is TP / FP (we join, GT does not) / FN (GT joins, we do not); GT pins
-that were not exported are counted as UNKNOWN with the reason of their cluster when one is near.
+page position, then CONFIRMED pin numbers are checked against GT pin numbers. Every pair of mapped pins is TP /
+FP (we join, GT does not) / FN (GT joins, we do not); any FN blocks PASS. GT pins that were not exported or
+whose identity/net cannot be scored are counted as UNKNOWN with a reason.
 Nothing here can turn a failure into a pass: a missing kicad-cli is reported as BLOCKED by the caller.
 """
 from __future__ import annotations
@@ -145,6 +146,7 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
     # most once, by the first exported pin in manifest order). scored: claimed GT indices whose exported pin is on
     # exactly one KiCad net, i.e. that enter the pair scoring. Every scoreable GT pin not in `scored` is UNKNOWN.
     mapped, unmatched, claimed, scored, dup = [], [], {}, set(), 0
+    identity_mismatches, identity_unverified = [], []
     for d in manifest["symbols"]:
         if d["decision"] != "PLACED":
             continue
@@ -160,12 +162,25 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
                 dup += len(cand) > 1 or (len(cand) == 1 and cand[0] in claimed)
                 continue
             claimed[cand[0]] = p["object"]
+            gt_pin = scoreable[cand[0]]
+            assignment = p.get("number_assignment", "CONFIRMED")
+            if assignment == "EQUIVALENT_CANONICAL":
+                identity_unverified.append({"object": p["object"], "gt_ref": gt_pin.ref,
+                                            "gt_number": gt_pin.number,
+                                            "export_numbers": list(p["numbers"]),
+                                            "reason": "synthetic canonical numbering; source pin identity is not proven"})
+            elif list(map(str, p["numbers"])) != [str(gt_pin.number)]:
+                identity_mismatches.append({"object": p["object"], "gt_ref": gt_pin.ref,
+                                            "gt_number": str(gt_pin.number),
+                                            "export_numbers": list(map(str, p["numbers"]))})
+                unmatched.append((p["object"], "pin identity mismatch against GT number"))
+                continue
             ours = {net_of.get((ref, n)) for n in p["numbers"]}
             if len(ours) != 1 or None in ours:
                 unmatched.append((p["object"], "pin not on exactly one KiCad net"))
                 continue
             scored.add(cand[0])                  # only now: the GT pin is electrically scored
-            mapped.append((p["object"], next(iter(ours)), scoreable[cand[0]].net))
+            mapped.append((p["object"], next(iter(ours)), gt_pin.net))
     c = collections.Counter()
     fp_examples, fn_examples = [], []
     for (oa, ka, ga), (ob, kb, gb) in itertools.combinations(mapped, 2):
@@ -190,6 +205,8 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
             "gt_pins_not_exported_UNKNOWN": len(scoreable) - len(scored),
             "gt_pins_scored": len(scored),
             "gt_pins_claimed_not_scored_UNKNOWN": len(set(claimed) - scored),
+            "pin_identity_mismatches": identity_mismatches,
+            "pin_identity_unverified_synthetic_canonical": identity_unverified,
             # mapping coverage = GT scoreable pins that an exported pin was scored against (None: nothing to score)
             "mapping_coverage": round(len(mapped) / len(scoreable), 4) if scoreable else None,
             # unmatched pins are not scored and stay UNKNOWN: nothing is inferred about their connectivity
@@ -247,8 +264,16 @@ def ground_truth_gate(g: dict, policy) -> dict:
            "TP": pairs["TP"], "FP": pairs["FP"], "FN": pairs["FN"], "TN": pairs["TN"],
            "precision": g["precision"], "recall": g["recall_over_mapped_pairs"],
            "min_mapping_coverage": policy.get("min_mapping_coverage") if isinstance(policy, dict) else None}
-    if pairs["FP"] > 0:
-        return {**rep, "state": GT_FAIL, "reason": f"{pairs['FP']} false-positive pin pair(s)"}
+    if pairs["FP"] > 0 or pairs["FN"] > 0:
+        failures = []
+        if pairs["FP"] > 0:
+            failures.append(f"{pairs['FP']} false-positive pin pair(s)")
+        if pairs["FN"] > 0:
+            failures.append(f"{pairs['FN']} false-negative pin pair(s)")
+        return {**rep, "state": GT_FAIL, "reason": "; ".join(failures)}
+    if g.get("pin_identity_mismatches"):
+        return {**rep, "state": GT_FAIL,
+                "reason": f"{len(g['pin_identity_mismatches'])} exported pin identity mismatch(es) against GT"}
     pp = gt_policy_problems(policy)
     if pp:
         return {**rep, "state": GT_BLOCKED, "reason": pp[0]}
@@ -259,6 +284,5 @@ def ground_truth_gate(g: dict, policy) -> dict:
         return {**rep, "state": GT_FAIL, "reason": f"mapping coverage {g['mapping_coverage']} below the policy "
                                                    f"minimum {policy['min_mapping_coverage']}"}
     if g["precision"] is None and pairs["TP"] == 0:
-        # only TN/FN pairs: no exported connection was confirmed, which is fine (FP = 0) but stated
-        return {**rep, "state": GT_PASS, "reason": "FP = 0, coverage met; no exported connection among mapped pins"}
-    return {**rep, "state": GT_PASS, "reason": "FP = 0 and coverage met"}
+        return {**rep, "state": GT_PASS, "reason": "FP = 0, FN = 0, coverage met; no exported connection among mapped pins"}
+    return {**rep, "state": GT_PASS, "reason": "FP = 0, FN = 0 and coverage met"}
