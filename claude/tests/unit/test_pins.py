@@ -68,6 +68,16 @@ def test_symmetric_geometry_with_different_electrical_pin_signatures_stays_ambig
     assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
 
 
+def test_stacked_duplicate_pin_number_is_not_misreported_as_confirmed():
+    base = LIB.symbols["R"]
+    # Two library pin definitions occupy the same physical terminal and reuse its number.
+    # Set equality alone would collapse them to one number; identity must still fail closed.
+    stacked = replace(base, pins=base.pins + (replace(base.pins[0], name="STACKED"),))
+    _, _, (cr,) = run(sym("R"), symbols={"R_STACKED": stacked})
+    assert cr.resolution.id_state == "AMBIGUOUS"
+    assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
+
+
 def test_p2_no_stub_drawn_gives_candidate_only():
     _, _, (cr,) = run(sym("R", pins=False))
     assert [p.pos_state for p in cr.pins] == [POS_CANDIDATE, POS_CANDIDATE]

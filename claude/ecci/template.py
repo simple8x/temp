@@ -151,7 +151,7 @@ class ResolvedPin:
 class Resolution:
     hits: tuple[Hit, ...]
     status: str                       # "NONE" | "UNIQUE" | "DIFFERENT_TIP_SETS"
-    id_state: str                     # "CONFIRMED" | "AMBIGUOUS" | "UNKNOWN"
+    id_state: str                     # "CONFIRMED" | "PIN_EQUIVALENT_CANONICAL" | "AMBIGUOUS" | "UNKNOWN"
     pins: tuple[ResolvedPin, ...]
     symbols: tuple[str, ...]
     note: str = ""
@@ -200,6 +200,10 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
             # exactly one pin with the same electrical signature. Pin numbers alone are not a signature.
             defs = [p for p in hit.symbol.pins if math.hypot(*(a - b for a, b in zip(hit.place(*p.tip), tip0))) <= tau]
             if len(matches) != 1 or len(defs) != 1:
+                # A stacked / duplicate physical terminal is not a unique pin identity, even
+                # when the duplicate happens to reuse the same pin number. Never label it
+                # CONFIRMED merely because the set of numbers collapsed to one value.
+                agree = False
                 electrically_equivalent = False
             else:
                 pin = defs[0]
