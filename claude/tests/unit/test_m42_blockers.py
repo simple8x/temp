@@ -158,4 +158,437 @@ def test_b1_missing_lineage_is_rejected():
     # 2. the S2 evidence record is gone (declared unresolved instead)
     bad = copy.deepcopy(conn)
     bad["evidence"] = [e for e in bad["evidence"] if e["id"] != sid]
-    bad["unresolved_references"]["evidence"] = sorted(bad["unresolved_references"]["evidence×MzÑ¼­zÊ&ŠÛ^u±…µ‰‘„ÈèÉl‰Á¥¹}±¥¹•Ì‰ulÁt¹Á½À ¤°(€€€€€€€€€€€€€€€€€±…µ‰‘„ÈèÉl‰Á¥¹}±¥¹•Ì‰ulÁulÁt¹ÕÁ‘…Ñ”¡±¥¹”õ9½¹”¤°(€€€€€€€€€€€€€€€€€±…µ‰‘„ÈèÉl‰Á¥¹}±¥¹•Ì‰ulÁulÁul‰±¥¹”‰t¹ÕÁ‘…Ñ”¡Ñ½±•É…¹”ôÅ”Ø¤¤è(€€€€€€€‰…€ô½Áä¹‘••Á½Áä¡ÍåµÌ¤(€€€€€€€™½É”¡}Á±}±ÕÍÑ•È¡‰…¥l‰É•Í½±ÕÑ¥½¸‰t¤(€€€€€€€Ý¥Ñ ÁåÑ•ÍÐ¹É…¥Í•Ì¡ÍåµÉ•Œ¹Måµ‰½±½ÉÉ½È¤è(€€€€€€€€€€€ÍåµÉ•Œ¹±½…‘Ì¡É•¡…Í¡}ÍåµÌ¡‰…¤°½¹¸°±¥ˆ¤(€€€‰…€ô½Áä¹‘••Á½Áä¡ÍåµÌ¤€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€Œ…¸10Í•±•Ñ¥½¸µ…ä¹½Ð…ÉÉäÁ¥¸±¥¹•Ì(€€€Œ€ô¹•áÐ¡Œ™½ÈŒ¥¸‰…‘l‰±ÕÍÑ•ÉÌ‰t¥˜l‰É•Í½±ÕÑ¥½¸‰ul‰Í•±•Ñ¥½¸‰t€ôôÍåµÉ•Œ¹M1}10¤(€€€l‰É•Í½±ÕÑ¥½¸‰ul‰Á¥¹}±¥¹•Ì‰t€ô½Áä¹‘••Á½Áä¡}Á±}±ÕÍÑ•È¡ÍåµÌ¥l‰É•Í½±ÕÑ¥½¸‰ul‰Á¥¹}±¥¹•Ì‰t¤(€€€Ý¥Ñ ÁåÑ•ÍÐ¹É…¥Í•Ì¡ÍåµÉ•Œ¹Måµ‰½±½ÉÉ½È¤è(€€€€€€€ÍåµÉ•Œ¹±½…‘Ì¡É•¡…Í¡}ÍåµÌ¡‰…¤°½¹¸°±¥ˆ¤(((Œ€ôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôôÌèÉ½Õ¹µÑÉÕÑ ½Ù•É…”…Ñ”)A=0€ôì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€Ä¸Áô(()‘•˜}Ð¡Í•¹”°Ðõ9½¹”¤è(€€€Á¤°½¹¸°ÍåµÌ°Í °µ…¸€ô•áÁ½ÉÐ¡Í•¹”¤(€€€É•ÑÕÉ¸­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸°}¹•Ñ±¥ÍÑ}™É½´¡µ…¸¤°Ð¥˜Ð¥Ì¹½Ð9½¹”•±Í”Í•¹”¹Ñ}Á¥¹Ì ¤¤((((Œ€´´´´ÄèÁ¥¸µ¹Õµ‰•È•ÅÕ¥Ù…±•¹”¥Ì…¸•áÁ±¥¥ÐÑÝ¼µÑ•Éµ¥¹…°…±±½Ý±¥ÍÐ°¹•Ù•È¥¹™•ÉÉ•™É½´Á…ÍÍ¥Ù”Á¥¹Ì)ÁåÑ•ÍÐ¹µ…É¬¹Á…É…µ•ÑÉ¥é” ‰¹…µ”±Á¥¹Ì±½É¥•¹Ñ…Ñ¥½¹Ìˆ°l(€€€€ ‰ÕÍÑ½µ|ÑA¥¸ˆ°ÑÕÁ±”¡A¥¹•˜¡ÍÑÈ¡¤€¬€Ä¤°€‰øˆ°€©áä°€À°€È°€‰Á…ÍÍ¥Ù”ˆ¤(€€€€€€€€€€€€€€€€€€€€€€€€€€™½È¤°áä¥¸•¹Õµ•É…Ñ”   À°€Ô¤°€ ÄÀ°€Ô¤°€ Ô°€À¤°€ Ô°€ÄÀ¤¤¤¤°€ À°€È°€Ð°€Ô¤¤°(€€€€ ‰}A½±…É¥é•ˆ°€¡A¥¹•˜ ˆÄˆ°€‰øˆ°€´È°€Ô°€À°€È°€‰Á…ÍÍ¥Ù”ˆ¤°(€€€€€€€€€€€€€€€€€€€€A¥¹•˜ ˆÈˆ°€‰øˆ°€ÄÈ°€Ô°€ÄàÀ°€È°€‰Á…ÍÍ¥Ù”ˆ¤¤°€ À°€È¤¤°)t¤)‘•˜Ñ•ÍÑ}˜Å}Á…ÍÍ¥Ù•}Í¥¹…ÑÕÉ•}…±½¹•}¹•Ù•É}…ÕÑ¡½É¥é•Í}Á¥¹}¹Õµ‰•É}•á¡…¹”¡¹…µ”°Á¥¹Ì°½É¥•¹Ñ…Ñ¥½¹Ì¤è(€€€‰½‘ä€ô€¡	½‘åA…Ñ    À°€À¤°€ ÄÀ°€À¤°€ ÄÀ°€ÄÀ¤°€ À°€ÄÀ¤¤°QÉÕ”¤°¤(€€€Íå´€ôMåµ‰½±•˜¡¹…µ”°Á¥¹Ì°‰½‘ä°€‰Ñ•ÍÐµ±¥‰É…Éäˆ¤(€€€±ÕÍÑ•È€ô±ÕÍÑ•È Ä°€ Ä°¤°€ À°€À°€ÄÀ°€ÄÀ¤°€  À°€À¤°€ ÄÀ°€À¤°€ ÄÀ°€ÄÀ¤°€ À°€ÄÀ¤¤°(€€€€€€€€€€€€€€€€€€€€€€   À°€À¤°€ ÄÀ°€À¤¤°€  ÄÀ°€À¤°€ ÄÀ°€ÄÀ¤¤°€  ÄÀ°€ÄÀ¤°€ À°€ÄÀ¤¤°€  À°€ÄÀ¤°€ À°€À¤¤¤¤(€€€Í¡¥™ÑÌ€ôìÀè€ À¸À°€À¸À¤°€Èè€ ÄÀ¸À°€ÄÀ¸À¤°€Ðè€ ÄÀ¸À°€À¸À¤°€Ôè€ À¸À°€ÄÀ¸À¥ô(€€€¡¥ÑÌ€ôm!¥Ð¡Íå´°¼°€Ä¸À°€©Í¡¥™ÑÍm½t°€À¸À¤™½È¼¥¸½É¥•¹Ñ…Ñ¥½¹Ít(€€€É•ÍÕ±Ð€ôÉ•Í½±Ù”¡±ÕÍÑ•È°¡¥ÑÌ¤(€€€…ÍÍ•ÉÐÉ•ÍÕ±Ð¹ÍÑ…ÑÕÌ€ôô€‰U9%EUˆ(€€€…ÍÍ•ÉÐÉ•ÍÕ±Ð¹¥‘}ÍÑ…Ñ”€ôô€‰5	%U=ULˆ(()‘•˜Ñ•ÍÑ}˜É}Ñ}‘•Ñ•ÑÍ}Á¥¹}¹Õµ‰•É}µ¥Íµ…Ñ¡}•Ù•¹}Ý¡•¹}Á¡åÍ¥…±}Á½Í¥Ñ¥½¹}µ…Ñ¡•Ì ¤è(€€€ÍŒ°µ…¸°¹°€ô}É½ÍÍ¥¹}Ð ¤(€€€Ð€ô±¥ÍÐ¡ÍŒ¹Ñ}Á¥¹Ì ¤¤(€€€œÀ€ôÑlÁt(€€€ÑlÁt€ôÑA¥¸¡œÀ¹É•˜°€‰]I=9ˆ°œÀ¹à°œÀ¹ä°œÀ¹¹•Ð°œÀ¹¡¥‘‘•¸°œÀ¹±¥‰}¥¤(€€€É•Á½ÉÐ€ô­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸°¹°°Ð¤(€€€…ÍÍ•ÉÐÉ•Á½ÉÑl‰Á¥¹}¥‘•¹Ñ¥Ñå}µ¥Íµ…Ñ¡•Ì‰t(€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡É•Á½ÉÐ°A=0¤(€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}%0…¹€‰¥‘•¹Ñ¥Ñäµ¥Íµ…Ñ ˆ¥¸…Ñ•l‰É•…Í½¸‰t(()‘•˜Ñ•ÍÑ}˜Í}Ñ}™…±Í•}¹•…Ñ¥Ù•}Á…¥ÉÍ}‰±½­}Á…ÍÍ}•Ù•¹}Ý¥Ñ¡}™Õ±±}µ…ÁÁ¥¹}½Ù•É…” ¤è(€€€ÍŒ°µ…¸°¹°€ô}É½ÍÍ¥¹}Ð ¤(€€€Ð€ô±¥ÍÐ¡ÍŒ¹Ñ}Á¥¹Ì ¤¤(€€€€Œ±…¥´„P©½¥¸‰•ÑÝ••¸ÑÝ¼Á¡åÍ¥…±±äµ…ÁÁ•Á¥¹ÌÝ¡¥ Ñ¡”•áÁ½ÉÐ±•…Ù•ÌÍ•Á…É…Ñ”¸(€€€Á…¥ÉÌ€ômt(€€€™½È¤°„¥¸•¹Õµ•É…Ñ”¡Ð¤è(€€€€€€€™½Èˆ¥¸Ñm¤€¬€Äétè(€€€€€€€€€€€€Œ¥¹Ñ¡”•áÁ½ÉÑ•Á¥¸…Ð•… Á…”Á½Í¥Ñ¥½¸ì½¹±ä¡½½Í”Á¥¹Ì½¸‘¥ÍÑ¥¹Ð-¥…¹•ÑÌ¸(€€€€€€€€€€€‘•˜­}¹•Ð¡Á¥¸¤è(€€€€€€€€€€€€€€€™½È¥¸µ…¹l‰Íåµ‰½±Ì‰tè(€€€€€€€€€€€€€€€€€€€¥˜‘l‰‘•¥Í¥½¸‰t€„ô€‰A1ˆè(€€€€€€€€€€€€€€€€€€€€€€€½¹Ñ¥¹Õ”(€€€€€€€€€€€€€€€€€€€É•˜€ô‘l‰Íå¹Ñ¡•Ñ¥}É•™•É•¹”‰ul‰Ù…±Õ”‰t(€€€€€€€€€€€€€€€€€€€™½ÈÀ¥¸‘l‰Á¥¹Ì‰tè(€€€€€€€€€€€€€€€€€€€€€€€¥˜€ ¡Ál‰Á…•}Ñ¥À‰ulÁt€´Á¥¸¹à¤€¨¨€È€¬€¡Ál‰Á…•}Ñ¥À‰ulÅt€´Á¥¸¹ä¤€¨¨€È¤€¨¨€À¸Ô€ð€Ä¸Àè(€€€€€€€€€€€€€€€€€€€€€€€€€€€É•ÑÕÉ¸¹•áÐ ¡¹•Ð™½È¹•Ð°¹½‘•Ì¥¸¹±l‰¹•ÑÌ‰t¹¥Ñ•µÌ ¤¥˜€¡É•˜°Ál‰¹Õµ‰•ÉÌ‰ulÁt¤¥¸¹½‘•Ì¤°9½¹”¤(€€€€€€€€€€€€€€€É•ÑÕÉ¸9½¹”(€€€€€€€€€€€¥˜„¹¹•Ð€„ôˆ¹¹•Ð…¹­}¹•Ð¡„¤€„ô­}¹•Ð¡ˆ¤…¹­}¹•Ð¡„¤¥Ì¹½Ð9½¹”…¹­}¹•Ð¡ˆ¤¥Ì¹½Ð9½¹”è(€€€€€€€€€€€€€€€Á…¥ÉÌ¹…ÁÁ•¹ ¡„°ˆ¤¤(€€€…ÍÍ•ÉÐÁ…¥ÉÌ(€€€„°ˆ€ôÁ…¥ÉÍlÁt(€€€™½É•€ô˜‰=I})=%9}í„¹É•™õ}í„¹¹Õµ‰•Éõ}íˆ¹É•™õ}íˆ¹¹Õµ‰•Éôˆ(€€€Ð€ômÑA¥¸¡à¹É•˜°à¹¹Õµ‰•È°à¹à°à¹ä°™½É•¥˜à¥¸€¡„°ˆ¤•±Í”à¹¹•Ð°à¹¡¥‘‘•¸°à¹±¥‰}¥¤(€€€€€€€€€™½Èà¥¸Ñt(€€€É•Á½ÉÐ€ô­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸°¹°°Ð¤(€€€…ÍÍ•ÉÐÉ•Á½ÉÑl‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôô€Ä¸À…¹É•Á½ÉÑl‰Á…¥ÉÌ‰ul‰8‰t€ø€À(€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡É•Á½ÉÐ°A=0¤(€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}%0…¹€‰™…±Í”µ¹•…Ñ¥Ù”ˆ¥¸…Ñ•l‰É•…Í½¸‰t()‘•˜Ñ•ÍÑ}ˆÍ}é•É½}µ…ÁÁ•‘}Á¥¹Í}Ý¥Ñ¡}é•É½}™Á}‘½•Í}¹½Ñ}Á…ÍÌ ¤è(€€€ÍŒ€ôÉ½ÍÍ¥¹œ ¤(€€€µ½Ù•€ômÑA¥¸¡œ¹É•˜°œ¹¹Õµ‰•È°œ¹à€¬€ÔÀ°œ¹ä€¬€ÔÀ°œ¹¹•Ð°…±Í”°œ¹±¥‰}¥¤™½Èœ¥¸ÍŒ¹Ñ}Á¥¹Ì ¥t(€€€œ€ô}Ð¡ÍŒ°µ½Ù•¤(€€€…ÍÍ•ÉÐl‰•áÁ½ÉÑ•‘}Á¥¹Í}µ…ÁÁ•‰t€ôô€À…¹l‰Á…¥ÉÌ‰ul‰@‰t€ôô€À…¹l‰ÁÉ•¥Í¥½¸‰t¥Ì9½¹”(€€€™½ÈÁ½°¥¸€¡A=0°ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€À¸ÀÅô¤è(€€€€€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡œ°Á½°¤(€€€€€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}%9=91UM%Y€„ô­È¹Q}AML…¹€‰¹¼Á¥¸Á…¥Èˆ¥¸…Ñ•l‰É•…Í½¸‰t(€€€…ÍÍ•ÉÐ­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡œ°9½¹”¥l‰ÍÑ…Ñ”‰t€ôô­È¹Q}	1=-(()‘•˜Ñ•ÍÑ}ˆÍ}•±•ÑÉ¥…±±å}•ÅÕ¥Ù…±•¹Ñ}Á…ÍÍ¥Ù•}Á¥¹}Á•ÉµÕÑ…Ñ¥½¹}¥Í}µ…ÁÁ•‘}‰å}Á¡åÍ¥…±}Á½Í¥Ñ¥½¸ ¤è(€€€œ€ô}Ð¡…µ‰¥Õ½ÕÍ}È ¤¤(€€€…ÍÍ•ÉÐl‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôô€Ä¸À…¹l‰Á…¥ÉÌ‰ul‰@‰t€ôô€À(€€€…ÍÍ•ÉÐl‰Á…¥ÉÌ‰ul‰Q@‰t€ôô€Ä…¹l‰Á…¥ÉÌ‰ul‰8‰t€ôô€À(€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡œ°A=0¤(€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}AML…¹…Ñ•l‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôô€Ä¸À(()‘•˜Ñ•ÍÑ}ˆÍ}ÍÕ™™¥¥•¹Ñ}µ…ÁÁ¥¹}Ý¥Ñ¡}é•É½}™Á}µ…å}Á…ÍÌ ¤è(€€€œ€ô}Ð¡É½ÍÍ¥¹œ ¤¤(€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡œ°A=0¤(€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}AML…¹…Ñ•l‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôô€Ä¸À…¹…Ñ•l‰@‰t€ôô€À(€€€™½È¬¥¸€ ‰Ñ}Í½É•…‰±•}Á¥¹Ìˆ°€‰•áÁ½ÉÑ•‘}Á¥¹Í}µ…ÁÁ•ˆ°€‰•áÁ½ÉÑ•‘}Á¥¹Í}Õ¹µ…Ñ¡•ˆ°€‰µ…ÁÁ¥¹}½Ù•É…”ˆ°(€€€€€€€€€€€€€€‰Q@ˆ°€‰@ˆ°€‰8ˆ°€‰ÁÉ•¥Í¥½¸ˆ°€‰É•…±°ˆ°€‰É•…Í½¸ˆ°€‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆ¤è(€€€€€€€…ÍÍ•ÉÐ¬¥¸…Ñ”(()‘•˜Ñ•ÍÑ}ˆÍ}™…±Í•}Á½Í¥Ñ¥Ù•Í}™…¥±}É•…É‘±•ÍÍ}½™}Á½±¥ä ¤è(€€€ÍŒ€ôÉ½ÍÍ¥¹œ ¤(€€€…Á…ÉÐ€ômÑA¥¸¡œ¹É•˜°œ¹¹Õµ‰•È°œ¹à°œ¹ä°˜‰Í½±½í¥ôˆ°…±Í”°œ¹±¥‰}¥¤™½È¤°œ¥¸•¹Õµ•É…Ñ”¡ÍŒ¹Ñ}Á¥¹Ì ¤¥t(€€€œ€ô}Ð¡ÍŒ°…Á…ÉÐ¤(€€€™½ÈÁ½°¥¸€¡A=0°9½¹”¤è(€€€€€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡œ°Á½°¤(€€€€€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}%0…¹€‰™…±Í”µÁ½Í¥Ñ¥Ù”ˆ¥¸…Ñ•l‰É•…Í½¸‰t(()ÁåÑ•ÍÐ¹µ…É¬¹Á…É…µ•ÑÉ¥é” ‰Á½°ˆ°m9½¹”°íô°ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€Áô°ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€Ä¸Õô°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€ˆÀ¸Ô‰ô°ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆèQÉÕ•ô°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè™±½…Ð ‰¹…¸ˆ¥ô°ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€À¸Ô°€‰àˆè€Åô°lÀ¸Õut¤)‘•˜Ñ•ÍÑ}ˆÍ}µ¥ÍÍ¥¹}½É}µ…±™½Éµ•‘}Á½±¥å}¥Í}‰±½­•¡Á½°¤è(€€€…Ñ”€ô­È¹É½Õ¹‘}ÑÉÕÑ¡}…Ñ”¡}Ð¡É½ÍÍ¥¹œ ¤¤°Á½°¤(€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôô­È¹Q}	1=-(()‘•˜Ñ•ÍÑ}ˆÍ}Á½±¥å}™¥±•}±½…‘¥¹}™…¥±Í}±½Í•¡ÑµÁ}Á…Ñ ¤è(€€€…ÍÍ•ÉÐ­È¹±½…‘}Ñ}Á½±¥ä¡9½¹”¤¥Ì9½¹”…¹­È¹±½…‘}Ñ}Á½±¥ä¡ÍÑÈ¡ÑµÁ}Á…Ñ €¼€‰…‰Í•¹Ð¹©Í½¸ˆ¤¤¥Ì9½¹”(€€€À€ôÑµÁ}Á…Ñ €¼€‰À¹©Í½¸ˆ(€€€À¹ÝÉ¥Ñ•}Ñ•áÐ ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€À¸áôœ¤(€€€…ÍÍ•ÉÐ­È¹±½…‘}Ñ}Á½±¥ä¡ÍÑÈ¡À¤¤€ôôì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€À¸áô(€€€™½È‰…¥¸€ ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè9…9ôœ°€ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€Áôœ°€‰mtˆ°€‰¹½Ð©Í½¸ˆ¤è(€€€€€€€À¹ÝÉ¥Ñ•}Ñ•áÐ¡‰…¤(€€€€€€€Ý¥Ñ ÁåÑ•ÍÐ¹É…¥Í•Ì¡Y…±Õ•ÉÉ½È¤è(€€€€€€€€€€€­È¹±½…‘}Ñ}Á½±¥ä¡ÍÑÈ¡À¤¤(€€€€Œ¹¼Á½±¥äÍ¡¥ÁÌÝ¥Ñ Ñ¡”ÁÉ½©•ÐèÑ¡”Ñ¡É•Í¡½±¥ÌÑ¡”½Ý¹•ÈÌ‘•¥Í¥½¸(€€€…ÍÍ•ÉÐ¹½Ð€¡Á…Ñ¡±¥ˆ¹A…Ñ ¡}}™¥±•}|¤¹É•Í½±Ù” ¤¹Á…É•¹ÑÍlÉt€¼€‰Ñ½½±Ìˆ€¼€‰´Ñ}Ñ}Á½±¥ä¹©Í½¸ˆ¤¹•á¥ÍÑÌ ¤(()‘•˜Ñ•ÍÑ}ˆÍ}•±•ÑÉ¥…±±å}•ÅÕ¥Ù…±•¹Ñ}Á…ÍÍ¥Ù•}Á¥¹Í}µ…Á}‰å}Á¡åÍ¥…±}Á½Í¥Ñ¥½¸ ¤è(€€€ÍŒ€ô…µ‰¥Õ½ÕÍ}È ¤(€€€œ€ô}Ð¡ÍŒ¤(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}¹½Ñ}•áÁ½ÉÑ•‘}U9-9=]8‰t€ôô±•¸¡l‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹Ì‰t¤€ôô€À(€€€…ÍÍ•ÉÐl‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôô€Ä¸À…¹l‰Á…¥ÉÌ‰ul‰@‰t€ôô€À(€€€µ½Ù•€ômÑA¥¸¡à¹É•˜°à¹¹Õµ‰•È°à¹à€¬€ÔÀ°à¹ä€¬€ÔÀ°à¹¹•Ð°…±Í”°à¹±¥‰}¥¤™½Èà¥¸É½ÍÍ¥¹œ ¤¹Ñ}Á¥¹Ì ¥t(€€€œÈ€ô}Ð¡É½ÍÍ¥¹œ ¤°µ½Ù•¤(€€€…ÍÍ•ÉÐœÉl‰•áÁ½ÉÑ•‘}Á¥¹Í}Õ¹µ…Ñ¡•‰t€ôô±•¸¡œÉl‰Õ¹µ…Ñ¡•‘}•áÁ½ÉÑ•‘}Á¥¹Ì‰t¤€ø€À(€€€…ÍÍ•ÉÐ…±°¡‘l‰ÍÑ…Ñ”‰t€ôô€‰U9-9=]8ˆ…¹‘l‰É•…Í½¸‰t™½È¥¸œÉl‰Õ¹µ…Ñ¡•‘}•áÁ½ÉÑ•‘}Á¥¹Ì‰t¤(€€€…ÍÍ•ÉÐÍÕ´¡œÉl‰Á…¥ÉÌ‰t¹Ù…±Õ•Ì ¤¤€ôô€À€€€€€€€€€€€€€€€€€€€Œ¹½Ñ¡¥¹œÍ½É•°¹½Ñ¡¥¹œÁÉ½µ½Ñ•(()‘•˜Ñ•ÍÑ}ˆÍ}…Ñ•}Ñ…‰±•}‘½•Í}¹½Ñ}Á…ÍÍ}¥¹½¹±ÕÍ¥Ù” ¤è(€€€½¬€ôì‰ÍÑ…•ÌˆèíÌèAML™½ÈÌ¥¸€ ‰½¹¹•Ñ¥Ù¥Ñå}Í¡•µ…}É½Õ¹‘ÑÉ¥Àˆ°€‰Íåµ‰½±Í}Í¡•µ…}É½Õ¹‘ÑÉ¥Àˆ°€‰ÁÉ½Ù•¹…¹”ˆ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€‰µ…¹¥™•ÍÑ}É•‘•É¥Ù•ˆ°€‰­¥…‘}É•…ˆ°€‰¹•Ñ±¥ÍÑ}É½Õ¹‘ÑÉ¥Àˆ°€‰É½Õ¹‘}ÑÉÕÑ ˆ¥õô(€€€¥¹Œ€ô½Áä¹‘••Á½Áä¡½¬¤(€€€¥¹l‰ÍÑ…•Ì‰ul‰É½Õ¹‘}ÑÉÕÑ ‰t€ô%9=91UM%Y(€€€Ð€ô…Ñ•}Ñ…‰±”¡m½¬°¥¹t°€‰àˆ¤(€€€…ÍÍ•ÉÐÑl‰…Ñ•Ì‰ul‰É½Õ¹‘}ÑÉÕÑ ‰t€ôô	1=-…¹Ñl‰½Ù•É…±°‰t€„ôAML(()‘•˜}™…­•}±¤¡µ½¹­•åÁ…Ñ °µ…¹}¡½±‘•È¤è(€€€€ˆˆ‰M%5U1Q­¥…µ±¤€¡¹½Ð-¥…¤èÝÉ¥Ñ•Ì„¹•Ñ±¥ÍÐ™¥±”…¹É•ÑÕÉ¹ÌÑ¡”µ…¹¥™•ÍÐÌ½Ý¸¹•ÑÌ¸=¹±ä™½ÈÑ¡”(€€€…Ñ”Ý¥É¥¹œ½˜ÉÕ¹}Á…”ìÑ¡”É•…°É½Õ¹ÑÉ¥À¥ÌÑ•ÍÑÌ½­¥…¸ˆˆˆ(€€€‘•˜•áÁ½ÉÑ}¹•Ñ±¥ÍÐ¡±¤°Í °áµ°¤è(€€€€€€€Á…Ñ¡±¥ˆ¹A…Ñ ¡áµ°¤¹ÝÉ¥Ñ•}Ñ•áÐ ˆñ•áÁ½ÉÐ¼øˆ¤(€€€€€€€É•ÑÕÉ¸ÍÕ‰ÁÉ½•ÍÌ¹½µÁ±•Ñ•‘AÉ½•ÍÌ¡m±¥t°€À°€ˆˆ°€ˆˆ¤(€€€µ½¹­•åÁ…Ñ ¹Í•Ñ…ÑÑÈ¡­È°€‰•áÁ½ÉÑ}¹•Ñ±¥ÍÐˆ°•áÁ½ÉÑ}¹•Ñ±¥ÍÐ¤(€€€µ½¹­•åÁ…Ñ ¹Í•Ñ…ÑÑÈ¡­È°€‰É•…‘}¹•Ñ±¥ÍÐˆ°±…µ‰‘„Á…Ñ è}¹•Ñ±¥ÍÑ}™É½´¡©Í½¸¹±½…‘Ì (€€€€€€€€¡Á…Ñ¡±¥ˆ¹A…Ñ ¡Á…Ñ ¤¹Á…É•¹Ð€¼€‰µ…¹¥™•ÍÐ¹©Í½¸ˆ¤¹É•…‘}Ñ•áÐ ¤¤¤¤(€€€µ½¹­•åÁ…Ñ ¹Í•Ñ…ÑÑÈ¡­È°€‰½µÁ…É•}É½Õ¹‘ÑÉ¥Àˆ°±…µ‰‘„µ…¸°Í °¹°èì(€€€€€€€€‰ÁÉ½‰±•µÌˆèmt°€‰¹•Ñ}ÍÑ…Ñ•Ìˆèíô°€‰Íåµ‰½±Ìˆè€À°€‰•áÁ½ÉÑ•‘}Á¥¹Ìˆè€À°€‰­¥…‘}¹•ÑÌˆè€Áô¤(()ÁåÑ•ÍÐ¹µ…É¬¹Á…É…µ•ÑÉ¥é” ‰Á½±¥ä±ÍÑ…Ñ”ˆ°l¡9½¹”°	1=-¤°€¡ì‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…”ˆè€Ä¸Áô°AML¥t¤)‘•˜Ñ•ÍÑ}ˆÍ}ÉÕ¹}Á…•}É½Õ¹‘}ÑÉÕÑ¡}ÍÑ…•}¹••‘Í}…}Á½±¥ä¡Á½±¥ä°ÍÑ…Ñ”°ÑµÁ}Á…Ñ °µ½¹­•åÁ…Ñ ¤è(€€€}™…­•}±¤¡µ½¹­•åÁ…Ñ °9½¹”¤(€€€ÍŒ€ôÉ½ÍÍ¥¹œ ¤(€€€Á¤°±Ì°°°‰Õ¥±Ð°É•Ì€ôÍŒ¹ÉÕ¸ ¤(€€€É•Œ€ôÉÕ¹}Á…”¡ÑµÁ}Á…Ñ °Á¤°±Ì°°°‰Õ¥±Ð°É•Ì°1%°1%	}QaP°ì‰¹…µ”ˆèÍŒ¹¹…µ•ô°ÍŒ¹Ñ}Á¥¹Ì ¤°€‰™…­”µ±¤ˆ°(€€€€€€€€€€€€€€€€€€Ñ}Á½±¥äõÁ½±¥ä¤(€€€…ÍÍ•ÉÐÉ•l‰ÍÑ…•Ì‰ul‰É½Õ¹‘}ÑÉÕÑ ‰t€ôôÍÑ…Ñ”(€€€…Ñ”€ôÉ•l‰É½Õ¹‘}ÑÉÕÑ ‰ul‰…Ñ”‰t(€€€…ÍÍ•ÉÐ…Ñ•l‰ÍÑ…Ñ”‰t€ôôÍÑ…Ñ”…¹…Ñ•l‰É•…Í½¸‰t(€€€…ÍÍ•ÉÐÉ•l‰É½Õ¹‘}ÑÉÕÑ ‰ul‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôô€Ä¸À(€€€…ÍÍ•ÉÐ©Í½¸¹±½…‘Ì ¡ÑµÁ}Á…Ñ €¼€‰Ñ}É•Á½ÉÐ¹©Í½¸ˆ¤¹É•…‘}Ñ•áÐ ¤¥l‰…Ñ”‰ul‰ÍÑ…Ñ”‰t€ôôÍÑ…Ñ”(€€€…ÍÍ•ÉÐÉ•l‰Á¥¹}±¥¹•Í}…Õ‘¥Ð‰ul‰ÍÑ…ÑÕÌ‰t€ôôÍåµÉ•Œ¹A1}9…¹É•l‰ÍÑ…•Ì‰ul‰ÁÉ½Ù•¹…¹”‰t€ôôAML(()‘•˜Ñ•ÍÑ}ˆÍ}ÉÕ¹}Á…•}é•É½}µ…ÁÁ•‘}¥Í}¹½Ñ}Á…ÍÌ¡ÑµÁ}Á…Ñ °µ½¹­•åÁ…Ñ ¤è(€€€}™…­•}±¤¡µ½¹­•åÁ…Ñ °9½¹”¤(€€€ÍŒ€ôÉ½ÍÍ¥¹œ ¤(€€€Á¤°±Ì°°°‰Õ¥±Ð°É•Ì€ôÍŒ¹ÉÕ¸ ¤(€€€µ½Ù•€ômÑA¥¸¡œ¹É•˜°œ¹¹Õµ‰•È°œ¹à€¬€ÔÀ°œ¹ä€¬€ÔÀ°œ¹¹•Ð°…±Í”°œ¹±¥‰}¥¤™½Èœ¥¸ÍŒ¹Ñ}Á¥¹Ì ¥t(€€€É•Œ€ôÉÕ¹}Á…”¡ÑµÁ}Á…Ñ °Á¤°±Ì°°°‰Õ¥±Ð°É•Ì°1%°1%	}QaP°ì‰¹…µ”ˆèÍŒ¹¹…µ•ô°µ½Ù•°€‰™…­”µ±¤ˆ°(€€€€€€€€€€€€€€€€€€Ñ}Á½±¥äõA=0¤(€€€…ÍÍ•ÉÐÉ•l‰ÍÑ…•Ì‰ul‰É½Õ¹‘}ÑÉÕÑ ‰t€ôô%9=91UM%Y(€€€…ÍÍ•ÉÐ…Ñ•}Ñ…‰±”¡mÉ•t°€‰™…­”µ±¤ˆ¥l‰…Ñ•Ì‰ul‰É½Õ¹‘}ÑÉÕÑ ‰t€ôô	1=-(()ÁåÑ•ÍÐ¹µ…É¬¹Á…É…µ•ÑÉ¥é” ‰ÍÑ…ÑÕÌ±ÍÑ…”ˆ°l¡ÍåµÉ•Œ¹A1}%0°€‰%0ˆ¤°€¡ÍåµÉ•Œ¹A1}	1=-°	1=-¤°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€¡ÍåµÉ•Œ¹A1}YI%%°AML¤°€¡ÍåµÉ•Œ¹A1}9°AML¥t¤)‘•˜Ñ•ÍÑ}ˆÉ}ÉÕ¹}Á…•}ÁÉ½Ù•¹…¹•}™½±±½ÝÍ}Ñ¡•}Á¥¹}±¥¹•Í}…Õ‘¥Ð¡ÍÑ…ÑÕÌ°ÍÑ…”°ÑµÁ}Á…Ñ °µ½¹­•åÁ…Ñ ¤è(€€€µ½¹­•åÁ…Ñ ¹Í•Ñ…ÑÑÈ¡ÍåµÉ•Œ°€‰…Õ‘¥Ñ}Á¥¹}±¥¹•Ìˆ°±…µ‰‘„‘½Œ°Á…”°±Ìõ9½¹”èì(€€€€€€€€‰ÍÑ…ÑÕÌˆèÍÑ…ÑÕÌ°€‰ÁÉ½‰±•µÌˆèmt¥˜ÍÑ…ÑÕÌ¥¸€¡ÍåµÉ•Œ¹A1}YI%%°ÍåµÉ•Œ¹A1}9¤•±Í”l‰à‰t°€‰±ÕÍÑ•ÉÌˆèmuô¤(€€€ÍŒ€ô¡…¥¸ ‰ÈÀˆ¤(€€€Á¤°±Ì°°°‰Õ¥±Ð°É•Ì€ôÍŒ¹ÉÕ¸ ¤(€€€É•Œ€ôÉÕ¹}Á…”¡ÑµÁ}Á…Ñ °Á¤°±Ì°°°‰Õ¥±Ð°É•Ì°1%°1%	}QaP°ì‰¹…µ”ˆèÍŒ¹¹…µ•ô°9½¹”°9½¹”¤(€€€…ÍÍ•ÉÐÉ•l‰ÍÑ…•Ì‰ul‰ÁÉ½Ù•¹…¹”‰t€ôôÍÑ…”…¹É•l‰Á¥¹}±¥¹•Í}…Õ‘¥Ð‰ul‰ÍÑ…ÑÕÌ‰t€ôôÍÑ…ÑÕÌ(((Œ€´´´´Ì™½±±½ÜµÕÀèPU9-9=]8…½Õ¹Ñ¥¹œ€¡„•½µ•ÑÉ¥Œ±…¥´¥Ì¹½Ð„Í½É”¤)‘•˜}É½ÍÍ¥¹}Ð ¤è(€€€ÍŒ€ôÉ½ÍÍ¥¹œ ¤(€€€Á¤°½¹¸°ÍåµÌ°Í °µ…¸€ô•áÁ½ÉÐ¡ÍŒ¤(€€€É•ÑÕÉ¸ÍŒ°µ…¸°}¹•Ñ±¥ÍÑ}™É½´¡µ…¸¤(()‘•˜}¡•­}…½Õ¹Ñ¥¹œ¡œ¤è(€€€¸€ôl‰Ñ}Í½É•…‰±•}Á¥¹Ì‰t(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}Í½É•‰t€ôôl‰•áÁ½ÉÑ•‘}Á¥¹Í}µ…ÁÁ•‰t(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}¹½Ñ}•áÁ½ÉÑ•‘}U9-9=]8‰t€ôô¸€´l‰Ñ}Á¥¹Í}Í½É•‰t€ôô±•¸¡l‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹Ì‰t¤(€€€…ÍÍ•ÉÐ…±°¡‘l‰ÍÑ…Ñ”‰t€ôô€‰U9-9=]8ˆ…¹‘l‰É•…Í½¸‰t™½È¥¸l‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹Ì‰t¤(€€€…ÍÍ•ÉÐl‰µ…ÁÁ¥¹}½Ù•É…”‰t€ôôÉ½Õ¹¡l‰Ñ}Á¥¹Í}Í½É•‰t€¼¸°€Ð¤(()‘•˜Ñ•ÍÑ}ˆÍ}Ù…±¥‘}•½µ•ÑÉ¥}…¹‘}•±•ÑÉ¥…±}µ…Ñ¡}¥Í}Í½É• ¤è(€€€ÍŒ°µ…¸°¹°€ô}É½ÍÍ¥¹}Ð ¤(€€€œ€ô­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸°¹°°ÍŒ¹Ñ}Á¥¹Ì ¤¤(€€€}¡•­}…½Õ¹Ñ¥¹œ¡œ¤(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}Í½É•‰t€ôôl‰Ñ}Í½É•…‰±•}Á¥¹Ì‰t€ôô€à…¹l‰Ñ}Á¥¹Í}¹½Ñ}•áÁ½ÉÑ•‘}U9-9=]8‰t€ôô€À(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}±…¥µ•‘}¹½Ñ}Í½É•‘}U9-9=]8‰t€ôô€À…¹l‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹Ì‰t€ôômt(()‘•˜Ñ•ÍÑ}ˆÍ}Õ¹¥ÅÕ•}•½µ•ÑÉ¥}µ…Ñ¡}Ý¥Ñ¡½ÕÑ}…}­¥…‘}¹•Ñ}ÍÑ…åÍ}Õ¹­¹½Ý¸ ¤è(€€€ÍŒ°µ…¸°¹°€ô}É½ÍÍ¥¹}Ð ¤(€€€€ô¹•áÐ¡™½È¥¸µ…¹l‰Íåµ‰½±Ì‰t¥˜‘l‰‘•¥Í¥½¸‰t€ôô€‰A1ˆ¤(€€€É•˜°À€ô‘l‰Íå¹Ñ¡•Ñ¥}É•™•É•¹”‰ul‰Ù…±Õ”‰t°‘l‰Á¥¹Ì‰ulÁt(€€€¹°È€ô½Áä¹‘••Á½Áä¡¹°¤(€€€™½È¬¥¸±¥ÍÐ¡¹°Él‰¹•ÑÌ‰t¤è(€€€€€€€¹°Él‰¹•ÑÌ‰um­t€ômà™½Èà¥¸¹°Él‰¹•ÑÌ‰um­t¥˜ÑÕÁ±”¡à¤¹½Ð¥¸ì¡É•˜°¸¤™½È¸¥¸Ál‰¹Õµ‰•ÉÌ‰uõt(€€€œ€ô­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸°¹°È°ÍŒ¹Ñ}Á¥¹Ì ¤¤(€€€}¡•­}…½Õ¹Ñ¥¹œ¡œ¤(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}Í½É•‰t€ôô€Ü…¹l‰Ñ}Á¥¹Í}¹½Ñ}•áÁ½ÉÑ•‘}U9-9=]8‰t€ôô€Ä(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}±…¥µ•‘}¹½Ñ}Í½É•‘}U9-9=]8‰t€ôô€Ä(€€€€¡Ô°¤€ôl‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹Ì‰t(€€€…ÍÍ•ÉÐÁl‰½‰©•Ð‰t¥¸Õl‰É•…Í½¸‰t…¹€‰¹½Ð½¸•á…Ñ±ä½¹”-¥…¹•Ðˆ¥¸Õl‰É•…Í½¸‰t(€€€…ÍÍ•ÉÐì‰½‰©•ÐˆèÁl‰½‰©•Ð‰t°€‰ÍÑ…Ñ”ˆè€‰U9-9=]8ˆ°€‰É•…Í½¸ˆè€‰Á¥¸¹½Ð½¸•á…Ñ±ä½¹”-¥…¹•Ð‰ôp(€€€€€€€¥¸l‰Õ¹µ…Ñ¡•‘}•áÁ½ÉÑ•‘}Á¥¹Ì‰t(()‘•˜Ñ•ÍÑ}ˆÍ}ÑÝ½}•áÁ½ÉÑ•‘}Á¥¹Í}±…¥µ¥¹}½¹•}Ñ}Á¥¸ ¤è(€€€ÍŒ°µ…¸°¹°€ô}É½ÍÍ¥¹}Ð ¤(€€€µ…¸È€ô½Áä¹‘••Á½Áä¡µ…¸¤(€€€Á±…•€ôm™½È¥¸µ…¸Él‰Íåµ‰½±Ì‰t¥˜‘l‰‘•¥Í¥½¸‰t€ôô€‰A1‰t(€€€™¥ÉÍÐ°Í•½¹€ôÁ±…•‘lÁul‰Á¥¹Ì‰ulÁt°Á±…•‘lÅul‰Á¥¹Ì‰ulÁt(€€€Í•½¹‘l‰Á…•}Ñ¥À‰t€ô±¥ÍÐ¡™¥ÉÍÑl‰Á…•}Ñ¥À‰t¤€€€€€€€€€€Œ‰½Ñ ¹½ÜÍ¥Ð½¸Ñ¡”Í…µ”PÁ¥¸(€€€œ€ô­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸È°¹°°ÍŒ¹Ñ}Á¥¹Ì ¤¤(€€€}¡•­}…½Õ¹Ñ¥¹œ¡œ¤(€€€…ÍÍ•ÉÐl‰…µ‰¥Õ½ÕÍ}½É}‘ÕÁ±¥…Ñ•}µ…Ñ¡•Ì‰t€ôô€Ä(€€€…ÍÍ•ÉÐì‰½‰©•ÐˆèÍ•½¹‘l‰½‰©•Ð‰t°€‰ÍÑ…Ñ”ˆè€‰U9-9=]8ˆ°€‰É•…Í½¸ˆè€‰PÁ¥¸…±É•…‘äµ…Ñ¡•‰ôp(€€€€€€€¥¸l‰Õ¹µ…Ñ¡•‘}•áÁ½ÉÑ•‘}Á¥¹Ì‰t(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}Í½É•‰t€ôô€Ü€€€€€€€€€€€€€€€€€€€€€€€ŒÑ¡”PÁ¥¸¥ÌÍ½É•½¹”ìÍ•½¹Ì½Ý¸PÁ¥¸¥ÌU9-9=]8(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}±…¥µ•‘}¹½Ñ}Í½É•‘}U9-9=]8‰t€ôô€À(()‘•˜Ñ•ÍÑ}ˆÍ}µ¥áÑÕÉ•}½™}µ…ÁÁ•‘}Õ¹µ…Ñ¡•‘}…¹‘}Õ¹Í½É•‘}Á¥¹Ì ¤è(€€€ÍŒ°µ…¸°¹°€ô}É½ÍÍ¥¹}Ð ¤(€€€Á±…•€ôm™½È¥¸µ…¹l‰Íåµ‰½±Ì‰t¥˜‘l‰‘•¥Í¥½¸‰t€ôô€‰A1‰t(€€€½™˜€ôÁ±…•‘lÁul‰Á¥¹Ì‰ulÁt€€€€€€€€€€€€€€€€€€€€€€€€€€€€Œ€Äè¹¼PÁ¥¸¹•…È¥Ð€¡¥ÑÌPÁ¥¸µ½Ù•…Ý…ä¤(€€€¹½¹•Ð€ôÁ±…•‘lÅul‰Á¥¹Ì‰ulÁt€€€€€€€€€€€€€€€€€€€€€€€€€€Œ€Èè•½µ•ÑÉ¥Œµ…Ñ °¹¼-¥…¹•Ð(€€€É•˜€ôÁ±…•‘lÅul‰Íå¹Ñ¡•Ñ¥}É•™•É•¹”‰ul‰Ù…±Õ”‰t(€€€Ð€ômÑA¥¸¡à¹É•˜°à¹¹Õµ‰•È°à¹à€¬€ÔÀ°à¹ä€¬€ÔÀ°à¹¹•Ð°…±Í”°à¹±¥‰}¥¤(€€€€€€€€€¥˜…‰Ì¡à¹à€´½™™l‰Á…•}Ñ¥À‰ulÁt¤€ð€Å”´Ø…¹…‰Ì¡à¹ä€´½™™l‰Á…•}Ñ¥À‰ulÅt¤€ð€Å”´Ø•±Í”à(€€€€€€€€€™½Èà¥¸ÍŒ¹Ñ}Á¥¹Ì ¥t(€€€¹°È€ô½Áä¹‘••Á½Áä¡¹°¤(€€€™½È¬¥¸±¥ÍÐ¡¹°Él‰¹•ÑÌ‰t¤è(€€€€€€€¹°Él‰¹•ÑÌ‰um­t€ômà™½Èà¥¸¹°Él‰¹•ÑÌ‰um­t¥˜ÑÕÁ±”¡à¤¹½Ð¥¸ì¡É•˜°¸¤™½È¸¥¸¹½¹•Ñl‰¹Õµ‰•ÉÌ‰uõt(€€€œ€ô­È¹½µÁ…É•}É½Õ¹‘}ÑÉÕÑ ¡µ…¸°¹°È°Ð¤(€€€}¡•­}…½Õ¹Ñ¥¹œ¡œ¤(€€€…ÍÍ•ÉÐl‰Ñ}Á¥¹Í}Í½É•‰t€ôôl‰•áÁ½ÉÑ•‘}Á¥¹Í}µ…ÁÁ•‰t€ôô€Ø(€€€…ÍÍ•ÉÐl‰•áÁ½ÉÑ•‘}Á¥¹Í}Õ¹µ…Ñ¡•‰t€ôô€È…¹l‰Ñ}Á¥¹Í}¹½Ñ}•áÁ½ÉÑ•‘}U9-9=]8‰t€ôô€È(€€€É•…Í½¹Ì€ôÍ½ÉÑ•¡Õl‰É•…Í½¸‰t¹ÍÁ±¥Ð ˆ€ˆ¥lÁt™½ÈÔ¥¸l‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹Ì‰t¤(€€€…ÍÍ•ÉÐÉ•…Í½¹Ì€ôôl‰µ…Ñ¡•ˆ°€‰¹¼‰t(€€€…ÍÍ•ÉÐÍÕ´¡l‰Á…¥ÉÌ‰t¹Ù…±Õ•Ì ¤¤€ôô€Ø€¨€Ô€¼¼€È€€€€€€€€€Œ½¹±äÑ¡”€ØÍ½É•Á¥¹Ì…É”Á…¥É•
+    bad["unresolved_references"]["evidence"] = sorted(bad["unresolved_references"]["evidence"] + [sid])
+    _reject(bad, "has no evidence record")
+    # 3. the pin record has no stub field at all
+    bad = copy.deepcopy(conn)
+    del next(x for x in bad["objects"] if x["id"] == o["id"])["pin"]["stub"]
+    _reject(bad, "no stub field")
+    # 4. an S2 record that no pin cites
+    bad = copy.deepcopy(conn)
+    e = copy.deepcopy(next(e for e in bad["evidence"] if e["id"] == sid))
+    e["id"] = "S2:99:0"
+    bad["evidence"] = sorted(bad["evidence"] + [e], key=lambda x: x["id"])
+    _reject(bad, "cited by no pin stub")
+
+
+def test_b1_symbol_reader_applies_the_same_s2_rule_to_its_connectivity_document():
+    pi, conn, syms = docs(chain("r0"))
+    o, st = _pin_with_stub(conn)
+    bad = copy.deepcopy(conn)
+    s = next(x for x in bad["objects"] if x["id"] == o["id"])["pin"]["stub"]
+    s["a"] = [s["a"][0] + 20.0, s["a"][1]]
+    bad["content_sha256"] = writer.content_hash(bad)       # a forged dict handed straight to the symbol reader
+    probs = symrec.validate(symrec.build_symbols_like(syms, bad), bad, LIB)
+    assert any(p.startswith("connectivity:") and "does not span" in p for p in probs)
+    assert any("does not span" in p for p in symrec.audit_evidence(bad, syms, pi, LIB))
+
+
+def test_b1_page_audit_without_page_is_blocked_not_passed():
+    pi, conn, syms = docs(chain("r0"))
+    assert symrec.audit_s2_against_page(conn, None) == ["S2 audit BLOCKED: source-page geometry unavailable"]
+
+
+def test_b1_stub_primitive_missing_from_the_page_is_reported():
+    pi, conn, syms = docs(chain("r0"))
+    o, st = _pin_with_stub(conn)
+    page = dataclasses.replace(pi, prims=[q for q in pi.prims if q.id != st["prim"]])
+    assert any("is not on the page" in p for p in symrec.audit_s2_against_page(conn, page))
+
+
+# ======================================================================== B2: PIN_LINES source-page audit
+@pytest.fixture(scope="module")
+def pin_lines_docs(tmp_path_factory):
+    f = tmp_path_factory.mktemp("cp") / "cp.kicad_sym"
+    f.write_text(COPIES)
+    lib = load_library(str(f))
+    pi = ingest_pdf(one_page(_draw_unit(lib, "CP_1"), size=(W, PH))).pages[0]
+    cls, cl, built, res = analyze_page(pi, lib.symbols.values())
+    conn = writer.loads(writer.dumps(built.graph, res, built=built, page=pi, clusters=cl, registry=cls.registry,
+                                     source={"name": "cp"}))
+    syms = symrec.loads(symrec.dumps(symrec.build_symbols(cl, pi, lib, conn)), conn, lib)
+    return pi, cls, lib, conn, syms
+
+
+def _pl_cluster(syms):
+    return next(
+[... 119 bytes omitted ...]
+ence_is_verified_against_the_page(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    c = _pl_cluster(syms)
+    sup = c["resolution"]["pin_lines"]
+    n_sel = sum(x["selected"] for x in c["candidates"])
+    assert len(sup) == n_sel >= 1 and n_sel < len(c["candidates"])
+    assert sorted(x["number"] for x in sup[0]) == ["1", "2", "3"]
+    a1 = symrec.audit_pin_lines(syms, pi, cls)
+    assert a1 == {"status": symrec.PL_VERIFIED, "problems": [], "clusters": [c["id"]]}
+    assert symrec.audit_pin_lines(syms, pi) == a1                       # deterministic, cls recomputed
+    # ALL selections have nothing to audit and are not reported as verified
+    pi2, conn2, syms2 = docs(chain("r0"))
+    assert symrec.audit_pin_lines(syms2, pi2)["status"] == symrec.PL_NA
+
+
+def test_b2_no_pin_promoted_by_the_lines(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    c = _pl_cluster(syms)
+    assert all(p["pos_state"] == "CANDIDATE" for p in c["pins"])         # lines chose: not independent S2
+    assert all(o["pin"]["stub"] is None for o in conn["objects"]
+               if o["kind"] == "PIN" and o["pin"]["cluster"] == c["id"])
+
+
+def test_b2_wrong_page_fails(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    other = dataclasses.replace(pi, geom=dataclasses.replace(pi.geom, page_index=pi.geom.page_index + 1))
+    a = symrec.audit_pin_lines(syms, other, cls)
+    assert a["status"] == symrec.PL_FAIL and "wrong page" in a["problems"][0]
+
+
+def _forge_line(syms, **kw):
+    bad = copy.deepcopy(syms)
+    ln = _pl_cluster(bad)["resolution"]["pin_lines"][0][0]["line"]
+    ln.update(kw)
+    return bad
+
+
+def test_b2_nonexistent_line_fails(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    bad = symrec.loads(rehash_syms(_forge_line(syms, prim=999999)), conn, lib)   # the file cannot tell ...
+    a = symrec.audit_pin_lines(bad, pi, cls)                                     # ... the page can
+    assert a["status"] == symrec.PL_FAIL and any("does not exist on the page" in p for p in a["problems"])
+
+
+def test_b2_existing_but_unrelated_line_fails(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    c = _pl_cluster(syms)
+    real = c["resolution"]["pin_lines"][0][2]["line"]                     # pin 3's line, claimed for pin 1
+    bad = _forge_line(syms, **copy.deepcopy(real))
+    with pytest.raises(symrec.SymbolDocError) as e:
+        symrec.loads(rehash_syms(bad), conn, lib)
+    assert any("fails the pin-line rule" in p for p in e.value.problems)
+    a = symrec.audit_pin_lines(bad, pi, cls)
+    assert a["status"] == symrec.PL_FAIL and any("does not support the pin" in p for p in a["problems"])
+    # an existing page primitive that is not a 2-point open line at all (the closed body outline)
+    body = next(q for q in pi.prims if q.line_closed)
+    a = symrec.audit_pin_lines(_forge_line(syms, prim=body.id), pi, cls)
+    assert a["status"] == symrec.PL_FAIL and any("not an open 2-point" in p for p in a["problems"])
+
+
+def test_b2_shifted_endpoint_passes_the_file_but_fails_the_page(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    ln = _pl_cluster(syms)["resolution"]["pin_lines"][0][0]["line"]
+    d = 0.3 * ln["tolerance"]                                            # within tolerance: the rule still holds
+    bad = _forge_line(syms, end=[ln["end"][0], ln["end"][1] + d], far=[ln["far"][0], ln["far"][1] + d])
+    bad = symrec.loads(rehash_syms(bad), conn, lib)
+    a = symrec.audit_pin_lines(bad, pi, cls)
+    assert a["status"] == symrec.PL_FAIL and any("displaced" in p for p in a["problems"])
+    # a content_ref of another operator is caught too
+    a = symrec.audit_pin_lines(_forge_line(syms, content_ref="p0/page#0"), pi, cls)
+    assert a["status"] == symrec.PL_FAIL and any("content_ref" in p for p in a["problems"])
+
+
+def test_b2_line_missing_from_the_page_fails_and_the_selection_must_follow(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    ln = _pl_cluster(syms)["resolution"]["pin_lines"][0][0]["line"]
+    page = dataclasses.replace(pi, prims=[q for q in pi.prims if q.id != ln["prim"]])
+    a = symrec.audit_pin_lines(syms, page, cls)
+    assert a["status"] == symrec.PL_FAIL
+    assert any("does not exist" in p for p in a["problems"]) and any("lacks a drawn line" in p for p in a["problems"])
+
+
+def test_b2_missing_source_geometry_is_blocked(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    for page in (None, dataclasses.replace(pi, prims=[])):
+        a = symrec.audit_pin_lines(syms, page, cls)
+        assert a["status"] == symrec.PL_BLOCKED and "unavailable" in a["problems"][0]
+    unknown = dataclasses.replace(pi, geom=dataclasses.replace(pi.geom, page_index=None))
+    assert symrec.audit_pin_lines(syms, unknown, cls)["status"] == symrec.PL_BLOCKED
+
+
+def test_b2_pin_lines_record_is_required_and_checked_on_load(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    for forge in (lambda r: r.update(pin_lines=[]), lambda r: r["pin_lines"][0].pop(),
+                  lambda r: r["pin_lines"][0][0].update(line=None),
+                  lambda r: r["pin_lines"][0][0]["line"].update(tolerance=1e6)):
+        bad = copy.deepcopy(syms)
+        forge(_pl_cluster(bad)["resolution"])
+        with pytest.raises(symrec.SymbolDocError):
+            symrec.loads(rehash_syms(bad), conn, lib)
+    bad = copy.deepcopy(syms)                                # an ALL selection may not carry pin lines
+    c = next(c for c in bad["clusters"] if c["resolution"]["selection"] == symrec.SEL_ALL)
+    c["resolution"]["pin_lines"] = copy.deepcopy(_pl_cluster(syms)["resolution"]["pin_lines"])
+    with pytest.raises(symrec.SymbolDocError):
+        symrec.loads(rehash_syms(bad), conn, lib)
+
+
+# ======================================================================== B3: ground-truth coverage gate
+POL = {"min_mapping_coverage": 1.0}
+
+
+def _gt(scene, gt=None):
+    pi, conn, syms, sch, man = export(scene)
+    return kr.compare_ground_truth(man, _netlist_from(man), gt if gt is not None else scene.gt_pins())
+
+
+
+# ---- F1: pin-number equivalence is an explicit two-terminal allowlist, never inferred from passive pins
+@pytest.mark.parametrize("name,pins,orientations", [
+    ("Custom_4Pin", tuple(PinDef(str(i + 1), "~", *xy, 0, 2, "passive")
+                           for i, xy in enumerate(((0, 5), (10, 5), (5, 0), (5, 10)))), (0, 2, 4, 5)),
+    ("C_Polarized", (PinDef("1", "~", -2, 5, 0, 2, "passive"),
+                     PinDef("2", "~", 12, 5, 180, 2, "passive")), (0, 2)),
+])
+def test_f1_passive_signature_alone_never_authorizes_pin_number_exchange(name, pins, orientations):
+    body = (BodyPath(((0, 0), (10, 0), (10, 10), (0, 10)), True),)
+    sym = SymbolDef(name, pins, body, "test-library")
+    cluster = Cluster(1, (1,), (0, 0, 10, 10), ((0, 0), (10, 0), (10, 10), (0, 10)),
+                      (((0, 0), (10, 0)), ((10, 0), (10, 10)), ((10, 10), (0, 10)), ((0, 10), (0, 0))))
+    shifts = {0: (0.0, 0.0), 2: (10.0, 10.0), 4: (10.0, 0.0), 5: (0.0, 10.0)}
+    hits = [Hit(sym, o, 1.0, *shifts[o], 0.0) for o in orientations]
+    result = resolve(cluster, hits)
+    assert result.status == "UNIQUE"
+    assert result.id_state == "AMBIGUOUS"
+
+
+def test_f2_gt_detects_pin_number_mismatch_even_when_physical_position_matches():
+    sc, man, nl = _crossing_gt()
+    gt = list(sc.gt_pins())
+    g0 = gt[0]
+    gt[0] = GtPin(g0.ref, "WRONG", g0.x, g0.y, g0.net, g0.hidden, g0.lib_id)
+    report = kr.compare_ground_truth(man, nl, gt)
+    assert report["pin_identity_mismatches"]
+    gate = kr.ground_truth_gate(report, POL)
+    assert gate["state"] == kr.GT_FAIL and "identity mismatch" in gate["reason"]
+
+
+def test_f3_gt_false_negative_pairs_block_pass_even_with_full_mapping_coverage():
+    sc, man, nl = _crossing_gt()
+    gt = list(sc.gt_pins())
+    # Claim a GT join between two physically mapped pins which the export leaves separate.
+    pairs = []
+    for i, a in enumerate(gt):
+        for b in gt[i + 1:]:
+            # Find the exported pin at each page position; only choose pins on distinct KiCad nets.
+            def k_net(pin):
+                for d in man["symbols"]:
+                    if d["decision"] != "PLACED":
+                        continue
+                    ref = d["synthetic_reference"]["value"]
+                    for p in d["pins"]:
+                        if ((p["page_tip"][0] - pin.x) ** 2 + (p["page_tip"][1] - pin.y) ** 2) ** 0.5 < 1.0:
+                            return next((net for net, nodes in nl["nets"].items() if (ref, p["numbers"][0]) in nodes), None)
+                return None
+            if a.net != b.net and k_net(a) != k_net(b) and k_net(a) is not None and k_net(b) is not None:
+                pairs.append((a, b))
+    assert pairs
+    a, b = pairs[0]
+    forced = f"FORCED_JOIN_{a.ref}_{a.number}_{b.ref}_{b.number}"
+    gt = [GtPin(x.ref, x.number, x.x, x.y, forced if x in (a, b) else x.net, x.hidden, x.lib_id)
+          for x in gt]
+    report = kr.compare_ground_truth(man, nl, gt)
+    assert report["mapping_coverage"] == 1.0 and report["pairs"]["FN"] > 0
+    gate = kr.ground_truth_gate(report, POL)
+    assert gate["state"] == kr.GT_FAIL and "false-negative" in gate["reason"]
+
+def test_b3_zero_mapped_pins_with_zero_fp_does_not_pass():
+    sc = crossing()
+    moved = [GtPin(g.ref, g.number, g.x + 50, g.y + 50, g.net, False, g.lib_id) for g in sc.gt_pins()]
+    g = _gt(sc, moved)
+    assert g["exported_pins_mapped"] == 0 and g["pairs"]["FP"] == 0 and g["precision"] is None
+    for pol in (POL, {"min_mapping_coverage": 0.01}):
+        gate = kr.ground_truth_gate(g, pol)
+        assert gate["state"] == kr.GT_INCONCLUSIVE != kr.GT_PASS and "no pin pair" in gate["reason"]
+    assert kr.ground_truth_gate(g, None)["state"] == kr.GT_BLOCKED
+
+
+def test_b3_electrically_equivalent_passive_pin_permutation_is_mapped_by_physical_position():
+    g = _gt(ambiguous_r())
+    assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
+    assert g["pairs"]["TP"] == 1 and g["pairs"]["FN"] == 0
+    gate = kr.ground_truth_gate(g, POL)
+    assert gate["state"] == kr.GT_PASS and gate["mapping_coverage"] == 1.0
+
+
+def test_b3_sufficient_mapping_with_zero_fp_may_pass():
+    g = _gt(crossing())
+    gate = kr.ground_truth_gate(g, POL)
+    assert gate["state"] == kr.GT_PASS and gate["mapping_coverage"] == 1.0 and gate["FP"] == 0
+    for k in ("gt_scoreable_pins", "exported_pins_mapped", "exported_pins_unmatched", "mapping_coverage",
+              "TP", "FP", "FN", "precision", "recall", "reason", "min_mapping_coverage"):
+        assert k in gate
+
+
+def test_b3_false_positives_fail_regardless_of_policy():
+    sc = crossing()
+    apart = [GtPin(g.ref, g.number, g.x, g.y, f"solo{i}", False, g.lib_id) for i, g in enumerate(sc.gt_pins())]
+    g = _gt(sc, apart)
+    for pol in (POL, None):
+        gate = kr.ground_truth_gate(g, pol)
+        assert gate["state"] == kr.GT_FAIL and "false-positive" in gate["reason"]
+
+
+@pytest.mark.parametrize("pol", [None, {}, {"min_mapping_coverage": 0}, {"min_mapping_coverage": 1.5},
+                                 {"min_mapping_coverage": "0.5"}, {"min_mapping_coverage": True},
+                                 {"min_mapping_coverage": float("nan")}, {"min_mapping_coverage": 0.5, "x": 1}, [0.5]])
+def test_b3_missing_or_malformed_policy_is_blocked(pol):
+    gate = kr.ground_truth_gate(_gt(crossing()), pol)
+    assert gate["state"] == kr.GT_BLOCKED
+
+
+def test_b3_policy_file_loading_fails_closed(tmp_path):
+    assert kr.load_gt_policy(None) is None and kr.load_gt_policy(str(tmp_path / "absent.json")) is None
+    p = tmp_path / "p.json"
+    p.write_text('{"min_mapping_coverage": 0.8}')
+    assert kr.load_gt_policy(str(p)) == {"min_mapping_coverage": 0.8}
+    for bad in ('{"min_mapping_coverage": NaN}', '{"min_mapping_coverage": 0}', "[]", "not json"):
+        p.write_text(bad)
+        with pytest.raises(ValueError):
+            kr.load_gt_policy(str(p))
+    # no policy ships with the project: the threshold is the owner's decision
+    assert not (pathlib.Path(__file__).resolve().parents[2] / "tools" / "m4_gt_policy.json").exists()
+
+
+def test_b3_electrically_equivalent_passive_pins_map_by_physical_position():
+    sc = ambiguous_r()
+    g = _gt(sc)
+    assert g["gt_pins_not_exported_UNKNOWN"] == len(g["unmatched_gt_pins"]) == 0
+    assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
+    moved = [GtPin(x.ref, x.number, x.x + 50, x.y + 50, x.net, False, x.lib_id) for x in crossing().gt_pins()]
+    g2 = _gt(crossing(), moved)
+    assert g2["exported_pins_unmatched"] == len(g2["unmatched_exported_pins"]) > 0
+    assert all(d["state"] == "UNKNOWN" and d["reason"] for d in g2["unmatched_exported_pins"])
+    assert sum(g2["pairs"].values()) == 0                   # nothing scored, nothing promoted
+
+
+def test_b3_gate_table_does_not_pass_inconclusive():
+    ok = {"stages": {s: PASS for s in ("connectivity_schema_roundtrip", "symbols_schema_roundtrip", "provenance",
+                                       "manifest_rederived", "kicad_read", "netlist_roundtrip", "ground_truth")}}
+    inc = copy.deepcopy(ok)
+    inc["stages"]["ground_truth"] = INCONCLUSIVE
+    t = gate_table([ok, inc], "x")
+    assert t["gates"]["ground_truth"] == BLOCKED and t["overall"] != PASS
+
+
+def _fake_cli(monkeypatch, man_holder):
+    """SIMULATED kicad-cli (not KiCad): writes a netlist file and returns the manifest's own nets. Only for the
+    gate wiring of run_page; the real round trip is tests/kicad."""
+    def export_netlist(cli, sch, xml):
+        pathlib.Path(xml).write_text("<export/>")
+        return subprocess.CompletedProcess([cli], 0, "", "")
+    monkeypatch.setattr(kr, "export_netlist", export_netlist)
+    monkeypatch.setattr(kr, "read_netlist", lambda path: _netlist_from(json.loads(
+        (pathlib.Path(path).parent / "manifest.json").read_text())))
+    monkeypatch.setattr(kr, "compare_roundtrip", lambda man, sch, nl: {
+        "problems": [], "net_states": {}, "symbols": 0, "exported_pins": 0, "kicad_nets": 0})
+
+
+@pytest.mark.parametrize("policy,state", [(None, BLOCKED), ({"min_mapping_coverage": 1.0}, PASS)])
+def test_b3_run_page_ground_truth_stage_needs_a_policy(policy, state, tmp_path, monkeypatch):
+    _fake_cli(monkeypatch, None)
+    sc = crossing()
+    pi, cls, cl, built, res = sc.run()
+    rec = run_page(tmp_path, pi, cls, cl, built, res, LIB, LIB_TEXT, {"name": sc.name}, sc.gt_pins(), "fake-cli",
+                   gt_policy=policy)
+    assert rec["stages"]["ground_truth"] == state
+    gate = rec["ground_truth"]["gate"]
+    assert gate["state"] == state and gate["reason"]
+    assert rec["ground_truth"]["mapping_coverage"] == 1.0
+    assert json.loads((tmp_path / "gt_report.json").read_text())["gate"]["state"] == state
+    assert rec["pin_lines_audit"]["status"] == symrec.PL_NA and rec["stages"]["provenance"] == PASS
+
+
+def test_b3_run_page_zero_mapped_is_not_pass(tmp_path, monkeypatch):
+    _fake_cli(monkeypatch, None)
+    sc = crossing()
+    pi, cls, cl, built, res = sc.run()
+    moved = [GtPin(g.ref, g.number, g.x + 50, g.y + 50, g.net, False, g.lib_id) for g in sc.gt_pins()]
+    rec = run_page(tmp_path, pi, cls, cl, built, res, LIB, LIB_TEXT, {"name": sc.name}, moved, "fake-cli",
+                   gt_policy=POL)
+    assert rec["stages"]["ground_truth"] == INCONCLUSIVE
+    assert gate_table([rec], "fake-cli")["gates"]["ground_truth"] == BLOCKED
+
+
+@pytest.mark.parametrize("status,stage", [(symrec.PL_FAIL, "FAIL"), (symrec.PL_BLOCKED, BLOCKED),
+                                          (symrec.PL_VERIFIED, PASS), (symrec.PL_NA, PASS)])
+def test_b2_run_page_provenance_follows_the_pin_lines_audit(status, stage, tmp_path, monkeypatch):
+    monkeypatch.setattr(symrec, "audit_pin_lines", lambda doc, page, cls=None: {
+        "status": status, "problems": [] if status in (symrec.PL_VERIFIED, symrec.PL_NA) else ["x"], "clusters": []})
+    sc = chain("r0")
+    pi, cls, cl, built, res = sc.run()
+    rec = run_page(tmp_path, pi, cls, cl, built, res, LIB, LIB_TEXT, {"name": sc.name}, None, None)
+    assert rec["stages"]["provenance"] == stage and rec["pin_lines_audit"]["status"] == status
+
+
+# ---- B3 follow-up: GT UNKNOWN accounting (a geometric claim is not a score)
+def _crossing_gt():
+    sc = crossing()
+    pi, conn, syms, sch, man = export(sc)
+    return sc, man, _netlist_from(man)
+
+
+def _check_accounting(g):
+    n = g["gt_scoreable_pins"]
+    assert g["gt_pins_scored"] == g["exported_pins_mapped"]
+    assert g["gt_pins_not_exported_UNKNOWN"] == n - g["gt_pins_scored"] == len(g["unmatched_gt_pins"])
+    assert all(d["state"] == "UNKNOWN" and d["reason"] for d in g["unmatched_gt_pins"])
+    assert g["mapping_coverage"] == round(g["gt_pins_scored"] / n, 4)
+
+
+def test_b3_valid_geometric_and_electrical_match_is_scored():
+    sc, man, nl = _crossing_gt()
+    g = kr.compare_ground_truth(man, nl, sc.gt_pins())
+    _check_accounting(g)
+    assert g["gt_pins_scored"] == g["gt_scoreable_pins"] == 8 and g["gt_pins_not_exported_UNKNOWN"] == 0
+    assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 0 and g["unmatched_gt_pins"] == []
+
+
+def test_b3_unique_geometric_match_without_a_kicad_net_stays_unknown():
+    sc, man, nl = _crossing_gt()
+    d = next(d for d in man["symbols"] if d["decision"] == "PLACED")
+    ref, p = d["synthetic_reference"]["value"], d["pins"][0]
+    nl2 = copy.deepcopy(nl)
+    for k in list(nl2["nets"]):
+        nl2["nets"][k] = [x for x in nl2["nets"][k] if tuple(x) not in {(ref, n) for n in p["numbers"]}]
+    g = kr.compare_ground_truth(man, nl2, sc.gt_pins())
+    _check_accounting(g)
+    assert g["gt_pins_scored"] == 7 and g["gt_pins_not_exported_UNKNOWN"] == 1
+    assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 1
+    (u,) = g["unmatched_gt_pins"]
+    assert p["object"] in u["reason"] and "not on exactly one KiCad net" in u["reason"]
+    assert {"object": p["object"], "state": "UNKNOWN", "reason": "pin not on exactly one KiCad net"} \
+        in g["unmatched_exported_pins"]
+
+
+def test_b3_two_exported_pins_claiming_one_gt_pin():
+    sc, man, nl = _crossing_gt()
+    man2 = copy.deepcopy(man)
+    placed = [d for d in man2["symbols"] if d["decision"] == "PLACED"]
+    first, second = placed[0]["pins"][0], placed[1]["pins"][0]
+    second["page_tip"] = list(first["page_tip"])          # both now sit on the same GT pin
+    g = kr.compare_ground_truth(man2, nl, sc.gt_pins())
+    _check_accounting(g)
+    assert g["ambiguous_or_duplicate_matches"] == 1
+    assert {"object": second["object"], "state": "UNKNOWN", "reason": "GT pin already matched"} \
+        in g["unmatched_exported_pins"]
+    assert g["gt_pins_scored"] == 7                       # the GT pin is scored once; second's own GT pin is UNKNOWN
+    assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 0
+
+
+def test_b3_mixture_of_mapped_unmatched_and_unscored_pins():
+    sc, man, nl = _crossing_gt()
+    placed = [d for d in man["symbols"] if d["decision"] == "PLACED"]
+    off = placed[0]["pins"][0]                            # 1: no GT pin near it (its GT pin moved away)
+    nonet = placed[1]["pins"][0]                          # 2: geometric match, no KiCad net
+    ref = placed[1]["synthetic_reference"]["value"]
+    gt = [GtPin(x.ref, x.number, x.x + 50, x.y + 50, x.net, False, x.lib_id)
+          if abs(x.x - off["page_tip"][0]) < 1e-6 and abs(x.y - off["page_tip"][1]) < 1e-6 else x
+          for x in sc.gt_pins()]
+    nl2 = copy.deepcopy(nl)
+    for k in list(nl2["nets"]):
+        nl2["nets"][k] = [x for x in nl2["nets"][k] if tuple(x) not in {(ref, n) for n in nonet["numbers"]}]
+    g = kr.compare_ground_truth(man, nl2, gt)
+    _check_accounting(g)
+    assert g["gt_pins_scored"] == g["exported_pins_mapped"] == 6
+    assert g["exported_pins_unmatched"] == 2 and g["gt_pins_not_exported_UNKNOWN"] == 2
+    reasons = sorted(u["reason"].split(" ")[0] for u in g["unmatched_gt_pins"])
+    assert reasons == ["matched", "no"]
+    assert sum(g["pairs"].values()) == 6 * 5 // 2         # only the 6 scored pins are paired
