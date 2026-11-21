@@ -578,6 +578,18 @@ def test_b3_unique_geometric_match_without_a_kicad_net_stays_unknown():
                and "not on exactly one KiCad net" in x["reason"] for x in g["unmatched_exported_pins"])
 
 
+def test_b3_missing_pin_number_assignment_is_not_defaulted_to_confirmed():
+    sc, man, nl = _crossing_gt()
+    d = next(d for d in man["symbols"] if d["decision"] == "PLACED")
+    p = d["pins"][0]
+    del p["number_assignment"]
+    g = kr.compare_ground_truth(man, nl, sc.gt_pins())
+    assert g["exported_pins_mapped"] == 7
+    assert g["gt_pins_not_exported_UNKNOWN"] == 1
+    assert any(p["object"] in x["reason"] and "assignment is missing or unknown" in x["reason"]
+               for x in g["unmatched_exported_pins"])
+
+
 def test_b3_two_exported_pins_claiming_one_gt_pin():
     sc, man, nl = _crossing_gt()
     man2 = copy.deepcopy(man)

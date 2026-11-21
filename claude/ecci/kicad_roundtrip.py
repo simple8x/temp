@@ -164,12 +164,17 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
                 continue
             claimed[cand[0]] = p["object"]
             gt_pin = scoreable[cand[0]]
-            assignment = p.get("number_assignment", "CONFIRMED")
+            assignment = p.get("number_assignment")
             if assignment == "EQUIVALENT_CANONICAL":
                 reason = f"matched by {p['object']}; synthetic canonical numbering means source pin identity is not proven and is excluded from GT PASS"
                 identity_unverified.append({"object": p["object"], "gt_ref": gt_pin.ref,
                                             "gt_number": gt_pin.number,
                                             "export_numbers": list(p["numbers"]), "reason": reason})
+                unmatched.append((p["object"], reason))
+                unscored_reasons[cand[0]] = reason
+                continue
+            elif assignment not in ("CONFIRMED", "TRANSFORM_EQUIVALENT"):
+                reason = f"matched by {p['object']} but pin identity assignment is missing or unknown"
                 unmatched.append((p["object"], reason))
                 unscored_reasons[cand[0]] = reason
                 continue
