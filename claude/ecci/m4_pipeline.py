@@ -131,4 +131,4 @@ def gate_table(records: list[dict], cli: str | None, extra: dict | None = None) 
 
 
 def env_cli() -> str | None:
-    return kr.kicad_cli() if os.environ.get("ECCI_NO_KICAD") !=
+    return kr.kicad_cli() if os.environ.get("ECCI_NO_KICAD") != "1" else None

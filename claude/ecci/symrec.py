@@ -611,3 +611,4 @@ def build_symbols_like(doc: dict, conn_doc: dict) -> dict:
     d = {k: v for k, v in doc.items() if k != "content_sha256"}
     d["connectivity_sha256"] = conn_doc["content_sha256"]
     d["content_sha256"] = content_hash(d)
+    return d

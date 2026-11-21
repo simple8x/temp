@@ -504,4 +504,5 @@ def verify_manifest(man: dict, conn: dict, syms: dict, lib_text: str, sch_text: 
         diff = sorted(k for k in set(man) | set(man2) if man.get(k) != man2.get(k))
         P.append(f"manifest is not what the inputs give (differs in {diff})")
     if sch_text is not None and sch_text != sch2:
-        P.append("schematic text i
+        P.append("schematic text is not what the inputs give")
+    return P

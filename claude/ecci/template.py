@@ -256,3 +256,4 @@ def diagnose_match(cl: Cluster, sym: SymbolDef, params: MatchParams = MatchParam
                   for a, b in segs_t for f in (0.17, 0.33, 0.5, 0.67, 0.83))
         r3b = max(min(point_segment_distance((0.5 * (c[0] + d[0]), 0.5 * (c[1] + d[1])), a, b) for a, b in segs_t) for c, d in cl.segs)
         out.append(f"o{oi}: s={s:.3f} r1={r1:.2f} (bad verts {len(bad_v)}) r3_template_on_cluster={r3a:.2f} r3_cluster_on_template={r3b:.2f}")
+    return out
