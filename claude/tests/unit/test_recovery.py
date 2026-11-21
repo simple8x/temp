@@ -339,7 +339,7 @@ def test_corrupted_geometry_is_rejected_by_the_audit():
     (c,) = promotable(rep)
     pid, pts = c.geometry[0]
     c.geometry = ((pid, ((pts[0][0] + 1.0, pts[0][1]),) + pts[1:]),) + c.geometry[1:]
-    rc.reaudit(rep, pi, cls, [XF])
+    rc.reaudit(rep, pi, cls, [XF], base)
     assert c.state == rc.REJECTED and "geometry/hash mismatch" in c.reasons[-1]
 
 
@@ -353,7 +353,7 @@ def test_corrupted_lineage_fields_are_rejected(field, bad, expect):
     pi, cls, base, rep = run(draw(XF), [XF])
     (c,) = promotable(rep)
     setattr(c, field, bad)
-    rc.reaudit(rep, pi, cls, [XF])
+    rc.reaudit(rep, pi, cls, [XF], base)
     assert c.state == rc.REJECTED and expect in c.reasons[-1]
 
 
@@ -368,7 +368,7 @@ def test_corrupted_pin_evidence_is_rejected(change, expect):
     pi, cls, base, rep = run(draw(XF), [XF])
     (c,) = promotable(rep)
     c.pins = (change(c.pins[0]),) + c.pins[1:]
-    rc.reaudit(rep, pi, cls, [XF])
+    rc.reaudit(rep, pi, cls, [XF], base)
     assert c.state == rc.REJECTED and expect in c.reasons[-1]
 
 
@@ -376,7 +376,7 @@ def test_line_prim_pointing_at_a_template_primitive_is_rejected():
     pi, cls, base, rep = run(draw(XF), [XF])
     (c,) = promotable(rep)
     c.pins = (replace(c.pins[0], line_prim=c.matched_prim_ids[0]),) + c.pins[1:]
-    rc.reaudit(rep, pi, cls, [XF])
+    rc.reaudit(rep, pi, cls, [XF], base)
     assert c.state == rc.REJECTED
 
 
@@ -388,6 +388,13 @@ def test_lineage_gate_rejects_non_body_and_missing_prims():
         c2 = _fresh(c, source_prim_ids=tuple(sorted(bad)))
         rc.gate(c2, pi, cls, rc._line_index(pi, cls), 0.0)
         assert c2.state == rc.REJECTED and c2.reasons[-1].startswith("lineage")
+    # a WIRE prim with an otherwise consistent role lineage: only the BODY check can refuse it
+    c4 = _fresh(c, source_prim_ids=tuple(sorted((wire,) + c.source_prim_ids)),
+                discovery_prim_ids=tuple(sorted({wire} | set(c.discovery_prim_ids))),
+                excluded_prim_ids=(wire,), operation=c.operation + "+RELAX")
+    assert rc.evidence_role_problems(c4, pins=False) == []
+    rc.gate(c4, pi, cls, rc._line_index(pi, cls), 0.0)
+    assert c4.state == rc.REJECTED and "is not a BODY polyline" in c4.reasons[-1]
     c3 = _fresh(c, stripped_prim_ids=c.matched_prim_ids[:1])
     rc.gate(c3, pi, cls, rc._line_index(pi, cls), 0.0)
     assert c3.state == rc.REJECTED and c3.reasons[-1].startswith("lineage")
@@ -557,7 +564,9 @@ def test_recover_rejects_a_candidate_whose_audit_fails(monkeypatch):
 def _tampered_identity(c, pins):
     idn = dict(c.identity)
     idn.update(id_state="CONFIRMED", pins=pins)
-    return _fresh(c, identity=idn)
+    # the retained alternatives are tampered consistently, so the gate stage under test is the one that decides
+    hits = tuple(dict(h, pins=tuple((n[0], tip, base) for tip, base, n in pins)) for h in c.hits)
+    return _fresh(c, identity=idn, hits=hits)
 
 
 def test_stacked_terminals_are_unknown_even_with_a_confirmed_identity():

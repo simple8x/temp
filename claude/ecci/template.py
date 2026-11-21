@@ -162,6 +162,19 @@ class Resolution:
     pins: tuple[ResolvedPin, ...]
     symbols: tuple[str, ...]
     note: str = ""
+    # library-qualified identities (lib_token, name) of every accepted hit, sorted. Two library symbols that share
+    # a name but not a lib_token are DIFFERENT identities. `symbols` (names only) is kept for the baseline.
+    identities: tuple[tuple[str, str], ...] = ()
+
+
+def symbol_identity(symbol: SymbolDef) -> tuple[str, str]:
+    """Canonical symbol identity: (lib_token, name). A name alone does not identify a library symbol."""
+    return (symbol.lib_token, symbol.name)
+
+
+def hit_sort_key(h: "Hit") -> tuple:
+    """Order-independent canonical key of one accepted (symbol, transform) alternative."""
+    return (h.symbol.name, h.symbol.lib_token, h.orient, round(h.scale, 9), round(h.tx, 6), round(h.ty, 6))
 
 
 def _tips(h: Hit):
@@ -181,22 +194,30 @@ def _same_set(a, b, tau: float) -> bool:
     return True
 
 
-def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -> Resolution:
+def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams(), *,
+            qualified: bool = False) -> Resolution:
+    """qualified=False is the unchanged baseline behaviour (names decide the pin-exchange shortcut).
+    qualified=True (recovery): hits are put in canonical order first, so the result never depends on input order,
+    and the pin-exchange shortcut requires ONE library-qualified identity, not one name."""
     if not hits:
         return Resolution((), "NONE", "UNKNOWN", (), (), "no template accepted")
+    if qualified:
+        hits = sorted(hits, key=hit_sort_key)
     tau = tolerance(cl, params)
     sets = [_tips(h) for h in hits]
     names = tuple(sorted({h.symbol.name for h in hits}))
+    idents = tuple(sorted({symbol_identity(h.symbol) for h in hits}))
+    one_symbol = (len(idents) == 1) if qualified else (len(names) == 1)
     first = sets[0]
     if not all(_same_set(first, s, tau) for s in sets[1:]):
         return Resolution(tuple(hits), "DIFFERENT_TIP_SETS", "AMBIGUOUS", (), names,
-                          "accepted templates predict different pin positions")
+                          "accepted templates predict different pin positions", idents)
     if not first:
-        return Resolution(tuple(hits), "UNIQUE", "UNKNOWN", (), names, "template has no pins")
+        return Resolution(tuple(hits), "UNIQUE", "UNKNOWN", (), names, "template has no pins", idents)
     # numbers per tip across all hits; id is CONFIRMED only if every hit agrees on every number
     pins: list[ResolvedPin] = []
     agree = True
-    electrically_equivalent = len(names) == 1 and all(_pin_number_exchange_allowed(h.symbol) for h in hits)
+    electrically_equivalent = one_symbol and all(_pin_number_exchange_allowed(h.symbol) for h in hits)
     for num0, tip0, base0 in first:
         nums = set()
         signatures = []
@@ -235,7 +256,7 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
     else:
         id_state = "AMBIGUOUS"
         note = "pin numbers cannot be assigned from geometry without an electrically equivalent pin mapping"
-    return Resolution(tuple(hits), "UNIQUE", id_state, tuple(pins), names, note)
+    return Resolution(tuple(hits), "UNIQUE", id_state, tuple(pins), names, note, idents)
 
 
 def diagnose_match(cl: Cluster, sym: SymbolDef, params: MatchParams = MatchParams()) -> list[str]:

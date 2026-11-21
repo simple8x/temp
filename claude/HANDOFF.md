@@ -32,6 +32,25 @@
 - Known pre-existing flake: hypothesis finds `test_text_band_is_text_and_symbols_survive` counterexample
   symbols=['R'], words=[('EEE',20,8,22),('0000',20,5,42)] (prim classified WIRE inside the text band) on the
   unmodified baseline too. Not caused by recovery; assertion NOT relaxed.
+### P0 audit fixes (audit of 873bfbb: two blockers)
+- B1 identity: canonical identity `template.symbol_identity(sym) = (lib_token, name)`. `resolve(..., qualified=True)`
+  (recovery only) sorts hits by `hit_sort_key` first (input order never matters) and allows the 2-pin exchange
+  shortcut only for ONE qualified identity; it always records `Resolution.identities`. The baseline call
+  (`qualified=False`) is unchanged on purpose (baseline still uses names for that shortcut: separate decision).
+  Recovery: hits stored in canonical order with every placed pin (`hits[i]["pins"]`); gate requires one
+  identity (`multiple_symbol_identities`), no library collision (same identity, different definition), and
+  `alternative_problems()`: EVERY alternative must map one-to-one onto the recorded terminals (tip + base within
+  template tau) with a recorded number (exactly that number when CONFIRMED). Audit looks symbols up by identity,
+  re-derives hits incl. placed pins, re-resolves (status, id_state, identities) and re-runs alternative_problems.
+- B2 evidence roles: discovery (all prims of the source NONE clusters), proposal (source), template (matched),
+  stripped, excluded (= source - matched - stripped, left out by a relaxation). template/stripped/excluded must
+  partition the proposal exactly; stripped/excluded need +RELAX; duplicates / overlaps / missing discovery fail
+  closed (`evidence_role_problems`). A pin line may not be ANY lineage prim (`role_index`; reasons
+  `pin_line_reused_from_<role>`). The stripped-stub-as-pin-line exception is REMOVED (no independence policy).
+  Audit re-derives discovery from the baseline (`audit_candidate(..., baseline)`, `reaudit(rep, pi, cls, syms,
+  baseline)`; no baseline -> fail), re-runs the relaxation for +RELAX candidates and the role checks. Conflicts
+  use one key space, so a pin line of A that B groups is a conflict.
+- Tests `tests/unit/test_recovery_identity_evidence.py`; mutations R21-R36 (R01/R05 patterns updated).
 - NOT yet measured: full GT corpus (needs KiCad 9.0.9 / CI). No recall/precision claim without the claude-gt run.
 
 

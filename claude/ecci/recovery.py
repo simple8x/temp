@@ -18,6 +18,22 @@ Pipeline per page
   5. audit           every EVIDENCE_SUPPORTED candidate is re-derived from the page alone (geometry hash, template
                      re-match, predicted pins, measured lines). Pass -> PROMOTABLE, any mismatch -> REJECTED.
 
+Symbol identity is library-qualified: (lib_token, name). Two library symbols that share a name are different
+identities; more than one identity among the accepted alternatives keeps the candidate UNKNOWN. Every retained
+(symbol, transform) alternative is validated, not only the first one, and the hit order never decides anything.
+
+Evidence roles (primitive ids, recorded on every candidate, re-derived by the audit):
+  discovery     every primitive of the baseline NONE clusters the proposal was built from (candidate discovery)
+  proposal      source_prim_ids: the grouped primitives (subset of discovery)
+  template_fit  matched_prim_ids: the primitives the template was fitted to
+  stripped      stripped_prim_ids: stubs removed by the baseline relaxation (stripped-source interpretation)
+  excluded      excluded_prim_ids: the rest of the proposal that the relaxation left out (other style group,
+                round decor). template_fit, stripped and excluded partition the proposal EXACTLY; stripped or
+                excluded prims without a +RELAX operation, overlaps, duplicates or a gap fail closed.
+  pin_line      one measured line per pin. It must be disjoint from discovery (and so from every other role): a
+                primitive that helped propose, group, fit or interpret the candidate is never its own physical
+                pin evidence. There is no reuse exception (none is documented as independent).
+
 States: PROPOSED, EVIDENCE_SUPPORTED, PROMOTABLE, REJECTED, UNKNOWN. There is NO path to VERIFIED here: PROMOTABLE
 is terminal in P0 (no existing authority policy permits candidate -> VERIFIED; see status.py).
 """
@@ -36,7 +52,7 @@ from .flatten import point_segment_distance
 from .ir import PageIngest
 from .pins import S2_REL_MAX, S2_TAU_ABS_MAX, PinParams, _line_index, s2_tolerance, stub_orientation
 from .symbols import EPS_DEFAULT, Cluster, _rebuild, relaxations
-from .template import D4, MatchParams, match_cluster, resolve, tolerance
+from .template import D4, MatchParams, hit_sort_key, match_cluster, resolve, symbol_identity, tolerance
 
 PROPOSED = "PROPOSED"
 EVIDENCE_SUPPORTED = "EVIDENCE_SUPPORTED"
@@ -101,9 +117,11 @@ class RecoveryCandidate:
     geometry_sha256: str
     frame: str
     tolerances: dict
-    hits: tuple[dict, ...]                  # every accepted (symbol, transform) alternative
+    hits: tuple[dict, ...]                  # every accepted (symbol, transform) alternative, canonical order
     identity: dict
     pins: tuple[PinEvidence, ...] = ()
+    discovery_prim_ids: tuple[int, ...] = ()   # empty = missing lineage -> fails closed
+    excluded_prim_ids: tuple[int, ...] = ()
     state: str = PROPOSED
     history: list = field(default_factory=list)
     reasons: list = field(default_factory=list)
@@ -233,8 +251,138 @@ def touch_components(ids, by_id, eps: float) -> list[tuple[int, ...]]:
 
 
 def _hit_dict(h) -> dict:
+    """pins: (number, placed tip, placed base) of EVERY library pin of this alternative, library order."""
     return {"symbol": h.symbol.name, "lib_token": h.symbol.lib_token, "orient": h.orient, "scale": h.scale,
-            "tx": h.tx, "ty": h.ty, "residual": h.residual}
+            "tx": h.tx, "ty": h.ty, "residual": h.residual,
+            "pins": tuple((p.number, h.place(*p.tip), h.place(*p.base)) for p in h.symbol.pins)}
+
+
+def _hits_sorted(hits) -> list:
+    return sorted(hits, key=hit_sort_key)
+
+
+def _identity_of(d: dict) -> tuple[str, str]:
+    return (d["lib_token"], d["symbol"])
+
+
+def library_index(symbols) -> tuple[dict, set]:
+    """(lib_token, name) -> SymbolDef, plus the identities that map to more than one DIFFERENT definition."""
+    idx: dict = {}
+    collide: set = set()
+    for s in symbols:
+        k = symbol_identity(s)
+        if k in idx and idx[k] != s:
+            collide.add(k)
+        idx.setdefault(k, s)
+    return idx, collide
+
+
+def alternative_problems(c: "RecoveryCandidate") -> list[str]:
+    """Every retained (symbol, transform) alternative must predict the SAME terminals (tip and base within the
+    template tolerance, one-to-one) with a pin number the identity records for that terminal; with a CONFIRMED
+    identity each alternative must give exactly the recorded number. Nothing is taken from hits[0] alone."""
+    probs = []
+    idn = c.identity
+    tau = c.tolerances.get("template_tau")
+    rec = idn.get("pins") or []
+    if not c.hits:
+        return ["no retained template alternative"]
+    if tau is None or not (tau > 0):
+        return ["template tolerance missing"]
+    ids = sorted({_identity_of(h) for h in c.hits})
+    if [list(x) for x in ids] != [list(x) for x in idn.get("identities", [])]:
+        probs.append("alternatives' identities differ from the recorded identity")
+    for k, h in enumerate(c.hits):
+        hp = h.get("pins")
+        if hp is None or len(hp) != len(rec):
+            probs.append(f"alternative {k}: pin count differs")
+            continue
+        used = set()
+        for tip, base, numbers in rec:
+            m = [j for j, (_n, t, _b) in enumerate(hp) if math.dist(t, tip) <= tau]
+            if len(m) != 1 or m[0] in used:
+                probs.append(f"alternative {k}: terminal at {tuple(round(v, 3) for v in tip)} not matched one-to-one")
+                continue
+            used.add(m[0])
+            n, _t, b = hp[m[0]]
+            if math.dist(b, base) > tau:
+                probs.append(f"alternative {k}: pin {n} direction differs")
+            if n not in numbers:
+                probs.append(f"alternative {k}: pin number {n} not recorded for its terminal")
+            elif idn.get("id_state") == "CONFIRMED" and tuple(numbers) != (n,):
+                probs.append(f"alternative {k}: pin number assignment differs")
+    return probs
+
+
+ROLE_PRIORITY = ("template", "stripped", "excluded", "proposal", "discovery")
+
+
+def role_index(c: "RecoveryCandidate") -> dict[int, str]:
+    """prim id -> the most specific lineage role it holds (template > stripped > excluded > proposal >
+    discovery). Every id here is forbidden as independent pin-line evidence of this candidate."""
+    out: dict[int, str] = {}
+    for role, ids in (("discovery", c.discovery_prim_ids), ("proposal", c.source_prim_ids),
+                      ("excluded", c.excluded_prim_ids), ("stripped", c.stripped_prim_ids),
+                      ("template", c.matched_prim_ids)):
+        for i in ids:
+            out[i] = role
+    return out
+
+
+def evidence_role_problems(c: "RecoveryCandidate", *, pins: bool = True) -> list[str]:
+    """Structural independence of the evidence roles (see module docstring). Fail closed on anything missing."""
+    probs = []
+    roles = {"discovery": c.discovery_prim_ids, "proposal": c.source_prim_ids, "template": c.matched_prim_ids,
+             "stripped": c.stripped_prim_ids, "excluded": c.excluded_prim_ids}
+    for r, ids in roles.items():
+        if len(set(ids)) != len(ids):
+            probs.append(f"duplicate prim ids within {r}")
+    if not c.discovery_prim_ids:
+        probs.append("missing discovery lineage")
+    if not c.matched_prim_ids:
+        probs.append("no template-fit prims")
+    src = set(c.source_prim_ids)
+    if not src <= set(c.discovery_prim_ids):
+        probs.append("proposal prims outside the discovery lineage")
+    m, st, ex = set(c.matched_prim_ids), set(c.stripped_prim_ids), set(c.excluded_prim_ids)
+    if m & st or m & ex or st & ex:
+        probs.append("prim holds two of template/stripped/excluded")
+    if (m | st | ex) - src:
+        probs.append("template/stripped/excluded prims outside the proposal")
+    if src - (m | st | ex):
+        probs.append(f"source coverage incomplete: {len(src - (m | st | ex))} proposal prim(s) without a role")
+    if (st or ex) and "+RELAX" not in c.operation:
+        probs.append("stripped/excluded prims without a relaxation")
+    if pins:
+        forbidden = role_index(c)
+        seen: dict[int, int] = {}
+        for p in c.pins:
+            if p.line_prim is None:
+                continue
+            if p.line_prim in forbidden:
+                probs.append(f"pin {p.index}: pin line {p.line_prim} is {forbidden[p.line_prim]} evidence "
+                             "(not independent)")
+            if p.line_prim in seen:
+                probs.append(f"pin {p.index}: pin line {p.line_prim} also used by pin {seen[p.line_prim]}")
+            seen.setdefault(p.line_prim, p.index)
+    return probs
+
+
+def discovery_of(baseline, source_clusters) -> tuple[tuple[int, ...] | None, list[str]]:
+    """Re-derive the discovery lineage from the baseline: every source cluster must exist and be NONE."""
+    by_cl = {cr.cluster.id: cr for cr in baseline}
+    probs, ids = [], set()
+    if not source_clusters:
+        return None, ["no source clusters"]
+    for k in source_clusters:
+        cr = by_cl.get(k)
+        if cr is None:
+            probs.append(f"source cluster {k} not in the baseline")
+        elif cr.resolution.status != "NONE":
+            probs.append(f"source cluster {k} is not a NONE cluster")
+        else:
+            ids.update(cr.cluster.prim_ids)
+    return (None if probs else tuple(sorted(ids))), probs
 
 
 def _hit_key(d: dict) -> tuple:
@@ -355,6 +503,7 @@ def propose(pi, cls, baseline, symbols, params: RecoveryParams, eps: float, stat
     silently lost; candidates already built are complete."""
     by_id = {q.id: q for q in pi.prims}
     syms = list(symbols)
+    _lib, collide = library_index(syms)
     out = []
     props = _proposals(pi, cls, baseline, params, stats)
     for k, (src, ids, op) in enumerate(props):
@@ -362,11 +511,11 @@ def propose(pi, cls, baseline, symbols, params: RecoveryParams, eps: float, stat
             stats["budget_deadline_dropped"] += len(props) - k
             break
         cl = _rebuild(-(k + 1), ids, by_id)
-        hits, stripped, opname = match_cluster(cl, syms), (), op
+        hits, stripped, opname = _hits_sorted(match_cluster(cl, syms)), (), op
         mcl = cl
         if not hits and params.relax:
             for cl2, stubs2 in relaxations(cl, by_id, eps):
-                h2 = match_cluster(cl2, syms)
+                h2 = _hits_sorted(match_cluster(cl2, syms))
                 if h2:
                     mcl, hits, stripped, opname = cl2, h2, tuple(sorted(stubs2)), op + "+RELAX"
                     break
@@ -374,16 +523,23 @@ def propose(pi, cls, baseline, symbols, params: RecoveryParams, eps: float, stat
             stats["proposals_no_template"] += 1
             continue
         geom = geometry_of(pi, ids)
-        res = resolve(mcl, hits)
+        res = resolve(mcl, hits, qualified=True)
+        disc, _dp = discovery_of(baseline, src)
+        matched_ids = tuple(sorted(mcl.prim_ids))
         tau = tolerance(mcl, MatchParams())
         out.append(RecoveryCandidate(
             id=f"RC{k}", operation=opname, source_clusters=src, source_prim_ids=ids,
-            matched_prim_ids=tuple(sorted(mcl.prim_ids)), stripped_prim_ids=stripped,
+            matched_prim_ids=matched_ids, stripped_prim_ids=stripped,
+            discovery_prim_ids=disc or (),
+            excluded_prim_ids=tuple(sorted(set(ids) - set(matched_ids) - set(stripped))),
             geometry=geom, geometry_sha256=geometry_hash(geom), frame=FRAME,
             tolerances={"template_tau": tau, "s2_tau_abs": S2_TAU_ABS_MAX, "s2_rel": S2_REL_MAX,
-                        "touch_eps": params.touch_eps, "merge_gap_frac": params.merge_gap_frac},
-            hits=tuple(sorted((_hit_dict(h) for h in hits), key=_hit_key)),
+                        "touch_eps": params.touch_eps, "merge_gap_frac": params.merge_gap_frac,
+                        "relax_eps": eps},
+            hits=tuple(_hit_dict(h) for h in hits),
             identity={"status": res.status, "id_state": res.id_state, "symbols": list(res.symbols),
+                      "identities": [list(x) for x in res.identities],
+                      "library_collision": sorted(list(x) for x in set(res.identities) & collide),
                       "note": res.note, "pins": [(p.tip, p.base, p.numbers) for p in res.pins]},
             history=[(None, PROPOSED, f"{opname} matched {len(hits)} template alternative(s)")]))
     return out
@@ -391,14 +547,14 @@ def propose(pi, cls, baseline, symbols, params: RecoveryParams, eps: float, stat
 
 # ----------------------------------------------------------------------------------------------- evidence gate
 
-def _measure_pin(tip, base, lines, matched: frozenset, kind_of, tol: float, by_id):
-    """All distinct measured 2-point lines whose two ends agree with base and tip within tol, excluding the
-    template-fit primitives. Returns (supporting [(pid, (p0, p1) as ingested, orientation, residual)],
-    reused_template_line)."""
+def _measure_pin(tip, base, lines, forbidden: dict, kind_of, tol: float, by_id):
+    """All distinct measured 2-point lines whose two ends agree with base and tip within tol, excluding EVERY
+    primitive of the candidate's own lineage (`forbidden`: prim id -> role, see role_index). Returns
+    (supporting [(pid, (p0, p1) as ingested, orientation, residual)], roles of agreeing lineage lines)."""
     grid, cell = lines
     gx, gy = math.floor(tip[0] / cell), math.floor(tip[1] / cell)
     span = max(1, math.ceil(tol / cell))
-    sup, reused, seen = [], False, set()
+    sup, reused, seen = [], set(), set()
     for dx in range(-span, span + 1):
         for dy in range(-span, span + 1):
             for _end, _far, pid in grid.get((gx + dx, gy + dy), ()):
@@ -410,8 +566,8 @@ def _measure_pin(tip, base, lines, matched: frozenset, kind_of, tol: float, by_i
                 o = stub_orientation(p0, p1, base, tip, tol)
                 if o is None:
                     continue
-                if pid in matched:
-                    reused = True
+                if pid in forbidden:
+                    reused.add(forbidden[pid])
                     continue
                 if kind_of(pid) == "TEXT":
                     continue
@@ -437,6 +593,7 @@ def gate(c: RecoveryCandidate, pi, cls, lines, min_part: float) -> None:
         lin.append("matched/stripped prims outside the source group")
     if set(c.matched_prim_ids) & set(c.stripped_prim_ids):
         lin.append("prim both matched and stripped")
+    lin += evidence_role_problems(c, pins=False)
     if lin:
         c.to(REJECTED, "lineage: " + "; ".join(lin))
         return
@@ -459,6 +616,12 @@ def gate(c: RecoveryCandidate, pi, cls, lines, min_part: float) -> None:
     if len(idn["symbols"]) != 1:
         c.to(UNKNOWN, f"multiple_symbols: {idn['symbols']}")
         return
+    if len(idn.get("identities") or ()) != 1:
+        c.to(UNKNOWN, f"multiple_symbol_identities: {idn.get('identities')}")
+        return
+    if idn.get("library_collision", True):
+        c.to(UNKNOWN, f"library_identity_collision: {idn.get('library_collision')}")
+        return
     if not idn["pins"]:
         c.to(REJECTED, "no_pins: template has no pins")
         return
@@ -470,8 +633,12 @@ def gate(c: RecoveryCandidate, pi, cls, lines, min_part: float) -> None:
     if any(math.dist(tips[i], tips[j]) <= tau for i in range(len(tips)) for j in range(i + 1, len(tips))):
         c.to(UNKNOWN, "stacked_pins: two predicted terminals coincide")
         return
+    alt = alternative_problems(c)
+    if alt:
+        c.to(UNKNOWN, "ambiguous_alternatives: " + "; ".join(alt))
+        return
     # 4. independent physical pin-line evidence, every pin
-    matched = frozenset(c.matched_prim_ids)
+    forbidden = role_index(c)
     kind_of = lambda pid: cls.records[pid].cls  # noqa: E731
     pins, bad, used = [], [], Counter()
     for k, (tip, base, numbers) in enumerate(idn["pins"]):
@@ -482,9 +649,10 @@ def gate(c: RecoveryCandidate, pi, cls, lines, min_part: float) -> None:
             bad.append("zero_length_pin")
             continue
         tol = s2_tolerance(plen)
-        sup, reused = _measure_pin(tip, base, lines, matched, kind_of, tol, by_id)
+        sup, reused = _measure_pin(tip, base, lines, forbidden, kind_of, tol, by_id)
         if not sup:
-            why = "pin_line_reused_from_template" if reused else "missing_pin_line"
+            why = ("pin_line_reused_from_" + next(r for r in ROLE_PRIORITY if r in reused)) if reused \
+                else "missing_pin_line"
         elif len(sup) > 1:
             why = f"overlapping_pin_lines: {[s[0] for s in sup]}"
         else:
@@ -503,6 +671,10 @@ def gate(c: RecoveryCandidate, pi, cls, lines, min_part: float) -> None:
         return
     if bad:
         c.to(UNKNOWN, "pin_evidence: " + ",".join(sorted(set(bad))))
+        return
+    er = evidence_role_problems(c)
+    if er:
+        c.to(REJECTED, "evidence_roles: " + "; ".join(er))
         return
     c.to(EVIDENCE_SUPPORTED, f"all {len(pins)} pins have a distinct measured pin line")
 
@@ -538,11 +710,9 @@ def resolve_conflicts(cands: list, claimed_prims: set, claimed_tips: list) -> No
     flag: dict[str, set] = {}
     owners: dict[tuple, list[int]] = {}
     for n, c in enumerate(live):
-        for i in c.source_prim_ids:
+        # one key space: a pin line of one candidate that is a grouped primitive of another is a conflict too
+        for i in set(c.source_prim_ids) | {p.line_prim for p in c.pins if p.line_prim is not None}:
             owners.setdefault(("p", i), []).append(n)
-        for p in c.pins:
-            if p.line_prim is not None:
-                owners.setdefault(("l", p.line_prim), []).append(n)
     for ns in owners.values():
         for a in set(ns):
             for b in set(ns):
@@ -567,8 +737,9 @@ def resolve_conflicts(cands: list, claimed_prims: set, claimed_tips: list) -> No
 
 # ----------------------------------------------------------------------------------------------- audit
 
-def audit_candidate(c: RecoveryCandidate, pi, cls, symbols) -> list[str]:
-    """Re-derive the candidate from the page alone; every disagreement is a problem."""
+def audit_candidate(c: RecoveryCandidate, pi, cls, symbols, baseline=None) -> list[str]:
+    """Re-derive the candidate from the page, the library and the baseline alone; every disagreement is a problem.
+    baseline=None cannot re-derive the discovery lineage and therefore fails closed."""
     probs = []
     by_id = {q.id: q for q in pi.prims}
     if any(i not in by_id for i in c.source_prim_ids):
@@ -578,15 +749,57 @@ def audit_candidate(c: RecoveryCandidate, pi, cls, symbols) -> list[str]:
         probs.append("geometry/hash mismatch")
     if not c.matched_prim_ids or not set(c.matched_prim_ids) <= set(c.source_prim_ids):
         return probs + ["matched prims not within source"]
+    # evidence lineage: discovery from the baseline, roles partition the proposal, pin lines outside all of it
+    if baseline is None:
+        probs.append("discovery lineage not re-derivable (no baseline)")
+    else:
+        disc, dp = discovery_of(baseline, c.source_clusters)
+        probs += ["discovery: " + x for x in dp]
+        if disc is not None and disc != tuple(c.discovery_prim_ids):
+            probs.append("discovery lineage differs from the baseline")
+    probs += ["evidence roles: " + x for x in evidence_role_problems(c)]
+    syms = list(symbols)
+    lib, collide = library_index(syms)
+    eps = c.tolerances.get("relax_eps")
+    if "+RELAX" in c.operation:
+        # the stripped / excluded interpretation must follow from the baseline relaxation of the proposal
+        src_cl = _rebuild(0, tuple(c.source_prim_ids), by_id)
+        if eps is None:
+            probs.append("relaxation eps missing")
+        elif match_cluster(src_cl, syms):
+            probs.append("relaxation not needed: the proposal matches as drawn")
+        else:
+            got = None
+            for cl2, stubs2 in relaxations(src_cl, by_id, eps):
+                if match_cluster(cl2, syms):
+                    got = (tuple(sorted(cl2.prim_ids)), tuple(sorted(stubs2)))
+                    break
+            if got != (tuple(c.matched_prim_ids), tuple(c.stripped_prim_ids)):
+                probs.append("stripped/template split does not follow from the relaxation")
+    elif c.stripped_prim_ids or c.excluded_prim_ids or tuple(c.matched_prim_ids) != tuple(c.source_prim_ids):
+        probs.append("prims outside the template fit without a relaxation")
     cl = _rebuild(0, tuple(c.matched_prim_ids), by_id)
-    hits = tuple(sorted((_hit_dict(h) for h in match_cluster(cl, list(symbols))), key=_hit_key))
+    raw = _hits_sorted(match_cluster(cl, syms))
+    hits = tuple(_hit_dict(h) for h in raw)
     if [_hit_key(h) for h in hits] != [_hit_key(h) for h in c.hits]:
         probs.append("template re-match differs")
-    sym = {s.name: s for s in symbols}
-    if not c.hits or c.hits[0]["symbol"] not in sym:
+    elif any(len(a["pins"]) != len(b.get("pins") or ()) or any(
+            x[0] != y[0] or math.dist(x[1], y[1]) > 1e-6 or math.dist(x[2], y[2]) > 1e-6
+            for x, y in zip(a["pins"], b.get("pins") or ())) for a, b in zip(hits, c.hits)):
+        probs.append("alternative pins do not follow from symbol + transform")
+    res = resolve(cl, list(raw), qualified=True)
+    if (res.status != c.identity.get("status") or res.id_state != c.identity.get("id_state")
+            or [list(x) for x in res.identities] != c.identity.get("identities")):
+        probs.append("identity re-derivation differs")
+    if len(res.identities) != 1 or len(c.identity.get("identities") or ()) != 1:
+        probs.append("symbol identity not unique (library-qualified)")
+    if set(res.identities) & collide:
+        probs.append("library identity collision")
+    if not c.hits or any(_identity_of(h) not in lib for h in c.hits):
         return probs + ["symbol not in library"]
+    probs += alternative_problems(c)
     h0 = c.hits[0]
-    s0 = sym[h0["symbol"]]
+    s0 = lib[_identity_of(h0)]
     pred = sorted((_place(h0, *p.tip), _place(h0, *p.base)) for p in s0.pins)
     got = sorted((p.predicted_tip, p.predicted_base) for p in c.pins)
     if len(pred) != len(got) or any(math.dist(a[0], b[0]) > 1e-6 or math.dist(a[1], b[1]) > 1e-6
@@ -640,7 +853,7 @@ def recover(pi: PageIngest, cls: PageClassification, baseline, symbols, *, eps: 
         resolve_conflicts(cands, claimed_prims, claimed_tips)
         for c in cands:
             if c.state == EVIDENCE_SUPPORTED:
-                ap = audit_candidate(c, pi, cls, syms)
+                ap = audit_candidate(c, pi, cls, syms, baseline)
                 if ap:
                     c.to(REJECTED, "audit: " + "; ".join(ap))
                 else:
@@ -655,12 +868,12 @@ def recover(pi: PageIngest, cls: PageClassification, baseline, symbols, *, eps: 
     return rep
 
 
-def reaudit(rep: RecoveryReport, pi, cls, symbols) -> None:
+def reaudit(rep: RecoveryReport, pi, cls, symbols, baseline) -> None:
     """Re-run the independent audit over a (possibly stored / transported) report: any PROMOTABLE candidate whose
-    lineage or evidence no longer re-derives from the page is demoted to REJECTED."""
+    lineage or evidence no longer re-derives from the page, the library and the baseline is demoted to REJECTED."""
     for c in rep.candidates:
         if c.state == PROMOTABLE:
-            ap = audit_candidate(c, pi, cls, list(symbols))
+            ap = audit_candidate(c, pi, cls, list(symbols), baseline)
             if ap:
                 c.to(REJECTED, "audit: " + "; ".join(ap))
 
