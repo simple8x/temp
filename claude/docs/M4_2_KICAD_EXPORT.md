@@ -20,12 +20,18 @@ is the page's and that lineages name real geometry → `audit_against_page` and 
 pipeline's `provenance` stage).
 
 ## Export policy (`ecci/kicad_export.py`, fail-closed, every decision + reason in the manifest)
-- PLACED only with identity CONFIRMED, transform UNIQUE/EQUIVALENT, resolution UNIQUE with pin ids CONFIRMED,
-  library text present, scale = page scale (±0.5 %), KiCad orientation known, library pins = template pins,
-  each KiCad pin end (integer IU arithmetic) on the detected tip (≤ 10 µm), no implicit KiCad connection
-  (power symbol, hidden `power_in`), no pin end coinciding with a pin of another net.
-- EQUIVALENT = several hits of ONE symbol putting every pin number on the same tip; the manifest records
-  `SYNTHETIC_CANONICAL: candidate i of n`. Different symbols or different pin maps are never chosen between.
+- PLACED only with identity CONFIRMED and either (a) transform UNIQUE/EQUIVALENT with resolution UNIQUE and
+  pin ids CONFIRMED, or (b) resolution UNIQUE with pin id state EQUIVALENT: every ambiguous pin-number
+  permutation maps only pins with identical library electrical signatures (name, electrical type, shape,
+  hidden flag, length). Case (b) uses candidate 0 as an explicitly synthetic canonical pin numbering; the source
+  pin-number identity remains EQUIVALENT, never CONFIRMED. Library text, scale = page scale (±0.5 %), KiCad
+  orientation, library pin geometry, exact pin tips (≤ 10 µm), implicit connections and coincident pins are
+  still checked.
+- Transform EQUIVALENT = several hits of ONE symbol putting every pin number on the same tip. Pin-id EQUIVALENT
+  is distinct: symmetric electrically identical terminals (e.g. a passive resistor's two `~` pins) may be
+  canonically numbered for export because swapping them preserves pin electrical semantics. Manifest pin records
+  retain `source_number_candidates` and `number_assignment=EQUIVALENT_CANONICAL`; different electrical
+  signatures or different symbol identities remain NOT_PLACED.
 - Nets = `verified_group` of the connectivity doc only (quarantined groups excluded). INFERRED / UNKNOWN /
   CONFLICT edges, site links, open sites and partially exported groups are listed in `not_exported`.
 - A net is drawn as local labels on pin ends; **no wire geometry** (not in the connectivity doc).
@@ -50,7 +56,8 @@ pipeline's `provenance` stage).
 
 ## Tests / mutations
 `tests/unit/test_m4_export.py` (25, no KiCad): multiple candidates, identity AMBIGUOUS/UNKNOWN, reference
-UNKNOWN + synthetic id, 6 transform tamperings, dropped/injected candidate, pin number UNKNOWN + forgery, crossing
+UNKNOWN + synthetic id, 6 transform tamperings, dropped/injected candidate, electrically equivalent pin-number
+permutation + canonical mapping, non-equivalent pin-number ambiguity remains blocked, crossing
 site not exported, INFERRED T not exported, net evidence, forged edge / partition / manifest net / schematic
 wire, evidence lineage + primitive ref + geometry tampering, wrong binding/library, hidden power pin, coincident
 pins, library pin off the tip, determinism, orientation table, MERGED/MISSING/EXTRA classification, GT mismatch,
@@ -61,7 +68,8 @@ so the mutation job installs KiCad and sets `ECCI_KICAD_TESTS=1`).
 ## Limits
 - No wire geometry and no designators/values in the output; nonlocal connectivity (labels, power, sheets) is
   still unsolved upstream, so GT recall stays low; FP and mapping coverage are gated (B3), FN is reported.
-- Symbol choice is limited to what template matching supports: symmetric parts (R, C, …) stay NOT_PLACED.
+- Symbol choice is limited to what template matching supports: symmetric parts with non-equivalent pin
+  signatures stay NOT_PLACED; electrically identical terminals may use only a declared synthetic canonical map.
 - Library: the GT run embeds the source design's exact `lib_symbols` text (an ASSUMPTION shared with M4.0:
   the library is known). Derived (`extends`) symbols are not supported by `kicad_lib`.
 - Not re-verifiable from files alone: PIN_LINES selection support (needs the page's pin lines) — the file records
@@ -110,7 +118,8 @@ so the mutation job installs KiCad and sets `ECCI_KICAD_TESTS=1`).
   `GATE_MIN_PIN_RECALL` in `gt_gate.txt` is a different quantity), so **none is shipped**: `tools/m4_gt.py` reads
   `$M4_GT_POLICY` or `tools/m4_gt_policy.json`; absent → every page's `ground_truth` is BLOCKED and the
   `m4-kicad-export` job does not pass until the owner sets the threshold. The generated self-test scenes carry a
-  test-only policy (`Scene.gt_min_coverage`: 1.0, 0.5 for `ambiguous_r` whose R is NOT_PLACED by design).
+  test-only policy (`Scene.gt_min_coverage`: 1.0; `ambiguous_r` now reaches 1.0 because its resistor pins are
+  electrically equivalent and are mapped by physical position, not source pin-number identity).
 - UNKNOWN accounting: a GT pin is *claimed* when exactly one exported pin matches it geometrically (first claim
   wins; a second exported pin on the same GT pin is unmatched, "GT pin already matched") and *scored* only once
   that exported pin is on exactly one KiCad net. `gt_pins_scored` = scored = `exported_pins_mapped`;
@@ -128,3 +137,4 @@ non-line primitive / shifted endpoint / foreign content_ref / line removed from 
 required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
 policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
 `tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
+[exit status 0]
