@@ -211,9 +211,15 @@ def pin_lines_docs(tmp_path_factory):
 
 
 def _pl_cluster(syms):
-    return next(
-[... 348 bytes omitted ...]
-len(sup) == n_sel >= 1 and n_sel < len(c["candidates"])
+    return next(c for c in syms["clusters"] if c["resolution"]["selection"] == symrec.SEL_PIN_LINES)
+
+
+def test_b2_valid_pin_lines_evidence_is_verified_against_the_page(pin_lines_docs):
+    pi, cls, lib, conn, syms = pin_lines_docs
+    c = _pl_cluster(syms)
+    sup = c["resolution"]["pin_lines"]
+    n_sel = sum(x["selected"] for x in c["candidates"])
+    assert len(sup) == n_sel >= 1 and n_sel < len(c["candidates"])
     assert sorted(x["number"] for x in sup[0]) == ["1", "2", "3"]
     a1 = symrec.audit_pin_lines(syms, pi, cls)
     assert a1 == {"status": symrec.PL_VERIFIED, "problems": [], "clusters": [c["id"]]}
