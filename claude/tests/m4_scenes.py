@@ -103,7 +103,7 @@ def t_junction(dot: bool) -> Scene:
 
 
 def ambiguous_r() -> Scene:
-    """A symmetric R (pin numbers not decidable) wired to a D: the R is never placed."""
+    """A symmetric R wired to a D: R pin numbers are not source-identifiable, but are electrically equivalent."""
     s = Scene("ambiguous_r")
     s.add("R1", "R", "r90", (100.0, 100.0))
     s.add("D1", "D", "r0", (200.0, 100.0))
