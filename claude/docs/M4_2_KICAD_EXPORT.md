@@ -137,4 +137,3 @@ non-line primitive / shifted endpoint / foreign content_ref / line removed from 
 required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
 policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
 `tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
-[exit status 0]
