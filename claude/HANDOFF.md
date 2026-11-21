@@ -1,4 +1,39 @@
-# ECCI handoff (M4.0: ground-truth measurement)
+# ECCI handoff
+
+## P0 grouped-recovery redesign (PR #17, branch audit/m42-coverage-repair, base f08e052)
+- New module `ecci/recovery.py`; the baseline (`classify` -> `detect_pins` -> conn graph -> `solve`) is untouched
+  and READ-ONLY input. Recovery never registers evidence, never edits clusters/pins/edges/nets and never feeds
+  connectivity. `recover()` fingerprints (page, classification incl. registry, ClusterResults, graph, solve result)
+  before and after (pickle bytes, sha256) and raises if anything changed.
+- Lineage check first: the baseline body clusters are recomputed; every NONE cluster must be reproduced exactly and
+  every resolved cluster must be a subset of its recomputed cluster, else the page is BLOCKED (no candidates).
+- Proposals use ONLY primitives of baseline NONE clusters: SPLIT_TOUCH (touching components of a NONE cluster with
+  more than one) and MERGE_PAIR (two NONE units within gap <= 0.5 x larger dim of the smaller unit, <= 4 nearest
+  partners, units below the page minimum part size never merge). Matching = baseline `match_cluster`, then the
+  baseline `relaxations` (+RELAX). Budgets are counted in stats, never silent.
+- States PROPOSED -> EVIDENCE_SUPPORTED -> PROMOTABLE, else UNKNOWN / REJECTED; table `ALLOWED`, illegal moves raise.
+  No VERIFIED state exists; PROMOTABLE is terminal in P0 (no authority policy permits candidate -> VERIFIED).
+- Gate (all required): lineage complete (BODY polylines, matched/stripped within source); not degenerate, not below
+  the minimum part size; `resolve` UNIQUE, exactly one symbol, id_state CONFIRMED or PIN_EQUIVALENT_CANONICAL (the
+  allowlisted 2-pin passive canonical numbering of the baseline); no stacked terminals; EVERY pin has exactly one
+  distinct 2-point open non-TEXT line, not in the template-fit primitive set, whose BOTH ends agree with predicted
+  base and tip within `s2_tolerance` (the documented baseline S2 policy); no line supports two terminals.
+- Conflicts: a candidate touching a baseline-claimed primitive, pin line or terminal -> REJECTED (baseline wins);
+  candidates sharing a primitive, pin line or terminal -> ALL of them UNKNOWN. Then an independent audit re-derives
+  each survivor from the page (geometry hash, template re-match, predicted pins from symbol + transform, measured
+  lines, orientation, tolerance cap) -> PROMOTABLE, or REJECTED.
+- Stripped stubs of a relaxation may serve as pin lines (they are not template evidence, same rule as baseline S2).
+- GT: `gt_eval.py` adds a separate `recovery` block per page (GT_RECOVERY=0 switches it off) scored with the SAME
+  TOL_PIN / GT pins: new_tp, dup (GT pin already found by baseline), fp, number_mismatch; totals in GT_RECOVERY.
+  CI (`claude-gt`) runs the corpus again with GT_RECOVERY=0 and `recovery_compare.py gt_eval.log gt_eval_off.log`
+  fails unless every baseline field of every page is identical, invariant=true everywhere, fp=dup=mismatch=0,
+  and all 11 required corpus pages (HARMED + GAINED in the script) were compared.
+- Tests: `tests/unit/test_recovery.py`, `tests/unit/test_recovery_compare.py`; mutations R01-R20, C01-C05.
+- Known pre-existing flake: hypothesis finds `test_text_band_is_text_and_symbols_survive` counterexample
+  symbols=['R'], words=[('EEE',20,8,22),('0000',20,5,42)] (prim classified WIRE inside the text band) on the
+  unmodified baseline too. Not caused by recovery; assertion NOT relaxed.
+- NOT yet measured: full GT corpus (needs KiCad 9.0.9 / CI). No recall/precision claim without the claude-gt run.
+
 
 State (branch `claude`, simple8x/temp): see `git log`. Last evidence at d6aec44: m1 run 42786398844 (385 tests,
 mutation 111/111 killed, all jobs green), GT full run 42786399214 (`inventory_consistent: true`, 100 pages
