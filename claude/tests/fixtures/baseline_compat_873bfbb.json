@@ -1,0 +1,726 @@
+{
+ "format": "ecci.baseline_compat/1",
+ "generated_with": "tools/baseline_compat.py on the 873bfbb tree",
+ "pages": {
+  "baseline_only": {
+   "norm_sha256": "2a5cf3897d2015941985545009563dbb111cf32a0d5f833a1ad0273bf5df5509",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "AMBIGUOUS",
+     [
+      "U4"
+     ],
+     4
+    ]
+   ]
+  },
+  "chained_diodes": {
+   "norm_sha256": "1e1abeddfd358f4b2fd4580070bc3e679b08c4a6db1af5a8b34c5c538ba385b7",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ],
+    [
+     1,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ],
+    [
+     2,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ]
+   ]
+  },
+  "m4_ambiguous_r": {
+   "norm_sha256": "5a6c9944ad063a0abe2b0448f170e6f0581bf4d94e78f4dcc2ec01013ee19aaf",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_ad": {
+   "norm_sha256": "4d6c510f0a8e547986508d253c6bcb41227ae87a3e29dd4f9eb16a8951263a0d",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_dg": {
+   "norm_sha256": "e40d3c0fd602cd59ed6a8fb4cce2e476cf0929df5fcbb44e6d32dcd38312b22a",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_mx": {
+   "norm_sha256": "a50be171742b2763c8db398aaa33e9ff667ab081a1b2d9d520ce12f4756602de",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_my": {
+   "norm_sha256": "0fd0b62e1cbe5e214c506937e15aa23b43cebe0169532c2cd27f3c55353cd4a4",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_r0": {
+   "norm_sha256": "0a167e3688bb90cfeebfe0fc6484cc16d12672fb0f7a953114ffe967dec57c1a",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_r180": {
+   "norm_sha256": "810d6ee3ff50ce3e32c0bfddd265d26c5da537a71857a78aef5ccaca800c886b",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_r270": {
+   "norm_sha256": "b3ecf8c5d5290e6452c236e401bdeabffaf486bd839487f84b159fb2208352cb",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_chain_r90": {
+   "norm_sha256": "4f3c86728c393d86efc1171b9f6eaac38e7a1ed16f424e5ee89664bbeeb1310a",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_crossing": {
+   "norm_sha256": "d5a6e135e7bb9d8c873d700f7426c0f2d2e3c4382315e245168edaeb98c9f483",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     2,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ],
+    [
+     3,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_t_dot": {
+   "norm_sha256": "7b7232e45bcd7fa3d2ccfd94f2a2f0adc1675b02300385ad51d405977aae4521",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     2,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "m4_t_nodot": {
+   "norm_sha256": "5be038089cac6c835920f2815db061f4c0e9cda62ef58b0fc7a484cd574896c0",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     2,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "LED"
+     ],
+     2
+    ]
+   ]
+  },
+  "no_pin_lines": {
+   "norm_sha256": "609890bf26a6218b497a3b767d10febf2146c26cbede59e3318760545f2ae281",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ],
+    [
+     1,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ],
+    [
+     2,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ]
+   ]
+  },
+  "resolved_and_recovered": {
+   "norm_sha256": "5f4f89d564f3c036da4d621ed9e8b5cfee24c658c0a84a3f1e314a7731bc3c30",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     1,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ],
+    [
+     2,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ]
+   ]
+  },
+  "rotations_R_D": {
+   "norm_sha256": "45971f034b5606ba0a2b576896f1929ca614509c2e1e1ccad5d2163c8bfb4a6c",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     2,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     3,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     4,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     5,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     6,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     7,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ]
+   ]
+  },
+  "same_name_two_libs_D": {
+   "norm_sha256": "4e734cecde92bcc22aac7aefb796400fb48f5df2f3a7423635dc67198c439ed0",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "CONFIRMED",
+     [
+      "D"
+     ],
+     2
+    ]
+   ]
+  },
+  "same_name_two_libs_R": {
+   "norm_sha256": "2234db69704d0095deaac71cc7c43cd50e674462b47ba45e290efae89359c82a",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ],
+    [
+     1,
+     "UNIQUE",
+     "PIN_EQUIVALENT_CANONICAL",
+     [
+      "R"
+     ],
+     2
+    ]
+   ]
+  },
+  "split_body": {
+   "norm_sha256": "2ae0ae5a04f0de73c6931495fc1fa054834753b69ef8b9b8389cec48ec60b708",
+   "resolution_fields": [
+    "hits",
+    "status",
+    "id_state",
+    "pins",
+    "symbols",
+    "note"
+   ],
+   "resolutions": [
+    [
+     0,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ],
+    [
+     1,
+     "NONE",
+     "UNKNOWN",
+     [],
+     0
+    ]
+   ]
+  }
+ },
+ "source_commit": "873bfbb56a906d809ecc1120236be53855a3fb7a"
+}

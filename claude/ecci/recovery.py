@@ -52,7 +52,7 @@ from .flatten import point_segment_distance
 from .ir import PageIngest
 from .pins import S2_REL_MAX, S2_TAU_ABS_MAX, PinParams, _line_index, s2_tolerance, stub_orientation
 from .symbols import EPS_DEFAULT, Cluster, _rebuild, relaxations
-from .template import D4, MatchParams, hit_sort_key, match_cluster, resolve, symbol_identity, tolerance
+from .template import D4, MatchParams, hit_sort_key, match_cluster, resolve_qualified, symbol_identity, tolerance
 
 PROPOSED = "PROPOSED"
 EVIDENCE_SUPPORTED = "EVIDENCE_SUPPORTED"
@@ -259,6 +259,90 @@ def _hit_dict(h) -> dict:
 
 def _hits_sorted(hits) -> list:
     return sorted(hits, key=hit_sort_key)
+
+
+# Explicit numeric tolerance for re-derived pin GEOMETRY only (page points). The re-derivation runs the same code on
+# the same ingested page, so any honest record agrees to ~1e-12; 1e-9 absorbs float formatting, nothing else.
+# Identity, numbers and assignment state are compared EXACTLY (no tolerance).
+IDENTITY_GEOM_TOL = 1e-9
+IDENTITY_EXACT_KEYS = ("status", "id_state", "symbols", "identities", "library_collision", "note")
+
+
+def identity_record(qres, collide) -> dict:
+    res = qres.resolution
+    return {"status": qres.status, "id_state": qres.id_state, "symbols": list(res.symbols),
+            "identities": [list(x) for x in qres.identities],
+            "library_collision": sorted(list(x) for x in set(qres.identities) & collide),
+            "note": qres.note, "pins": [(p.tip, p.base, p.numbers) for p in res.pins]}
+
+
+def _norm_pin(p) -> tuple | None:
+    try:
+        tip, base, nums = p
+        tip = (float(tip[0]), float(tip[1]))
+        base = (float(base[0]), float(base[1]))
+        if len(tuple(tip)) != 2 or len(tuple(base)) != 2 or not all(map(math.isfinite, tip + base)):
+            return None
+        return tip, base, tuple(sorted(str(n) for n in nums))
+    except (TypeError, ValueError):
+        return None
+
+
+def identity_record_problems(stored: dict, derived: dict) -> list[str]:
+    """Stored candidate identity vs the identity re-derived from the page: every field that decides the outcome.
+    Exact: status, id_state (assignment state), symbols, identities, collisions, note, the pin COUNT and every
+    pin's possible numbers. Within IDENTITY_GEOM_TOL: terminal (tip) and base (direction) positions, matched
+    one-to-one after sorting by position. A malformed or missing field is a mismatch (fail closed)."""
+    probs = []
+    if not isinstance(stored, dict):
+        return ["identity record missing"]
+    for k in IDENTITY_EXACT_KEYS:
+        if k not in stored:
+            probs.append(f"identity field {k} missing")
+        elif stored[k] != derived[k]:
+            probs.append(f"identity re-derivation differs: {k}")
+    sp = stored.get("pins")
+    if not isinstance(sp, (list, tuple)):
+        return probs + ["identity pins missing"]
+    s_n = [_norm_pin(p) for p in sp]
+    if any(x is None for x in s_n):
+        return probs + ["identity pins malformed"]
+    d_n = [_norm_pin(p) for p in derived["pins"]]
+    if len(s_n) != len(d_n):
+        return probs + [f"pin resolution differs: {len(s_n)} stored vs {len(d_n)} derived pins"]
+    left = list(d_n)
+    for k, (tip, base, nums) in enumerate(sorted(s_n)):
+        m = [j for j, d in enumerate(left) if math.dist(d[0], tip) <= IDENTITY_GEOM_TOL]
+        if len(m) != 1:
+            probs.append(f"pin resolution differs: stored terminal {k} at {tip} not re-derived")
+            continue
+        d = left.pop(m[0])
+        if math.dist(d[1], base) > IDENTITY_GEOM_TOL:
+            probs.append(f"pin resolution differs: base/direction of terminal {k}")
+        if d[2] != nums:
+            probs.append(f"pin resolution differs: numbers of terminal {k} {nums} vs {d[2]}")
+    return probs
+
+
+def pin_evidence_identity_problems(c) -> list[str]:
+    """The per-pin evidence records must be exactly the identity's pins (same order, index, numbers, positions)."""
+    ip = (c.identity or {}).get("pins") if isinstance(c.identity, dict) else None
+    if not isinstance(ip, (list, tuple)) or len(ip) != len(c.pins):
+        return ["pin evidence count differs from the identity pins"]
+    probs = []
+    for k, (p, q) in enumerate(zip(c.pins, ip)):
+        nq = _norm_pin(q)
+        if nq is None:
+            probs.append(f"pin evidence {k}: identity pin malformed")
+            continue
+        if p.index != k:
+            probs.append(f"pin evidence {k}: index {p.index}")
+        if tuple(sorted(map(str, p.numbers))) != nq[2]:
+            probs.append(f"pin evidence {k}: numbers {p.numbers} differ from the identity {nq[2]}")
+        if (math.dist(p.predicted_tip, nq[0]) > IDENTITY_GEOM_TOL
+                or math.dist(p.predicted_base, nq[1]) > IDENTITY_GEOM_TOL):
+            probs.append(f"pin evidence {k}: predicted terminal differs from the identity")
+    return probs
 
 
 def _identity_of(d: dict) -> tuple[str, str]:
@@ -523,7 +607,7 @@ def propose(pi, cls, baseline, symbols, params: RecoveryParams, eps: float, stat
             stats["proposals_no_template"] += 1
             continue
         geom = geometry_of(pi, ids)
-        res = resolve(mcl, hits, qualified=True)
+        qres = resolve_qualified(mcl, hits)
         disc, _dp = discovery_of(baseline, src)
         matched_ids = tuple(sorted(mcl.prim_ids))
         tau = tolerance(mcl, MatchParams())
@@ -537,10 +621,7 @@ def propose(pi, cls, baseline, symbols, params: RecoveryParams, eps: float, stat
                         "touch_eps": params.touch_eps, "merge_gap_frac": params.merge_gap_frac,
                         "relax_eps": eps},
             hits=tuple(_hit_dict(h) for h in hits),
-            identity={"status": res.status, "id_state": res.id_state, "symbols": list(res.symbols),
-                      "identities": [list(x) for x in res.identities],
-                      "library_collision": sorted(list(x) for x in set(res.identities) & collide),
-                      "note": res.note, "pins": [(p.tip, p.base, p.numbers) for p in res.pins]},
+            identity=identity_record(qres, collide),
             history=[(None, PROPOSED, f"{opname} matched {len(hits)} template alternative(s)")]))
     return out
 
@@ -737,7 +818,7 @@ def resolve_conflicts(cands: list, claimed_prims: set, claimed_tips: list) -> No
 
 # ----------------------------------------------------------------------------------------------- audit
 
-def audit_candidate(c: RecoveryCandidate, pi, cls, symbols, baseline=None) -> list[str]:
+def audit_candidate(c: RecoveryCandidate, pi, cls, symbols, baseline) -> list[str]:
     """Re-derive the candidate from the page, the library and the baseline alone; every disagreement is a problem.
     baseline=None cannot re-derive the discovery lineage and therefore fails closed."""
     probs = []
@@ -787,13 +868,12 @@ def audit_candidate(c: RecoveryCandidate, pi, cls, symbols, baseline=None) -> li
             x[0] != y[0] or math.dist(x[1], y[1]) > 1e-6 or math.dist(x[2], y[2]) > 1e-6
             for x, y in zip(a["pins"], b.get("pins") or ())) for a, b in zip(hits, c.hits)):
         probs.append("alternative pins do not follow from symbol + transform")
-    res = resolve(cl, list(raw), qualified=True)
-    if (res.status != c.identity.get("status") or res.id_state != c.identity.get("id_state")
-            or [list(x) for x in res.identities] != c.identity.get("identities")):
-        probs.append("identity re-derivation differs")
-    if len(res.identities) != 1 or len(c.identity.get("identities") or ()) != 1:
+    qres = resolve_qualified(cl, list(raw))
+    probs += identity_record_problems(c.identity, identity_record(qres, collide))
+    probs += pin_evidence_identity_problems(c)
+    if len(qres.identities) != 1 or len(c.identity.get("identities") or ()) != 1:
         probs.append("symbol identity not unique (library-qualified)")
-    if set(res.identities) & collide:
+    if set(qres.identities) & collide:
         probs.append("library identity collision")
     if not c.hits or any(_identity_of(h) not in lib for h in c.hits):
         return probs + ["symbol not in library"]

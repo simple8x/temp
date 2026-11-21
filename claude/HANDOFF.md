@@ -33,15 +33,19 @@
   symbols=['R'], words=[('EEE',20,8,22),('0000',20,5,42)] (prim classified WIRE inside the text band) on the
   unmodified baseline too. Not caused by recovery; assertion NOT relaxed.
 ### P0 audit fixes (audit of 873bfbb: two blockers)
-- B1 identity: canonical identity `template.symbol_identity(sym) = (lib_token, name)`. `resolve(..., qualified=True)`
-  (recovery only) sorts hits by `hit_sort_key` first (input order never matters) and allows the 2-pin exchange
-  shortcut only for ONE qualified identity; it always records `Resolution.identities`. The baseline call
-  (`qualified=False`) is unchanged on purpose (baseline still uses names for that shortcut: separate decision).
+- B1 identity: canonical identity `template.symbol_identity(sym) = (lib_token, name)`. Recovery uses
+  `template.resolve_qualified()` (additive; legacy `resolve`/`Resolution` byte-identical to 873bfbb): legacy resolve
+  on the hits in `hit_sort_key` order (input order never matters), PIN_EQUIVALENT_CANONICAL downgraded to AMBIGUOUS
+  when more than one qualified identity remains (never upgraded). F1 evidence: `tools/baseline_compat.py` +
+  golden `tests/fixtures/baseline_compat_873bfbb.json` (test_baseline_compat.py).
   Recovery: hits stored in canonical order with every placed pin (`hits[i]["pins"]`); gate requires one
   identity (`multiple_symbol_identities`), no library collision (same identity, different definition), and
   `alternative_problems()`: EVERY alternative must map one-to-one onto the recorded terminals (tip + base within
   template tau) with a recorded number (exactly that number when CONFIRMED). Audit looks symbols up by identity,
-  re-derives hits incl. placed pins, re-resolves (status, id_state, identities) and re-runs alternative_problems.
+  re-derives hits incl. placed pins, re-resolves and compares the FULL identity record
+  (`identity_record_problems`: exact status/id_state/symbols/identities/collision/note/numbers, positions within
+  IDENTITY_GEOM_TOL=1e-9) and the pin evidence against it (`pin_evidence_identity_problems`). `audit_candidate` and
+  `reaudit` take `baseline` as a REQUIRED argument (None fails closed).
 - B2 evidence roles: discovery (all prims of the source NONE clusters), proposal (source), template (matched),
   stripped, excluded (= source - matched - stripped, left out by a relaxation). template/stripped/excluded must
   partition the proposal exactly; stripped/excluded need +RELAX; duplicates / overlaps / missing discovery fail

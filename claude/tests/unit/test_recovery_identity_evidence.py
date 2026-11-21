@@ -104,7 +104,7 @@ def test_resolve_qualified_is_order_independent_and_baseline_resolve_is_unchange
     cl = _rebuild(0, c.matched_prim_ids, {q.id: q for q in pi.prims})
     hits = tp.match_cluster(cl, [XF, twin])
     assert len(hits) >= 2
-    a, b = tp.resolve(cl, hits, qualified=True), tp.resolve(cl, list(reversed(hits)), qualified=True)
+    a, b = tp.resolve_qualified(cl, hits), tp.resolve_qualified(cl, list(reversed(hits)))
     assert a == b and len(a.identities) == 2
     legacy = tp.resolve(cl, hits)                                       # baseline call: name-only fields as before
     assert legacy.symbols == ("XF",) and legacy.status == a.status and legacy.id_state == a.id_state
@@ -285,7 +285,7 @@ def test_pin_exchange_shortcut_needs_one_library_qualified_identity():
     pi, cls = page(draw(r))
     base = detect_pins(pi, cls, [r])
     cl = next(cr.cluster for cr in base if cr.resolution.status == "UNIQUE")
-    one = tp.resolve(cl, tp.match_cluster(cl, [r]), qualified=True)
+    one = tp.resolve_qualified(cl, tp.match_cluster(cl, [r]))
     assert one.id_state == "PIN_EQUIVALENT_CANONICAL" and len(one.identities) == 1
-    two = tp.resolve(cl, tp.match_cluster(cl, [r, r2]), qualified=True)
+    two = tp.resolve_qualified(cl, tp.match_cluster(cl, [r, r2]))
     assert len(two.identities) == 2 and two.id_state == "AMBIGUOUS"
