@@ -114,4 +114,540 @@ MUTATIONS = [
     ("M39-ocr-names-conflict", "ecci/constraints.py",
      "if nm is not None and nm.confirmed:\n            by_name", "if nm is not None:\n            by_name"),
     ("M40-quarantine-not-excluded", "ecci/solver.py",
- Û­üá¼­zÊ&ŠÛ^t¤°(€€€€ ‰4ÄØÐµÉ½Õ¹‘ÑÉ¥Àµ¥¹½É•Ìµ•áÑÉ„µ½¹¹•Ñ¥½¸ˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€€€€€¥˜à¥¸¹•Ñ}½˜…¹±•¸¡¹•Ñ±¥ÍÑmp‰¹•ÑÍp‰um¹•Ñ}½™máut¤€ø€Äèˆ°€ˆ€€€€€€€¥˜…±Í”èˆ¤°(€€€€Œ€´´´´4Ð¸È¡…É‘•¹¥¹œ€¡ÄLÈ•½µ•ÑÉä°ÈA%9}1%9LÁ…”…Õ‘¥Ð°ÌP½Ù•É…”…Ñ”¤(€€€€ ‰4ÄØÔµÌÈµ•¹‘Á½¥¹ÑÌµ¹½Ðµ¡•­•ˆ°€‰•¤½ÝÉ¥Ñ•È¹Áäˆ°(€€€€€ˆ€€€€€€€¥˜½Ð¥Ì9½¹”éq¸€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÝôèÍÑÕˆÍ•µ•¹Ðˆ°€ˆ€€€€€€€¥˜…±Í”éq¸€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÝôèÍÑÕˆÍ•µ•¹Ðˆ¤°(€€€€ ‰4ÄØØµÌÈµ±¥¹•…”µÁÉ¥´µ¹½Ðµ¡•­•ˆ°€‰•¤½ÝÉ¥Ñ•È¹Áäˆ°(€€€€€ˆ€€€€€€€¥˜•mp‰±¥¹•…•p‰t€„ôm™p‰•½´éíÍÑÕ‰lÁÉ¥´uõp‰tèˆ°€ˆ€€€€€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄØÜµÌÈµ½É¥•¹Ñ…Ñ¥½¸µ±…‰•°µ¥¹½É•ˆ°€‰•¤½ÝÉ¥Ñ•È¹Áäˆ°(€€€€€ˆ€€€€€€€•±¥˜½Ð€„ôÍÑÕ‰mp‰½É¥•¹Ñ…Ñ¥½¹p‰tèˆ°€ˆ€€€€€€€•±¥˜…±Í”èˆ¤°(€€€€ ‰4ÄØàµÌÈµÑ½±•É…¹”µÁ½±¥äµ¥¹½É•ˆ°€‰•¤½ÝÉ¥Ñ•È¹Áäˆ°(€€€€€ˆ€€€€€€€¥˜Ñ½°€øÌÉ}Ñ½±•É…¹”¡Á±•¸°LÉ}QU}	M}5`°LÉ}I1}5`¤€¨€ Ä€¬€Å”´ÄÈ¤èˆ°€ˆ€€€€€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄØäµÌÈµ¥Ñ•µÝ¥Ñ¡½ÕÐµÍÑÕˆµ…•ÁÑ•ˆ°€‰•¤½ÝÉ¥Ñ•È¹Áäˆ°(€€€€€ˆ€€€€€€€€€€€¥˜ÌÈéq¸€€€€€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÝôè¥Ñ•Ìˆ°€ˆ€€€€€€€€€€€¥˜…±Í”éq¸€€€€€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÝôè¥Ñ•Ìˆ¤°(€€€€ ‰4ÄÜÀµÌÈµÁ…”µÍ•µ•¹Ðµ¹½Ðµ½µÁ…É•ˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€•±¥˜m±¥ÍÐ¡µ…À¡™±½…Ð°Í•lÁt¤¤°±¥ÍÐ¡µ…À¡™±½…Ð°Í•lÅt¤¥t€„ômÍÑmp‰…p‰t°ÍÑmp‰‰p‰utèˆ°€ˆ€€€€€€€•±¥˜…±Í”èˆ¤°(€€€€ ‰4ÄÜÄµÌÈµÁ…”µ…Õ‘¥ÐµÝ¥Ñ¡½ÕÐµÁ…”µÁ…ÍÍ•Ìˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€É•ÑÕÉ¸mp‰LÈ…Õ‘¥Ð	1=-èÍ½ÕÉ”µÁ…”•½µ•ÑÉäÕ¹…Ù…¥±…‰±•p‰tˆ°€ˆ€€€€€€€É•ÑÕÉ¸mtˆ¤°(€€€€ ‰4ÄÜÈµÍåµÉ•Œµ¥¹½É•Ìµ½¹¸µÌÈˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€@€¬ôm™p‰½¹¹•Ñ¥Ù¥Ñäèíáõpˆ™½Èà¥¸ÌÉ}ÁÉ½‰±•µÌ¡½¹¹}‘½Œ¥tˆ°€ˆ€€€Á…ÍÌˆ¤°(€€€€ ‰4ÄÜÌµÁ¥¸µ±¥¹•Ìµ™¥±”µ¡•¬µ½™˜ˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€@€¬ôÁ¥¹}±¥¹•Í}ÁÉ½‰±•µÌ¡É•Œ°Á…É…µÌ¥q¸ˆ°€ˆˆ¤°(€€€€ ‰4ÄÜÐµÁ¥¸µ±¥¹•Ìµ…Õ‘¥Ðµ¹¼µÁ…”µÙ•É¥™¥•ˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€É•ÑÕÉ¸íp‰ÍÑ…ÑÕÍpˆèA1}	1=-°p‰ÁÉ½‰±•µÍpˆèmp‰Í½ÕÉ”µÁ…”•½µ•ÑÉäÕ¹…Ù…¥±…‰±”èA%9}1%9LÍÕÁÁ½ÉÐ¹½Ð…Õ‘¥Ñ•‘p‰t°ˆ°(€€€€€ˆ€€€€€€€É•ÑÕÉ¸íp‰ÍÑ…ÑÕÍpˆèA1}YI%%°p‰ÁÉ½‰±•µÍpˆèmp‰Í½ÕÉ”µÁ…”•½µ•ÑÉäÕ¹…Ù…¥±…‰±”èA%9}1%9LÍÕÁÁ½ÉÐ¹½Ð…Õ‘¥Ñ•‘p‰t°ˆ¤°(€€€€ ‰4ÄÜÔµÁ¥¸µ±¥¹•Ìµ…Õ‘¥Ðµ¥¹½É•ÌµÁ…”µ¥¹‘•àˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€¥˜Ý…¹Ñ}Á¤€„ô¡…Ù•}Á¤èˆ°€ˆ€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄÜØµÁ¥¸µ±¥¹•Ìµ…Õ‘¥Ðµ¥¹½É•Ìµ‘¥ÍÁ±…•µ•¹Ðˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€¥˜m±¹mp‰•¹‘p‰t°±¹mp‰™…Ép‰ut¹½Ð¥¸€¡m„°‰t°mˆ°…t¤èˆ°€ˆ€€€€€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄÜÜµÁ¥¸µ±¥¹•Ìµ…Õ‘¥ÐµÍ­¥ÁÌµÉÕ±”ˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€€€€€€€€€¥˜Ý¡äéq¸€€€€€€€€€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÑ…ôèÁ…”±¥¹”ˆ°€ˆ€€€€€€€€€€€€€€€¥˜…±Í”éq¸€€€€€€€€€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÑ…ôèÁ…”±¥¹”ˆ¤°(€€€€ ‰4ÄÜàµÁ¥¸µ±¥¹•Ìµ…Õ‘¥Ðµµ¥ÍÍ¥¹œµÁÉ¥´µ¥¹½É•ˆ°€‰•¤½ÍåµÉ•Œ¹Áäˆ°(€€€€€ˆ€€€€€€€€€€€€€€€€€€€@¹…ÁÁ•¹¡™p‰íÑ…ôè±¥¹”ÁÉ¥µ¥Ñ¥Ù”í±¹lÁÉ¥´uô‘½•Ì¹½Ð•á¥ÍÐ½¸Ñ¡”Á…•pˆ¥q¸ˆ°€ˆˆ¤°(€€€€ ‰4ÄÜäµÐµ…Ñ”µÁ…ÍÍ•Ìµé•É¼µµ…ÁÁ•ˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€¥˜mp‰•áÁ½ÉÑ•‘}Á¥¹Í}µ…ÁÁ•‘p‰t€ð€È½ÈÍ½É•€ôô€À½Èmp‰µ…ÁÁ¥¹}½Ù•É…•p‰t¥Ì9½¹”èˆ°€ˆ€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄàÀµÐµ…Ñ”µ¥¹½É•Ìµ½Ù•É…”ˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€¥˜mp‰µ…ÁÁ¥¹}½Ù•É…•p‰t€ðÁ½±¥åmp‰µ¥¹}µ…ÁÁ¥¹}½Ù•É…•p‰tèˆ°€ˆ€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄàÄµÐµ…Ñ”µÝ¥Ñ¡½ÕÐµÁ½±¥äµÁ…ÍÍ•Ìˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€ÁÀ€ôÑ}Á½±¥å}ÁÉ½‰±•µÌ¡Á½±¥ä¥q¸€€€¥˜ÁÀèˆ°€ˆ€€€ÁÀ€ôÑ}Á½±¥å}ÁÉ½‰±•µÌ¡Á½±¥ä¥q¸€€€¥˜…±Í”èˆ¤°(€€€€ ‰4ÄàÈµÐµ…Ñ”µ™Àµ½¹±äµ½±µÉÕ±”ˆ°€‰•¤½´Ñ}Á¥Á•±¥¹”¹Áäˆ°(€€€€€ˆ€€€Mmp‰É½Õ¹‘}ÑÉÕÑ¡p‰t€ô…Ñ•mp‰ÍÑ…Ñ•p‰tˆ°€ˆ€€€Mmp‰É½Õ¹‘}ÑÉÕÑ¡p‰t€ôAML¥˜mp‰Á…¥ÉÍp‰ump‰Ap‰t€ôô€À•±Í”%0ˆ¤°(€€€€ ‰4ÄàÌµ…Ñ”µÑ…‰±”µ¥¹½¹±ÕÍ¥Ù”µÁ…ÍÍ•Ìˆ°€‰•¤½´Ñ}Á¥Á•±¥¹”¹Áäˆ°(€€€€€ˆ€€€€€€€…Ñ•ÍmÍÑt€ô%0¥˜%0¥¸Ù…±Ì•±Í”€¡AML¥˜…±°¡Ø€ôôAML™½ÈØ¥¸Ù…±Ì¤•±Í”	1=-¤ˆ°(€€€€€ˆ€€€€€€€…Ñ•ÍmÍÑt€ô%0¥˜%0¥¸Ù…±Ì•±Í”€¡	1=-¥˜	1=-¥¸Ù…±Ì•±Í”AML¤ˆ¤°(€€€€ ‰4ÄàÐµÕ¹µ…Ñ¡•µÐµÁ¥¹ÌµÁÉ½µ½Ñ•ˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€€€€€€€€€p‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹ÍpˆèÍ½ÉÑ•¡míp‰É•™pˆèœ¹É•˜°p‰¹Õµ‰•Épˆèœ¹¹Õµ‰•È°p‰ÍÑ…Ñ•pˆèp‰U9-9=]9pˆ°ˆ°(€€€€€ˆ€€€€€€€€€€€p‰Õ¹µ…Ñ¡•‘}Ñ}Á¥¹ÍpˆèÍ½ÉÑ•¡míp‰É•™pˆèœ¹É•˜°p‰¹Õµ‰•Épˆèœ¹¹Õµ‰•È°p‰ÍÑ…Ñ•pˆèp‰YI%%pˆ°ˆ¤°(€€€€ ‰4ÄàØµÐµ±…¥µ•µ½Õ¹Ñ•µ…ÌµÍ½É•ˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€€€€€€€€€±…¥µ•‘m…¹‘lÁut€ôÁmp‰½‰©•Ñp‰uq¸ˆ°€ˆ€€€€€€€€€€€±…¥µ•‘m…¹‘lÁut€ôÁmp‰½‰©•Ñp‰uq¸€€€€€€€€€€€Í½É•¹…‘¡…¹‘lÁt¥q¸ˆ¤°(€€€€ ‰4ÄàÜµÐµ‘ÕÁ±¥…Ñ”µ±…¥´µ…±±½Ý•ˆ°€‰•¤½­¥…‘}É½Õ¹‘ÑÉ¥À¹Áäˆ°(€€€€€ˆ€€€€€€€€€€€¥˜±•¸¡…¹¤€„ô€Ä½È…¹‘lÁt¥¸±…¥µ•èˆ°€ˆ€€€€€€€€€€€¥˜±•¸¡…¹¤€„ô€Äèˆ¤°(€€€€ ‰4ÄàÔµÁÉ½Ù•¹…¹”µ¥¹½É•ÌµÁ¥¸µ±¥¹•Ìµ…Õ‘¥Ðˆ°€‰•¤½´Ñ}Á¥Á•±¥¹”¹Áäˆ°(€€€€€ˆ€€€Mmp‰ÁÉ½Ù•¹…¹•p‰t€ô€¡%0¥˜½Ñ¡•È½ÈÁ±…mp‰ÍÑ…ÑÕÍp‰t€ôôÍåµÉ•Œ¹A1}%0ˆ°€ˆ€€€Mmp‰ÁÉ½Ù•¹…¹•p‰t€ô€¡%0¥˜½Ñ¡•Èˆ¤°)t(()!I9MM}QMQL€ô€ (€€€€‰Ñ•ÍÑÌ½Õ¹¥Ð½Ñ•ÍÑ}Ñ}™…¥±±½Í•¹ÁäèéÑ•ÍÑ}µÕÑ…Ñ¥½¹}ÉÕ¹¹•É}É•Á½ÉÑÍ}¥¹}…}™¥á•‘}½É‘•É}…¹‘}½Õ¹ÑÍ}•Ù•Éå}µÕÑ…Ñ¥½¸ˆ°(€€€€ŒÑ¡”ÉÕ¹¹•ÈÌ½Ý¸…‘Ù•ÉÍ…É¥…°Ñ•ÍÑÌèÑ¡•äÑ•ÍÐÑ¡¥Ì™¥±”½¸„™…­”Á…­…”°¹½Ð$°Í¼Ñ¡•ä…¸¹•¥Ñ¡•È(€€€€Œ‘•Ñ•Ð¹½È‰”‰É½­•¸‰ä„µÕÑ…Ñ¥½¸ìÉÕ¹¹¥¹œÑ¡•´¥¸•… ½ÁäÝ½Õ±½¹±ä½ÍÐÑ¥µ”(€€€€‰Ñ•ÍÑÌ½Õ¹¥Ð½Ñ•ÍÑ}µÕÑ…Ñ¥½¹}ÉÕ¹¹•È¹Áäˆ°(¤(()‘•˜}¥Í}¡…É¹•ÍÌ¡±…ÍÍ¹…µ”èÍÑÈ°¹…µ”èÍÑÈ¤€´ø‰½½°è(€€€™½ÈÐ¥¸!I9MM}QMQLè(€€€€€€€µ½°|°™¸€ôÐ¹Á…ÉÑ¥Ñ¥½¸ ˆèèˆ¤(€€€€€€€‘½ÑÑ•€ôµ½‘lè´Ít¹É•Á±…” ˆ¼ˆ°€ˆ¸ˆ¤¥˜µ½¹•¹‘ÍÝ¥Ñ  ˆ¹Áäˆ¤•±Í”µ½¹É•Á±…” ˆ¼ˆ°€ˆ¸ˆ¤(€€€€€€€¥˜€¡±…ÍÍ¹…µ”€ôô‘½ÑÑ•½È±…ÍÍ¹…µ”¹ÍÑ…ÉÑÍÝ¥Ñ ¡‘½ÑÑ•€¬€ˆ¸ˆ¤¤…¹€¡¹½Ð™¸½È¹…µ”¹ÍÁ±¥Ð ‰lˆ¥lÁt€ôô™¸¤è(€€€€€€€€€€€É•ÑÕÉ¸QÉÕ”(€€€É•ÑÕÉ¸…±Í”(()-%11°MUIY%Y°%9Y1%€ô€‰-%11ˆ°€‰MUIY%Yˆ°€‰%9Y1%ˆ)=11Q%=9}II=H°!I9MM}II=H°Q%5=UP€ô€‰=11Q%=9}II=Hˆ°€‰!I9MM}II=Hˆ°€‰Q%5=UPˆ)MQQUML€ô€¡-%11°MUIY%Y°%9Y1%°=11Q%=9}II=H°!I9MM}II=H°Q%5=UP¤)MU%Q}Q%5=UP€ô€äÀÀ(Œ…¸•á•ÁÑ¥½¸½˜½¹”½˜Ñ¡•Í”ÑåÁ•Ì¥¸„Ñ•ÍÐ¥Ì„‰É½­•¸¥µÁ½ÉÐ€¼Í½ÕÉ”°¹½Ð„Ñ•ÍÐ‘•Ñ•Ñ¥¹œÑ¡”µÕÑ…Ñ¥½¸)%5A=IQ%M €ô€ ‰Må¹Ñ…áÉÉ½Èˆ°€‰%¹‘•¹Ñ…Ñ¥½¹ÉÉ½Èˆ°€‰Q…‰ÉÉ½Èˆ°€‰%µÁ½ÉÑÉÉ½Èˆ°€‰5½‘Õ±•9½Ñ½Õ¹‘ÉÉ½Èˆ¤(()‘•˜ÉÕ¹}ÍÕ¥Ñ”¡Á­}É½½ÐèA…Ñ °©Õ¹¥ÐèA…Ñ ¤€´øÑÕÁ±•m¥¹Ð°ÍÑÉtè(€€€€Œ!I9MM}QMQL¡•¬Ñ¡¥Ì™¥±”Ì½Ý¸Á…ÑÑ•É¹Ì……¥¹ÍÐÑ¡”€¡µÕÑ…Ñ•¤Í½ÕÉ•Ì°Í¼Ñ¡•ä™…¥°™½ÈYIdµÕÑ…Ñ¥½¸(€€€€Œ…¹Ý½Õ±µ…­”•… ½¹”±½½¬-%11¸Q¡•ä…É”Ñ•ÍÑÌ½˜Ñ¡”ÉÕ¹¹•È°¹½Ð½˜$è‘•Í•±•Ñ•¥¸Ñ¡”½Áä¸(€€€‘•Í•°€ôm„™½ÈÐ¥¸!I9MM}QMQL™½È„¥¸€ ˆ´µ‘•Í•±•Ðˆ°Ð¥t(€€€À€ôÍÕ‰ÁÉ½•ÍÌ¹ÉÕ¸¡mÍåÌ¹•á•ÕÑ…‰±”°€ˆµ´ˆ°€‰ÁåÑ•ÍÐˆ°€ˆµÄˆ°€ˆµàˆ°€ˆµÀˆ°€‰¹¼é…¡•ÁÉ½Ù¥‘•Èˆ°€©‘•Í•°°(€€€€€€€€€€€€€€€€€€€€€€€˜ˆ´µ©Õ¹¥Ñáµ°õí©Õ¹¥Ñôˆ°€‰Ñ•ÍÑÌ‰t°(€€€€€€€€€€€€€€€€€€€€€€ÝõÁ­}É½½Ð°…ÁÑÕÉ•}½ÕÑÁÕÐõQÉÕ”°Ñ•áÐõQÉÕ”°Ñ¥µ•½ÕÐõMU%Q}Q%5=UP¤(€€€É•ÑÕÉ¸À¹É•ÑÕÉ¹½‘”°€¡À¹ÍÑ‘½ÕÐ€¬À¹ÍÑ‘•ÉÈ¤(()‘•˜}¥µÁ½ÉÑ¥Í ¡Ñ•áÐèÍÑÈ¤€´ø‰½½°è(€€€Ð€ôÑ•áÐ½È€ˆˆ(€€€É•ÑÕÉ¸…¹ä¡Ð¹ÍÑ…ÉÑÍÝ¥Ñ ¡¸¤½È˜‰€€í¹ôˆ¥¸Ð½È˜‰q¹í¹ôèˆ¥¸Ð™½È¸¥¸%5A=IQ%M ¤(()‘•˜±…ÍÍ¥™ä¡½‘”è¥¹Ð°©Õ¹¥Ñ}Ñ•áÐèÍÑÈð9½¹”°½ÕÐèÍÑÈ¤€´øÑÕÁ±•mÍÑÈ°ÍÑÉtè(€€€€ˆˆˆ¡ÍÑ…ÑÕÌ°‘•Ñ…¥°¤½˜½¹”ÁåÑ•ÍÐÉÕ¸¸MUIY%Y¡•É”µ•…¹Ì€‰½±±•Ñ•…¹…±°Á…ÍÍ•ˆ¸ˆˆˆ(€€€Ñ…¥°€ô€¡½ÕÐ½È€ˆˆ¤¹ÍÑÉ¥À ¤¹ÍÁ±¥Ñ±¥¹•Ì ¤(€€€±…ÍÐ€ôÑ…¥±l´ÅulèÄØÁt¥˜Ñ…¥°•±Í”€ˆˆ(€€€¥˜½‘”€ôô€Ìè(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰ÁåÑ•ÍÐ¥¹Ñ•É¹…°•ÉÉ½È€¡•á¥Ð€Ì¤èí±…ÍÑôˆ(€€€¥˜½‘”€ôô€Ðè(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰ÁåÑ•ÍÐÕÍ…”•ÉÉ½È€¡•á¥Ð€Ð¤èí±…ÍÑôˆ(€€€¥˜½‘”€ôô€Ôè(€€€€€€€É•ÑÕÉ¸=11Q%=9}II=H°€‰¹¼Ñ•ÍÑÌ½±±•Ñ•€¡•á¥Ð€Ô¤ˆ(€€€¥˜½‘”€ôô€Èè(€€€€€€€Ñ•áÐ€ô€¡½ÕÐ½È€ˆˆ¤€¬€¡©Õ¹¥Ñ}Ñ•áÐ½È€ˆˆ¤(€€€€€€€¥˜€‰½±±•Ñ¥½¸™…¥±ÕÉ”ˆ¥¸Ñ•áÐ½È€ ‰•ÉÉ½Èˆ¥¸Ñ•áÐ¹±½Ý•È ¤…¹€ ‰½±±•Ðˆ¥¸Ñ•áÐ¹±½Ý•È ¤½È}¥µÁ½ÉÑ¥Í ¡½ÕÐ¤¤¤è(€€€€€€€€€€€É•ÑÕÉ¸=11Q%=9}II=H°˜‰½±±•Ñ¥½¸€¼¥µÁ½ÉÐ•ÉÉ½È€¡•á¥Ð€È¤èí±…ÍÑôˆ(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰ÁåÑ•ÍÐ¥¹Ñ•ÉÉÕÁÑ•€¡•á¥Ð€È¤èí±…ÍÑôˆ(€€€¥˜½‘”¹½Ð¥¸€ À°€Ä¤è(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰Õ¹•áÁ•Ñ•ÁåÑ•ÍÐ•á¥ÐÍÑ…ÑÕÌí½‘•ôèí±…ÍÑôˆ(€€€¥˜¹½Ð©Õ¹¥Ñ}Ñ•áÐè(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰¹¼)U¹¥ÐÉ•Á½ÉÐ€¡•á¥Ðí½‘•ô¤ˆ(€€€ÑÉäè(€€€€€€€É½½Ð€ôP¹™É½µÍÑÉ¥¹œ¡©Õ¹¥Ñ}Ñ•áÐ¤(€€€•á•ÁÐP¹A…ÉÍ•ÉÉ½È…Ìàè(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰Õ¹É•…‘…‰±”)U¹¥ÐÉ•Á½ÉÐèíáôˆ(€€€…Í•Ì°™…¥±ÕÉ•Ì°•ÉÉ½ÉÌ€ô€À°mt°mt(€€€™½ÈŒ¥¸É½½Ð¹¥Ñ•È ‰Ñ•ÍÑ…Í”ˆ¤è(€€€€€€€…Í•Ì€¬ô€Ä(€€€€€€€¹¥€ô˜‰íŒ¹•Ð ±…ÍÍ¹…µ”œ°€œœ¥ôèéíŒ¹•Ð ¹…µ”œ°€œœ¥ôˆ(€€€€€€€¥˜}¥Í}¡…É¹•ÍÌ¡Œ¹•Ð ‰±…ÍÍ¹…µ”ˆ°€ˆˆ¤°Œ¹•Ð ‰¹…µ”ˆ°€ˆˆ¤¤è(€€€€€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰‘•Í•±•Ñ•¡…É¹•ÍÌÍ•±˜µÑ•ÍÐÉ…¸èí¹¥‘ôˆ(€€€€€€€™½È ¥¸Œè(€€€€€€€€€€€¥¹™¼€ô€¡¹¥° ¹•Ð ‰µ•ÍÍ…”ˆ¤½È€ˆˆ° ¹Ñ•áÐ½È€ˆˆ¤(€€€€€€€€€€€¥˜ ¹Ñ…œ€ôô€‰™…¥±ÕÉ”ˆè(€€€€€€€€€€€€€€€™…¥±ÕÉ•Ì¹…ÁÁ•¹¡¥¹™¼¤(€€€€€€€€€€€•±¥˜ ¹Ñ…œ€ôô€‰•ÉÉ½Èˆè(€€€€€€€€€€€€€€€•ÉÉ½ÉÌ¹…ÁÁ•¹¡¥¹™¼¤(€€€¥˜…Í•Ì€ôô€Àè(€€€€€€€É•ÑÕÉ¸=11Q%=9}II=H°€ˆÀÑ•ÍÑÌ½±±•Ñ•ˆ(€€€½±°€ômà™½Èà¥¸•ÉÉ½ÉÌ¥˜€‰½±±•Ñ¥½¸™…¥±ÕÉ”ˆ¥¸álÅt½È¹½ÐálÁt¹ÍÁ±¥Ð ˆèèˆ¥l´Åut(€€€¥˜½±°è(€€€€€€€É•ÑÕÉ¸=11Q%=9}II=H°˜‰½±±•Ñ¥½¸•ÉÉ½Èèí½±±lÁulÁuôí½±±lÁulÅuô‰lèÄØÁt(€€€¥µÀ€ômà™½Èà¥¸™…¥±ÕÉ•Ì€¬•ÉÉ½ÉÌ¥˜}¥µÁ½ÉÑ¥Í ¡álÅt¤½È}¥µÁ½ÉÑ¥Í ¡álÉt¥t(€€€¥˜¥µÀè(€€€€€€€É•ÑÕÉ¸=11Q%=9}II=H°˜‰¥µÁ½ÉÐ€¼Íå¹Ñ…à•ÉÉ½È¥¸í¥µÁlÁulÁuôèí¥µÁlÁulÅuô‰lèÄØÁt(€€€¥˜½‘”€ôô€Àè(€€€€€€€¥˜™…¥±ÕÉ•Ì½È•ÉÉ½ÉÌè(€€€€€€€€€€€É•ÑÕÉ¸!I9MM}II=H°€‰•á¥Ð€À‰ÕÐÑ¡”É•Á½ÉÐ¡…Ì™…¥±ÕÉ•Ì€¼•ÉÉ½ÉÌˆ(€€€€€€€É•ÑÕÉ¸MUIY%Y°˜‰í…Í•ÍôÑ•ÍÑÌÁ…ÍÍ•ˆ(€€€¥˜™…¥±ÕÉ•Ìè(€€€€€€€É•ÑÕÉ¸-%11°˜‰%1í™…¥±ÕÉ•ÍlÁulÁuôèí™…¥±ÕÉ•ÍlÁulÅuô‰lèÄØÁt(€€€¥˜•ÉÉ½ÉÌè(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰½¹±äÍ•ÑÕÀ€¼Ñ•…É‘½Ý¸•ÉÉ½ÉÌ°¹¼Ñ•ÍÐ™…¥±•èí•ÉÉ½ÉÍlÁulÁuôí•ÉÉ½ÉÍlÁulÅuô‰lèÄØÁt(€€€É•ÑÕÉ¸!I9MM}II=H°€‰•á¥Ð€Ä‰ÕÐÑ¡”É•Á½ÉÐ¡…Ì¹¼™…¥±ÕÉ”ˆ(()‘•˜ÉÕ¹}…¹‘}±…ÍÍ¥™ä¡Ý½É¬èA…Ñ ¤€´øÑÕÁ±•mÍÑÈ°ÍÑÉtè(€€€©Õ¹¥Ð€ôÝ½É¬¹Á…É•¹Ð€¼€‰©Õ¹¥Ð¹áµ°ˆ(€€€ÑÉäè(€€€€€€€½‘”°½ÕÐ€ôÉÕ¹}ÍÕ¥Ñ”¡Ý½É¬°©Õ¹¥Ð¤(€€€•á•ÁÐÍÕ‰ÁÉ½•ÍÌ¹Q¥µ•½ÕÑáÁ¥É•è(€€€€€€€É•ÑÕÉ¸Q%5=UP°˜‰ÍÕ¥Ñ”•á••‘•íMU%Q}Q%5=UQõÌˆ(€€€•á•ÁÐá•ÁÑ¥½¸…Ìàè€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ŒÑ¡”ÉÕ¹¹•È¥ÑÍ•±˜™…¥±•è¹•Ù•È-%11(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰ÉÕ¹¹•È™…¥±•èíÑåÁ”¡à¤¹}}¹…µ•}}ôèíáô‰lèÄØÁt(€€€ÑÉäè(€€€€€€€Ñ•áÐ€ô©Õ¹¥Ð¹É•…‘}Ñ•áÐ ¤¥˜©Õ¹¥Ð¹¥Í}™¥±” ¤•±Í”9½¹”(€€€•á•ÁÐ=MÉÉ½È…Ìàè(€€€€€€€É•ÑÕÉ¸!I9MM}II=H°˜‰…¹¹½ÐÉ•…)U¹¥ÐÉ•Á½ÉÐèíáôˆ(€€€É•ÑÕÉ¸±…ÍÍ¥™ä¡½‘”°Ñ•áÐ°½ÕÐ¤(()‘•˜}½µÁ¥±•Ì¡É•°èÍÑÈ°Á…Ñ èA…Ñ ¤€´øÍÑÈè(€€€€ˆˆˆœœ¥˜Ñ¡”µÕÑ…Ñ•™¥±”¥ÌÍÑ¥±°Íå¹Ñ…Ñ¥…±±äÙ…±¥°•±Í”Ñ¡”•ÉÉ½È€¡„‰É½­•¸Í½ÕÉ”¥Ì¹½Ð„­¥±°¤¸ˆˆˆ(€€€¥˜É•°¹•¹‘ÍÝ¥Ñ  ˆ¹Áäˆ¤è(€€€€€€€ÑÉäè(€€€€€€€€€€€½µÁ¥±”¡Á…Ñ ¹É•…‘}Ñ•áÐ ¤°ÍÑÈ¡Á…Ñ ¤°€‰•á•Œˆ¤(€€€€€€€•á•ÁÐMå¹Ñ…áÉÉ½È…Ìàè(€€€€€€€€€€€É•ÑÕÉ¸˜‰íÑåÁ”¡à¤¹}}¹…µ•}}ôèíáôˆ(€€€•±¥˜É•°¹•¹‘ÍÝ¥Ñ  ˆ¹Í ˆ¤è(€€€€€€€À€ôÍÕ‰ÁÉ½•ÍÌ¹ÉÕ¸¡l‰‰…Í ˆ°€ˆµ¸ˆ°ÍÑÈ¡Á…Ñ ¥t°…ÁÑÕÉ•}½ÕÑÁÕÐõQÉÕ”°Ñ•áÐõQÉÕ”¤(€€€€€€€¥˜À¹É•ÑÕÉ¹½‘”€„ô€Àè(€€€€€€€€€€€É•ÑÕÉ¸˜‰‰…Í €µ¸èíÀ¹ÍÑ‘•ÉÈ¹ÍÑÉ¥À ¥lèÄÈÁuôˆ(€€€É•ÑÕÉ¸€ˆˆ(()‘•˜µ…­•}½Áä¡ÑèA…Ñ ¤€´øA…Ñ è(€€€€ˆˆ‰AÉ¥Ù…Ñ”½Áä½˜Ñ¡”Á…­…”9Ñ¡”±…Õ‘”´¨Ý½É­™±½ÝÌÑ¡”ÍÕ¥Ñ”É•…‘Ì¸]¥Ñ¡½ÕÐÑ¡”Ý½É­™±½ÝÌ•Ù•ÉäÉÕ¸¥¸(€€€Ñ¡”½Áä™…¥±•½¸„µ¥ÍÍ¥¹œ™¥±”°Í¼•Ù•ÉäµÕÑ…Ñ¥½¸Ý…ÌÉ•Á½ÉÑ•-%11Ý¡…Ñ•Ù•È¥Ð¡…¹•¸ˆˆˆ(€€€Ý½É¬€ôÑ€¼€‰±…Õ‘”ˆ(€€€Í¡ÕÑ¥°¹½ÁåÑÉ•”¡I==P°Ý½É¬°¥¹½É”õÍ¡ÕÑ¥°¹¥¹½É•}Á…ÑÑ•É¹Ì (€€€€€€€€‰}}Áå…¡•}|ˆ°€ˆ¹ÁåÑ•ÍÑ}…¡”ˆ°€ˆ¹¡åÁ½Ñ¡•Í¥Ìˆ°€‰½ÕÐˆ°€ˆ¨¹•œµ¥¹™¼ˆ¤¤(€€€Ý˜€ôI==P¹Á…É•¹Ð€¼€ˆ¹¥Ñ¡Õˆˆ€¼€‰Ý½É­™±½ÝÌˆ(€€€€¡Ñ€¼€ˆ¹¥Ñ¡Õˆˆ€¼€‰Ý½É­™±½ÝÌˆ¤¹µ­‘¥È¡Á…É•¹ÑÌõQÉÕ”¤(€€€™½È˜¥¸Í½ÉÑ•¡Ý˜¹±½ˆ ‰±…Õ‘”´¨¹åµ°ˆ¤¤è(€€€€€€€Í¡ÕÑ¥°¹½ÁäÈ¡˜°Ñ€¼€ˆ¹¥Ñ¡Õˆˆ€¼€‰Ý½É­™±½ÝÌˆ€¼˜¹¹…µ”¤(€€€É•ÑÕÉ¸Ý½É¬(()‘•˜‰…Í•±¥¹” ¤€´øÑÕÁ±•m¥¹Ð°ÍÑÉtè(€€€€ˆˆ‰Q¡”U95UQQÍÕ¥Ñ”µÕÍÐÁ…ÍÌ±•…¹±ä€¡½±±•Ñ•°…±°Á…ÍÍ•¤¥¸Ñ¡”Í…µ”­¥¹½˜½Áäì½Ñ¡•ÉÝ¥Í”-%11(€€€µ•…¹Ì¹½Ñ¡¥¹œ¸I•ÑÕÉ¹Ì€ À°‘•Ñ…¥°¤½¹±ä™½È„±•…¸Á…ÍÌ¸ˆˆˆ(€€€Ý¥Ñ Ñ•µÁ™¥±”¹Q•µÁ½É…Éå¥É•Ñ½Éä ¤…ÌÑè(€€€€€€€ÍÐ°‘•Ñ…¥°€ôÉÕ¹}…¹‘}±…ÍÍ¥™ä¡µ…­•}½Áä¡A…Ñ ¡Ñ¤¤¤(€€€É•ÑÕÉ¸€ À°‘•Ñ…¥°¤¥˜ÍÐ€ôôMUIY%Y•±Í”€ Ä°˜‰íÍÑôèí‘•Ñ…¥±ôˆ¤(()‘•˜¡•­}½¹”¡µÕÐ¤€´ø‘¥Ðè(€€€€ˆˆ‰ÁÁ±ä½¹”µÕÑ…Ñ¥½¸Ñ¼„ÁÉ¥Ù…Ñ”½Áä½˜Ñ¡”Á…­…”…¹ÉÕ¸Ñ¡”ÍÕ¥Ñ”Ñ¡•É”¸9¼Í¡…É•ÍÑ…Ñ”°Í¼Ñ¡•Í”(€€€ÉÕ¸¥¸Á…É…±±•°ìÑ¡”É•Á½ÉÐ¥ÌÍÑ¥±°ÁÉ¥¹Ñ•¥¸5UQQ%=9L½É‘•È¸9•Ù•ÈÉ…¥Í•Ì¸ˆˆˆ(€€€µ¥€ôµÕÑlÁt¥˜¥Í¥¹ÍÑ…¹”¡µÕÐ°ÑÕÁ±”¤…¹µÕÐ•±Í”É•ÁÈ¡µÕÐ¤(€€€ÑÉäè(€€€€€€€|°É•°°½±°¹•Ü€ôµÕÐ(€€€€€€€¥˜¹½Ð½±½È½±€ôô¹•Üè(€€€€€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆè%9Y1%°€‰‘•Ñ…¥°ˆè€‰µÕÑ…Ñ¥½¸¡…¹•Ì¹½Ñ¡¥¹œ‰ô(€€€€€€€Ý¥Ñ Ñ•µÁ™¥±”¹Q•µÁ½É…Éå¥É•Ñ½Éä ¤…ÌÑè(€€€€€€€€€€€Ý½É¬€ôµ…­•}½Áä¡A…Ñ ¡Ñ¤¤(€€€€€€€€€€€Ñ…É•Ð€ôÝ½É¬€¼É•°(€€€€€€€€€€€¥˜¹½ÐÑ…É•Ð¹¥Í}™¥±” ¤è(€€€€€€€€€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆè%9Y1%°€‰‘•Ñ…¥°ˆè˜‰¹¼ÍÕ ™¥±”íÉ•±ô‰ô(€€€€€€€€€€€ÍÉŒ€ôÑ…É•Ð¹É•…‘}Ñ•áÐ ¤(€€€€€€€€€€€¥˜ÍÉŒ¹½Õ¹Ð¡½±¤€„ô€Äè(€€€€€€€€€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆè%9Y1%°€‰‘•Ñ…¥°ˆè˜‰Á…ÑÑ•É¸½ÕÉÌíÍÉŒ¹½Õ¹Ð¡½±¥õà‰ô(€€€€€€€€€€€Ñ…É•Ð¹ÝÉ¥Ñ•}Ñ•áÐ¡ÍÉŒ¹É•Á±…”¡½±°¹•Ü¤¤(€€€€€€€€€€€¥˜Ñ…É•Ð¹É•…‘}Ñ•áÐ ¤€ôôÍÉŒè(€€€€€€€€€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆè%9Y1%°€‰‘•Ñ…¥°ˆè€‰µÕÑ…Ñ•™¥±”¥ÌÕ¹¡…¹•‰ô(€€€€€€€€€€€‰…€ô}½µÁ¥±•Ì¡É•°°Ñ…É•Ð¤(€€€€€€€€€€€¥˜‰…è(€€€€€€€€€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆè=11Q%=9}II=H°€‰‘•Ñ…¥°ˆè˜‰µÕÑ…Ñ•Í½ÕÉ”‘½•Ì¹½Ð½µÁ¥±”èí‰…‘ô‰lèÄØÁuô(€€€€€€€€€€€ÍÐ°‘•Ñ…¥°€ôÉÕ¹}…¹‘}±…ÍÍ¥™ä¡Ý½É¬¤(€€€€€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆèÍÐ°€‰‘•Ñ…¥°ˆè‘•Ñ…¥±ô(€€€•á•ÁÐá•ÁÑ¥½¸…Ìàè(€€€€€€€É•ÑÕÉ¸ì‰¥ˆèµ¥°€‰ÍÑ…ÑÕÌˆè!I9MM}II=H°€‰‘•Ñ…¥°ˆè˜‰ÉÕ¹¹•È™…¥±•èíÑåÁ”¡à¤¹}}¹…µ•}}ôèíáô‰lèÄØÁuô(()‘•˜µ…¥¸ ¤€´ø¥¹Ðè(€€€½¹±ä€ôm„™½È„¥¸ÍåÌ¹…ÉÙlÄét¥˜¹½Ð„¹ÍÑ…ÉÑÍÝ¥Ñ  ˆ´ˆ¥t(€€€µÕÑÌ€ôm´™½È´¥¸5UQQ%=9L¥˜¹½Ð½¹±ä½ÈµlÁt¹ÍÁ±¥Ð ˆ´ˆ¥lÁt¥¸½¹±ä½ÈµlÁt¥¸½¹±åt(€€€€Œ½¹”Ý½É­•ÈÁ•ÈAT°‰ÕÐ•… Ý½É­•ÈÉÕ¹Ì„Ý¡½±”ÁåÑ•ÍÐÍÕ¥Ñ”°Í¼±•…Ù”½¹”½É”™É•”(€€€Ý½É­•ÉÌ€ôµ…à Ä°¥¹Ð¡½Ì¹•¹Ù¥É½¸¹•Ð ‰5UQQ%=9}]=I-ILˆ°µ…à Ä°€¡½Ì¹ÁÕ}½Õ¹Ð ¤½È€È¤€´€Ä¤¤¤¤(€€€ÐÀ€ôÑ¥µ”¹Ñ¥µ” ¤(€€€½‘”°Ñ…¥°€ô‰…Í•±¥¹” ¤(€€€¥˜½‘”€„ô€Àè(€€€€€€€ÁÉ¥¹Ð ‰5UQQ%=9}	M1%9}%0Ñ¡”Õ¹µÕÑ…Ñ•ÍÕ¥Ñ”™…¥±Ì¥¸Ñ¡”½Áä°Í¼¹¼µÕÑ…Ñ¥½¸É•ÍÕ±Ð¥ÌÙ…±¥èˆ¤(€€€€€€€ÁÉ¥¹Ð¡Ñ…¥°¤(€€€€€€€É•ÑÕÉ¸€Ä(€€€ÁÉ¥¹Ð¡˜‰5UQQ%=9}	M1%9}=,íÉ½Õ¹¡Ñ¥µ”¹Ñ¥µ” ¤€´ÐÀ¥õÌˆ°™±ÕÍ õQÉÕ”¤(€€€É•ÍÕ±ÑÌè‘¥ÑmÍÑÈ°‘¥Ñt€ôíô(€€€Ý¥Ñ ½¹ÕÉÉ•¹Ð¹™ÕÑÕÉ•Ì¹Q¡É•…‘A½½±á•ÕÑ½È¡µ…á}Ý½É­•ÉÌõÝ½É­•ÉÌ¤…Ì•àè(€€€€€€€™ÕÑÌ€ôí•à¹ÍÕ‰µ¥Ð¡¡•­}½¹”°´¤èµlÁt™½È´¥¸µÕÑÍô(€€€€€€€™½È˜¥¸½¹ÕÉÉ•¹Ð¹™ÕÑÕÉ•Ì¹…Í}½µÁ±•Ñ•¡™ÕÑÌ¤è(€€€€€€€€€€€ÑÉäè(€€€€€€€€€€€€€€€È€ô˜¹É•ÍÕ±Ð ¤(€€€€€€€€€€€•á•ÁÐá•ÁÑ¥½¸…Ìàè€€€€€€€€€€€€€€€€€€€€€€€€€€Œ„É…Í¡•Ý½É­•È¥Ì„¡…É¹•ÍÌ™…¥±ÕÉ”°¹•Ù•È„­¥±°(€€€€€€€€€€€€€€€È€ôì‰¥ˆè™ÕÑÍm™t°€‰ÍÑ…ÑÕÌˆè!I9MM}II=H°€‰‘•Ñ…¥°ˆè˜‰Ý½É­•È™…¥±•èíÑåÁ”¡à¤¹}}¹…µ•}}ô‰ô(€€€€€€€€€€€¥˜È¹•Ð ‰ÍÑ…ÑÕÌˆ¤¹½Ð¥¸MQQUMLè(€€€€€€€€€€€€€€€È€ôì‰¥ˆè™ÕÑÍm™t°€‰ÍÑ…ÑÕÌˆè!I9MM}II=H°€‰‘•Ñ…¥°ˆè˜‰Õ¹­¹½Ý¸ÍÑ…ÑÕÌíÈ¹•Ð ÍÑ…ÑÕÌœ¤…Éô‰ô(€€€€€€€€€€€É•ÍÕ±ÑÍmÉl‰¥‰ut€ôÈ(€€€€€€€€€€€ÁÉ¥¹Ð¡˜ˆ€íÉlÍÑ…ÑÕÌtèåÍôíÉl¥uôˆ°™±ÕÍ õQÉÕ”¤€€€€€€€ŒÁÉ½É•ÍÌ°Õ¹½É‘•É•(€€€½É‘•É•€ômÉ•ÍÕ±ÑÍmµlÁut™½È´¥¸µÕÑÍt(€€€½ÕÑ}‘¥È€ôI==P€¼€‰½ÕÐˆ(€€€½ÕÑ}‘¥È¹µ­‘¥È¡•á¥ÍÑ}½¬õQÉÕ”¤(€€€€¡½ÕÑ}‘¥È€¼€‰µÕÑ…Ñ¥½¹}É•Á½ÉÐ¹©Í½¸ˆ¤¹ÝÉ¥Ñ•}Ñ•áÐ¡©Í½¸¹‘ÕµÁÌ¡½É‘•É•°¥¹‘•¹ÐôÈ¤¤(€€€ÁÉ¥¹Ð ¤(€€€™½ÈÈ¥¸½É‘•É•è(€€€€€€€ÁÉ¥¹Ð¡˜‰íÉlÍÑ…ÑÕÌtèåÍôíÉl¥tèÌÙÍôíÉl‘•Ñ…¥°uôˆ¤(€€€‰…€ômÈ™½ÈÈ¥¸½É‘•É•¥˜Él‰ÍÑ…ÑÕÌ‰t€„ô-%11t(€€€½Õ¹ÑÌ€ôíÌèÍÕ´¡Él‰ÍÑ…ÑÕÌ‰t€ôôÌ™½ÈÈ¥¸½É‘•É•¤™½ÈÌ¥¸MQQUMMô(€€€ÁÉ¥¹Ð ‰q¹5UQQ%=9}=U9QL€ˆ€¬©Í½¸¹‘ÕµÁÌ¡½Õ¹ÑÌ¤¤(€€€ÁÉ¥¹Ð¡˜‰í±•¸¡½É‘•É•¤€´±•¸¡‰…¥ô½í±•¸¡½É‘•É•¥ô­¥±±•¥¸íÉ½Õ¹¡Ñ¥µ”¹Ñ¥µ” ¤€´ÐÀ¥õÌ€ˆ(€€€€€€€€€˜‰Ý¥Ñ íÝ½É­•ÉÍôÝ½É­•ÉÌˆ¤(€€€É•ÑÕÉ¸€Ä¥˜‰…•±Í”€À(()¥˜}}¹…µ•}|€ôô€‰}}µ…¥¹}|ˆè(€€€ÍåÌ¹•á¥Ð¡µ…¥¸ ¤¤(
+     "V_ok = [e for e in V + A if e[1] not in Q]", "V_ok = list(V + A)"),
+    ("M41-site-rollback-disabled", "ecci/solver.py",
+     "bad_links = bad & set(cur_L)", "bad_links = set()"),
+    ("M42-ambiguous-site-committed", "ecci/solver.py",
+     "elif len(consistent) == 1:", "elif len(consistent) >= 1:"),
+    ("M43-site-commit-verified", "ecci/solver.py",
+     "site_res[sid] = SiteResult(INFERRED, name,", "site_res[sid] = SiteResult(VERIFIED, name,"),
+    ("M44-cluster-limit-removed", "ecci/solver.py",
+     "if len(cl) > k_max:", "if len(cl) > 10**6:"),
+    ("M45-ocr-names-link", "ecci/solver.py",
+     "if nm.confirmed and o in kind:", "if o in kind:"),
+    ("M46-closure-always-closed", "ecci/solver.py",
+     '"OPEN" if reasons else "CLOSED"', '"CLOSED"'),
+    ("M47-pair-always-verified", "ecci/solver.py",
+     "return VERIFIED if self._vgroup.get(p) == self._vgroup.get(q) and p in self._vgroup else INFERRED",
+     "return VERIFIED"),
+    ("M48-touching-quarantine-allowed", "ecci/solver.py",
+     "        if a in Q or b in Q:\n            status[eid] = (UNKNOWN, \"TOUCHES_CONFLICT_COMPONENT\")",
+     "        if False:\n            status[eid] = (UNKNOWN, \"TOUCHES_CONFLICT_COMPONENT\")"),
+    ("M49-witness-picks-one-edge", "ecci/solver.py",
+     "            bad |= w\n", "            bad |= {min(w)}\n"),
+    ("M51-sites-not-created", "ecci/rules.py",
+     "elif arms >= 4:", "elif arms >= 99:"),
+    ("M52-dot-arms-evidence-always", "ecci/rules.py",
+     "if arms >= 3 and all(wrole[i].status == ROLE_CONFIRMED for i in arm_prims):", "if True:"),
+    ("M53-dot-aspect-ignored", "ecci/rules.py",
+     "if min(w, h) / max(w, h) < prm.dot_aspect:", "if False:"),
+    ("M54-dot-roundness-ignored", "ecci/rules.py",
+     "or (max(rs) - min(rs)) / rm > prm.dot_roundness:", "or False:"),
+    ("M55-dot-touching-body-ignored", "ecci/rules.py",
+     "        if len(ids) > 1:\n            touched |= set(ids)", "        if False:\n            touched |= set(ids)"),
+    ("M56-gap-blocker-ignored", "ecci/rules.py",
+     "if any(q not in (p1, p2) and _proper_cross(x1, x2, a, b, 0.0) is not None", "if False and any(q not in (p1, p2) and _proper_cross(x1, x2, a, b, 0.0) is not None"),
+    ("M57-gap-gmax-ignored", "ecci/rules.py",
+     "not (prm.eps < gap <= prm.g_max)", "not (prm.eps < gap)"),
+    ("M58-c4-against-unresolved", "ecci/rules.py",
+     "related = pin_objs_of.get(cid, [])", "related = pin_objs_of.get(cid, []) + ut_objs_of.get(cid, [])"),
+    ("M59-two-wires-at-tip-tr3", "ecci/rules.py",
+     'if len(near) == 1 and _is_end(by_id[near[0]], pin.tip, tol)', 'if len(near) >= 1'),
+    ("M71-ambiguous-style-guessed", "ecci/classify.py",
+     "no_wire = mode == AMBIGUOUS_STYLE", "no_wire = False"),
+    ("M72-no-length-tie-break", "ecci/classify.py",
+     "if len(cands) >= 2 and mean_len[cands[0]] >= params.style_len_dominance * mean_len[cands[1]]:",
+     "if False:"),
+    ("M73-off-colour-always-excluded", "ecci/rules.py",
+     "    if not good:\n        return frozenset()", "    if False:\n        return frozenset()"),
+    ("M74-tiny-styles-kept", "ecci/classify.py",
+     "big = {k: v for k, v in big.items() if tot[k] >= params.style_min_len_share * top}",
+     "big = dict(big)"),
+    ("M75-no-stub-strip-retry", "ecci/pins.py",
+     "if syms and not hits:", "if False:"),
+    ("M76-no-bridge-stub", "ecci/symbols.py",
+     "elif t0 and t1 and (dangling(i, touched[1], touched[0]) or dangling(i, touched[0], touched[1])):", "elif False:"),
+    ("M77-bare-never-joins-containing-part", "ecci/symbols.py",
+     "if (a in bare) != (b in bare) and _gap(ba, bb) > 0:", "if (a in bare) != (b in bare):"),
+    ("M78-double-plotted-line-not-bare", "ecci/symbols.py",
+     "and len({_geom_key(prims[i]) for i in ids}) == 1}", "and len(ids) == 1}"),
+    ("M79-repeat-rule-off", "ecci/classify.py",
+     "if cnt[sg] >= params.repeat_min_copies:", "if False:"),
+    ("M80-repeat-threshold-1", "ecci/classify.py",
+     "if cnt[sg] >= params.repeat_min_copies:", "if cnt[sg] >= 1:"),
+    ("M81-closed-uses-open-limit", "ecci/classify.py",
+     "(params.body_closed_max_frac if p.line_closed else params.body_max_frac)", "params.body_max_frac"),
+    ("M82-open-uses-closed-limit", "ecci/classify.py",
+     "(params.body_closed_max_frac if p.line_closed else params.body_max_frac)", "params.body_closed_max_frac"),
+    ("M83-relaxations-colour-groups-off", "ecci/symbols.py",
+     "    if len(groups) < 2:\n        variants_src = [(cl, ())]", "    if True:\n        variants_src = [(cl, ())]"),
+    ("M85-decor-never-stripped", "ecci/symbols.py",
+     "    if not dropped or not rest:\n        return None\n    return _rebuild(cl.id, rest, by_id), dropped",
+     "    return None"),
+    ("M86-decor-strips-everything", "ecci/symbols.py",
+     "<= max_frac * big)", "<= 10.0 * big)"),
+    ("M87-unit-selection-off", "ecci/pins.py",
+     "if sel and len(sel) < len(res.hits):", "if False:"),
+    ("M88-unit-selection-accepts-any-line", "ecci/pins.py",
+     "    if not (0.5 * plen <= ln <= 1.3 * plen):\n        return f\"line length",
+     "    if False:\n        return f\"line length"),
+    ("M89-unit-selection-keeps-s2-independent", "ecci/pins.py",
+     "if plen > 0 and not stub_selected:", "if plen > 0:"),
+    ("M90-stem-ignored", "ecci/pins.py",
+     "len({_part_stem(h.symbol.name) for h in res.hits}) == 1:", "len({1 for h in res.hits}) == 1:"),
+    ("M91-stem-keeps-library-nickname", "ecci/pins.py",
+     'name.rsplit(":", 1)[-1])', "name)"),
+    ("M93-attachment-promoted-to-verified", "ecci/solver.py",
+     "    vrep = _components(objs, V)\n", "    vrep = _components(objs, V + A)\n"),
+    ("M98-strip-stubs-counts-own-copy", "ecci/symbols.py",
+     "            if j == i or gk[j] == gk[i]:", "            if j == i:"),
+    ("M99-strip-stubs-grid-margin-ignores-stroke", "ecci/symbols.py",
+     "    margin = eps + 0.5 * (wmax + wmax)", "    margin = eps"),
+    ("M112-gt-eval-entrypoint-removed", "tools/gt_eval.py",
+     'if __name__ == "__main__":\n    sys.exit(main(sys.argv[1]))',
+     'if False:\n    sys.exit(main(sys.argv[1]))'),
+    ("M113-inventory-gate-off", "tools/gt_inventory.py",
+     '    return 1 if problems else 0', "    return 0"),
+    ("M114-inventory-accepts-missing-total", "tools/gt_inventory.py",
+     '        problems.append("no GT_TOTAL line: the evaluation did not finish")', "        pass"),
+    ("M103-unlisted-skip-allowed", "tools/gt_eval.py",
+     '            problems.append(f"page skipped but not pinned ({bucket}): {name}")',
+     "            pass"),
+    ("M104-stale-skip-pin-ignored", "tools/gt_eval.py",
+     '        stale = sorted(allowed_repeat & set(evaluated_names))', "        stale = []"),
+    ("M105-page-total-not-checked", "tools/gt_eval.py",
+     '        if total and seen_pages != total:', "        if False:"),
+    ("M106-gt-only-unevaluated-selection-ignored", "tools/gt_eval.py",
+     '            problems.append(f"GT_ONLY selected pages that were not evaluated: {sorted(missed)}")',
+     "            pass"),
+    ("M107-manifest-inventory-not-compared", "tools/gt_verify.sh",
+     'if ! diff -q "$listed" "$present" >/dev/null; then', "if false; then"),
+    ("M108-project-pair-count-not-checked", "tools/gt_verify.sh",
+     '    fail "$name: $npdf pdf / $nxml netlist (expected 1/1 or 0/0)"', '    true'),
+    ("M109-export-failure-set-not-checked", "tools/gt_verify.sh",
+     '[ "$got_fail" = "$want_fail" ] || fail', "true || fail"),
+    ("M110-sheet-copy-failure-hidden", "tools/gt_export.sh",
+     '''  if ! (cd "$d" && find . -name '*.kicad_sch' -print0 | xargs -0 -I{} cp --parents {} "$tgt_abs/src/"); then''', "  if false; then"),
+    ("M111-export-rc-ignored", "tools/gt_export.sh",
+     'kicad-cli sch export pdf --output "$tgt/$name.pdf" "$sch" >"$tgt/pdf.log" 2>&1 || { echo "FAIL pdf $name"; ok=0; }',
+     'kicad-cli sch export pdf --output "$tgt/$name.pdf" "$sch" >"$tgt/pdf.log" 2>&1 || true'),
+    ("M101-attachment-only-pair-inferred", "ecci/solver.py",
+     '        if self._elec_of.get(p, p) != self._elec_of.get(q, q):\n            return UNKNOWN',
+     "        if False:\n            return UNKNOWN"),
+    ("M102-electrical-partition-includes-attachments", "ecci/solver.py",
+     "dict(_components(objs, elec_edges)))", "dict(_components(objs, final_edges)))"),
+    ("M100-gt-unevaluated-page-ignored", "tools/gt_eval.py",
+     'problems += [f"page never evaluated: {n}" for n in never_ran]', "problems += []"),
+    ("M94-gt-incomplete-run-passes", "tools/gt_eval.py",
+     '    if cov["problems"]:\n', "    if False:\n"),
+    ("M95-gt-page-error-not-a-problem", "tools/gt_eval.py",
+     'problems = [f"page error: {e}" for e in errors]', "problems = []"),
+    ("M96-gt-manifest-not-checked", "tools/gt_verify.sh",
+     '(cd "$OUT" && sha256sum --quiet -c MANIFEST.sha256) ||', "true ||"),
+    ("M97-gt-source-pin-not-checked", "tools/gt_verify.sh",
+     '[ "$(prov KICAD_SOURCE_SHA)" = "$(pin KICAD_SRC_SHA)" ] ||', "true ||"),
+    ("M92-stem-strips-one-suffix-only", "ecci/pins.py",
+     '(#u\\d+|_\\d+)+$', '(#u\\d+|_\\d+)$'),
+    ("M60-stub-evidence-prefix", "ecci/rules.py",
+     'if ev.startswith("S2:") and ev in reg.items:\n                    for tok', 'if ev.startswith("S9:") and ev in reg.items:\n                    for tok'),
+    ("M61-style-length-share-off", "ecci/classify.py",
+     "big = {k: v for k, v in big.items() if tot[k] >= params.style_min_len_share * top}",
+     "big = big"),
+    ("M62-body-colour-filter-off", "ecci/classify.py",
+     "clean = {k: v for k, v in big.items() if body_colours.get(k[1], 0) < params.style_body_marks}",
+     "clean = dict(big)"),
+    ("M63-ambiguous-style-guesses-wires", "ecci/classify.py",
+     "return AMBIGUOUS_STYLE, len(groups[best_k]) / len(pop)", "return None, len(groups[best_k]) / len(pop)"),
+    ("M64-length-tiebreak-picks-shortest", "ecci/classify.py",
+     "cands.sort(key=lambda k: (-mean_len[k], str(k)))", "cands.sort(key=lambda k: (mean_len[k], str(k)))"),
+    ("M65-sheet-furniture-allowed", "ecci/classify.py",
+     "/ len(v) <= max_len} or big", "/ len(v) <= 1e9} or big"),
+    ("M66-stub-axis-check-off", "ecci/symbols.py",
+     "        if min(abs(a[0] - b[0]), abs(a[1] - b[1])) > axis_tol:\n            continue\n", ""),
+    ("M67-stub-contact-ignores-stroke-width", "ecci/symbols.py",
+     "            tol = eps + 0.5 * (p.stroke_w + q.stroke_w)\n            for k, end in enumerate((a, b)):",
+     "            tol = eps\n            for k, end in enumerate((a, b)):"),
+    ("M68-tiny-parts-merge-by-proximity", "ecci/symbols.py",
+     "never merge by proximity: only by touching.\n    # Without it, text strokes chain into one page-sized \"cluster\" that matches nothing.\n    min_part = min_gap_part_frac",
+     "never merge by proximity: only by touching.\n    # Without it, text strokes chain into one page-sized \"cluster\" that matches nothing.\n    min_part = 0.0 * min_gap_part_frac"),
+    ("M69-lone-glyph-needs-no-strokes", "ecci/classify.py",
+     "len(short) >= params.glyph_stroke_share * len(ps)", "False"),
+    # ---- trust boundary of VERIFIED (status.py / solver.audit_result)
+    ("M115-sound-kind-multiset-off", "ecci/status.py",
+     "if kind == SOUND and tuple(sorted(r.kind for r in e.roles)) != SOUND_KINDS[e.rule]:", "if False:"),
+    ("M116-role-obj-mismatch-ignored", "ecci/status.py",
+     "if (e.roles[0].obj, e.roles[1].obj) != (e.a, e.b):", "if False:"),
+    ("M117-verified-without-provenance", "ecci/status.py",
+     "    if not e.prov or not _valid_ids(e.prov):\n        return INFERRED", "    if False:\n        return INFERRED"),
+    ("M118-blank-evidence-id-counts", "ecci/status.py",
+     "        if not _valid_ids(r.evidence):\n            return ROLE_CANDIDATE", "        if False:\n            return ROLE_CANDIDATE"),
+    ("M119-truthy-weak-flag-trusted", "ecci/status.py",
+     "if any(r.weak is not False for r in e.roles):", "if any(r.weak is True for r in e.roles):"),
+    ("M120-n-prims-type-unchecked", "ecci/status.py",
+     "if not isinstance(e.n_prims, int) or isinstance(e.n_prims, bool):", "if False:"),
+    ("M121-audit-kinds-off", "ecci/status.py",
+     "    elif want is not None and tuple(sorted(kinds)) != want:", "    elif False:"),
+    ("M122-audit-endpoints-off", "ecci/status.py",
+     "    if not (ends_ok and all(_audit_str(o) for o in objs) and objs[0] == e.a and objs[1] == e.b):", "    if False:"),
+    ("M123-audit-provenance-off", "ecci/status.py",
+     '        problems.append("no provenance record")', "        pass"),
+    ("M124-audit-n-prims-off", "ecci/status.py",
+     '        problems.append(f"{rule} at a point with {e.n_prims} primitives")', "        pass"),
+    ("M125-audit-result-skips-unknown-edge", "ecci/solver.py",
+     '            problems.append(f"I7 {eid}: VERIFIED edge is not in the graph")', "            pass"),
+    ("M126-audit-result-trusts-edge-status", "ecci/solver.py",
+     "        if classify_edge(emap[eid])[0] != VERIFIED:", "        if False:"),
+    ("M127-gate-fp-ignored", "tools/gt_gate.py",
+     '                fail(f"{mode}.{k}={raw!r} > {lim}")', "                pass"),
+    ("M128-gate-pin-recall-ignored", "tools/gt_gate.py",
+     "    if pr is None or pr < g[\"GATE_MIN_PIN_RECALL\"]:", "    if False:"),
+    ("M129-gate-accepts-partial-run", "tools/gt_gate.py",
+     '        fail("partial run (GT_ONLY): the M4.0 gate needs the full corpus")', "        pass"),
+    ("M130-gate-accepts-inconsistent", "tools/gt_gate.py",
+     '        fail(f"inventory_consistent={inv!r}")', "        pass"),
+    ("M131-gate-min-pages-ignored", "tools/gt_gate.py",
+     '            fail(f"evaluated={raw!r} < {g[\'GATE_MIN_PAGES\']}")', "            pass"),
+    ("M132-verify-ok-list-ignored", "tools/gt_verify.sh",
+     '[ "$got_ok_list" = "$want_ok_list" ] || fail', '[ "$got_ok_list" = "$want_ok_list" ] || true'),
+    ("M133-eval-ok-list-ignored", "tools/gt_eval.py",
+     '            problems.append(f"exported project set != pinned EXPECT_EXPORT_OK_LIST: "', '            (f"exported project set != pinned EXPECT_EXPORT_OK_LIST: "'),
+    ("M134-pins-list-count-ignored", "tools/gt_eval.py",
+     '        problems.append(f"EXPECT_EXPORT_OK_LIST has {len(ok_list)} names != EXPECT_EXPORT_OK={exp_proj}")',
+     "        pass"),
+    ("M135-site-self-link-allowed", "ecci/solver.py",
+     "or a == b or a not in arm_set", "or a not in arm_set"),
+    ("M136-site-link-outside-arms-allowed", "ecci/solver.py",
+     "or a == b or a not in arm_set or b not in arm_set", "or a == b"),
+    # M4.1 writer / reader and F2 arm provenance
+    ("M137-reader-accepts-status-promotion", "ecci/writer.py", "        if not ok:", "        if False:"),
+    ("M138-reader-ignores-connectivity-recompute", "ecci/writer.py",
+     '        if (r["net"], r["electrical_group"], r["verified_group"]) != (net[o], elec[o], vg.get(o)):',
+     "        if False:"),
+    ("M139-reader-ignores-content-hash", "ecci/writer.py",
+     '    if doc["content_sha256"] != content_hash(doc):', "    if False:"),
+    ("M140-reader-accepts-verified-site-link", "ecci/writer.py",
+     '        if l["status"] != INFERRED or l["origin"] != ORIGIN_SITE:', '        if l["origin"] != ORIGIN_SITE:'),
+    ("M141-reader-ignores-provenance-block", "ecci/writer.py",
+     '        if e["provenance"] != exp_prov:', "        if False:"),
+    ("M142-arm-provenance-dropped", "ecci/rules.py", "prov_of(r[2]))", "())"),
+    ("M143-arm-audit-accepts-duplicate-edge", "ecci/rules.py",
+     "            if len(set(gedges)) != len(gedges):", "            if False:"),
+    # ---- M4.2 symbol records / native KiCad export / round trip (M156, M157 need the real kicad-cli tests)
+    ("M144-symrec-reader-trusts-candidates", "ecci/symrec.py",
+     "        if got != [{k: v for k, v in c.items() if k != \"selected\"} for c in want]:", "        if False:"),
+    ("M145-symrec-any-multi-hit-is-equivalent", "ecci/symrec.py",
+     "    if all(_equivalent(selected[0], c, tau) for c in selected[1:]):", "    if True:"),
+    ("M146-symrec-identity-from-any-name", "ecci/symrec.py",
+     "    if len(names) == 1:\n        return {\"state\": ID_CONFIRMED", "    if names:\n        return {\"state\": ID_CONFIRMED"),
+    ("M147-symrec-accepts-a-designator", "ecci/symrec.py",
+     "            if rec[f] != _unknown_field():", "            if False:"),
+    ("M148-export-ignores-identity", "ecci/kicad_export.py",
+     '        if c["identity"]["state"] != "CONFIRMED":', "        if False:"),
+    ("M150-export-uses-electrical-not-verified-groups", "ecci/kicad_export.py",
+     'vgroup = {c["object"]: c["verified_group"] for c in conn["connectivity"]}',
+     'vgroup = {c["object"]: c["electrical_group"] for c in conn["connectivity"]}'),
+    ("M151-export-keeps-coincident-pins", "ecci/kicad_export.py",
+     "            if len(occ) > 1 and len(groups) > 1:", "            if False:"),
+    ("M152-export-ignores-hidden-power-pins", "ecci/kicad_export.py",
+     '            if typ == "power_in" and hidden:', "            if False:"),
+    ("M153-roundtrip-merged-net-reads-ok", "ecci/kicad_roundtrip.py",
+     '            st = "OK" if set(netlist["nets"][kn]) == want else "MERGED"', '            st = "OK"'),
+    ("M154-gt-false-positive-counted-as-tn", "ecci/kicad_roundtrip.py",
+     '        elif ours:\n            c["FP"] += 1', '        elif ours:\n            c["TN"] += 1'),
+    ("M155-gt-compare-ignores-gt-net", "ecci/kicad_roundtrip.py",
+     "        ours, gt = ka == kb, ga == gb", "        ours, gt = ka == kb, ka == kb"),
+    ("M156-stale-netlist-kept", "ecci/kicad_roundtrip.py",
+     "        os.remove(xml_path)          # a stale netlist", "        pass  # os.remove(xml_path)          # a stale netlist"),
+    ("M188-pin-equivalence-ignores-electrical-signature", "ecci/template.py",
+     "            if len(signatures) != len(hits) or len(set(signatures)) != 1:", "            if False:"),
+    ("M189-pin-equivalence-ignores-canonical-tip", "ecci/kicad_export.py",
+     '                near = [q for q in cand["pins"] if math.hypot(q["tip"][0] - p["tip"][0],\n                                                                 q["tip"][1] - p["tip"][1]) <= 1e-6]',
+     '                near = list(cand["pins"])'),
+    ("M190-gt-gate-passes-synthetic-canonical-identity", "ecci/kicad_roundtrip.py",
+     '    if g.get("pin_identity_unverified_synthetic_canonical"):', "    if False:"),
+    ("M191-missing-pin-identity-defaults-confirmed", "ecci/kicad_roundtrip.py",
+     '            assignment = p.get("number_assignment")', '            assignment = p.get("number_assignment", "CONFIRMED")'),
+    ("M157-wrong-mirror-order", "ecci/kicad_export.py",
+     'MIRROR_ORDER: str | None = "RM"', 'MIRROR_ORDER: str | None = "MR"'),
+    ("M158-evidence-audit-skips-s1-lineage", "ecci/symrec.py",
+     "                if set(lin) != want:", "                if False:"),
+    ("M159-manifest-not-rederived", "ecci/kicad_export.py",
+     "    if canonical(man2) != canonical(man):", "    if False:"),
+    ("M160-page-audit-skips-geometry", "ecci/symrec.py",
+     "                [rec[\"bbox\"], rec[\"verts\"], rec[\"segs\"]]:", "                [rec[\"bbox\"], rec[\"verts\"], rec[\"segs\"]] and False:"),
+    ("M161-gate-table-passes-everything", "ecci/m4_pipeline.py",
+     "        gates[st] = FAIL if FAIL in vals else (PASS if all(v == PASS for v in vals) else BLOCKED)",
+     "        gates[st] = PASS"),
+    ("M162-orientation-ignores-order-dependence", "ecci/kicad_export.py",
+     '                if kicad_matrix(rot, mir, "MR") == m and kicad_matrix(rot, mir, "RM") == m:',
+     '                if kicad_matrix(rot, mir, "MR") == m:'),
+    ("M163-export-skips-pin-end-check", "ecci/kicad_export.py",
+     "            if math.hypot(end[0] - exp[0], end[1] - exp[1]) > tol_iu:", "            if False:"),
+    ("M164-roundtrip-ignores-extra-connection", "ecci/kicad_roundtrip.py",
+     "        if x in net_of and len(netlist[\"nets\"][net_of[x]]) > 1:", "        if False:"),
+    # ---- M4.2 hardening (B1 S2 geometry, B2 PIN_LINES page audit, B3 GT coverage gate)
+    ("M165-s2-endpoints-not-checked", "ecci/writer.py",
+     "        if got is None:\n            P.append(f\"{w}: stub segment", "        if False:\n            P.append(f\"{w}: stub segment"),
+    ("M166-s2-lineage-prim-not-checked", "ecci/writer.py",
+     "        if e[\"lineage\"] != [f\"geom:{stub['prim']}\"]:", "        if False:"),
+    ("M167-s2-orientation-label-ignored", "ecci/writer.py",
+     "        elif got != stub[\"orientation\"]:", "        elif False:"),
+    ("M168-s2-tolerance-policy-ignored", "ecci/writer.py",
+     "        if tol > s2_tolerance(plen, S2_TAU_ABS_MAX, S2_REL_MAX) * (1 + 1e-12):", "        if False:"),
+    ("M169-s2-cited-without-stub-accepted", "ecci/writer.py",
+     "            if s2:\n                P.append(f\"{w}: cites", "            if False:\n                P.append(f\"{w}: cites"),
+    ("M170-s2-page-segment-not-compared", "ecci/symrec.py",
+     "        elif [list(map(float, seg[0])), list(map(float, seg[1]))] != [st[\"a\"], st[\"b\"]]:", "        elif False:"),
+    ("M171-s2-page-audit-without-page-passes", "ecci/symrec.py",
+     "        return [\"S2 audit BLOCKED: source-page geometry unavailable\"]", "        return []"),
+    ("M172-symrec-ignores-conn-s2", "ecci/symrec.py",
+     "    P += [f\"connectivity: {x}\" for x in s2_problems(conn_doc)]", "    pass"),
+    ("M173-pin-lines-file-check-off", "ecci/symrec.py",
+     "        P += pin_lines_problems(rec, params)\n", ""),
+    ("M174-pin-lines-audit-no-page-verified", "ecci/symrec.py",
+     "        return {\"status\": PL_BLOCKED, \"problems\": [\"source-page geometry unavailable: PIN_LINES support not audited\"],",
+     "        return {\"status\": PL_VERIFIED, \"problems\": [\"source-page geometry unavailable: PIN_LINES support not audited\"],"),
+    ("M175-pin-lines-audit-ignores-page-index", "ecci/symrec.py",
+     "    if want_pi != have_pi:", "    if False:"),
+    ("M176-pin-lines-audit-ignores-displacement", "ecci/symrec.py",
+     "        if [ln[\"end\"], ln[\"far\"]] not in ([a, b], [b, a]):", "        if False:"),
+    ("M177-pin-lines-audit-skips-rule", "ecci/symrec.py",
+     "                if why:\n                    P.append(f\"{tag}: page line", "                if False:\n                    P.append(f\"{tag}: page line"),
+    ("M178-pin-lines-audit-missing-prim-ignored", "ecci/symrec.py",
+     "                    P.append(f\"{tag}: line primitive {ln['prim']} does not exist on the page\")\n", ""),
+    ("M179-gt-gate-passes-zero-mapped", "ecci/kicad_roundtrip.py",
+     "    if g[\"exported_pins_mapped\"] < 2 or scored == 0 or g[\"mapping_coverage\"] is None:", "    if False:"),
+    ("M180-gt-gate-ignores-coverage", "ecci/kicad_roundtrip.py",
+     "    if g[\"mapping_coverage\"] < policy[\"min_mapping_coverage\"]:", "    if False:"),
+    ("M181-gt-gate-without-policy-passes", "ecci/kicad_roundtrip.py",
+     "    pp = gt_policy_problems(policy)\n    if pp:", "    pp = gt_policy_problems(policy)\n    if False:"),
+    ("M182-gt-gate-fp-only-old-rule", "ecci/m4_pipeline.py",
+     "    S[\"ground_truth\"] = gate[\"state\"]", "    S[\"ground_truth\"] = PASS if g[\"pairs\"][\"FP\"] == 0 else FAIL"),
+    ("M183-gate-table-inconclusive-passes", "ecci/m4_pipeline.py",
+     "        gates[st] = FAIL if FAIL in vals else (PASS if all(v == PASS for v in vals) else BLOCKED)",
+     "        gates[st] = FAIL if FAIL in vals else (BLOCKED if BLOCKED in vals else PASS)"),
+    ("M184-unmatched-gt-pins-promoted", "ecci/kicad_roundtrip.py",
+     "            \"unmatched_gt_pins\": sorted([{\"ref\": g.ref, \"number\": g.number, \"state\": \"UNKNOWN\",",
+     "            \"unmatched_gt_pins\": sorted([{\"ref\": g.ref, \"number\": g.number, \"state\": \"VERIFIED\","),
+    ("M186-gt-claimed-counted-as-scored", "ecci/kicad_roundtrip.py",
+     "            claimed[cand[0]] = p[\"object\"]\n", "            claimed[cand[0]] = p[\"object\"]\n            scored.add(cand[0])\n"),
+    ("M187-gt-duplicate-claim-allowed", "ecci/kicad_roundtrip.py",
+     "            if len(cand) != 1 or cand[0] in claimed:", "            if len(cand) != 1:"),
+    ("M185-provenance-ignores-pin-lines-audit", "ecci/m4_pipeline.py",
+     "    S[\"provenance\"] = (FAIL if other or pla[\"status\"] == symrec.PL_FAIL", "    S[\"provenance\"] = (FAIL if other"),
+]
+
+
+HARNESS_TESTS = (
+    "tests/unit/test_gt_failclosed.py::test_mutation_runner_reports_in_a_fixed_order_and_counts_every_mutation",
+    # the runner's own adversarial tests: they test this file on a fake package, not ECCI, so they can neither
+    # detect nor be broken by a mutation; running them in each copy would only cost time
+    "tests/unit/test_mutation_runner.py",
+)
+
+
+def _is_harness(classname: str, name: str) -> bool:
+    for t in HARNESS_TESTS:
+        mod, _, fn = t.partition("::")
+        dotted = mod[:-3].replace("/", ".") if mod.endswith(".py") else mod.replace("/", ".")
+        if (classname == dotted or classname.startswith(dotted + ".")) and (not fn or name.split("[")[0] == fn):
+            return True
+    return False
+
+
+KILLED, SURVIVED, INVALID = "KILLED", "SURVIVED", "INVALID"
+COLLECTION_ERROR, HARNESS_ERROR, TIMEOUT = "COLLECTION_ERROR", "HARNESS_ERROR", "TIMEOUT"
+STATUSES = (KILLED, SURVIVED, INVALID, COLLECTION_ERROR, HARNESS_ERROR, TIMEOUT)
+SUITE_TIMEOUT = 900
+# an exception of one of these types in a test is a broken import / source, not a test detecting the mutation
+IMPORTISH = ("SyntaxError", "IndentationError", "TabError", "ImportError", "ModuleNotFoundError")
+
+
+def run_suite(pkg_root: Path, junit: Path) -> tuple[int, str]:
+    # HARNESS_TESTS check this file's own patterns against the (mutated) sources, so they fail for EVERY mutation
+    # and would make each one look KILLED. They are tests of the runner, not of ECCI: deselected in the copy.
+    desel = [a for t in HARNESS_TESTS for a in ("--deselect", t)]
+    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", *desel,
+                        f"--junitxml={junit}", "tests"],
+                       cwd=pkg_root, capture_output=True, text=True, timeout=SUITE_TIMEOUT)
+    return p.returncode, (p.stdout + p.stderr)
+
+
+def _importish(text: str) -> bool:
+    t = text or ""
+    return any(t.startswith(n) or f"E   {n}" in t or f"\n{n}:" in t for n in IMPORTISH)
+
+
+def classify(code: int, junit_text: str | None, out: str) -> tuple[str, str]:
+    """(status, detail) of one pytest run. SURVIVED here means "collected and all passed"."""
+    tail = (out or "").strip().splitlines()
+    last = tail[-1][:160] if tail else ""
+    if code == 3:
+        return HARNESS_ERROR, f"pytest internal error (exit 3): {last}"
+    if code == 4:
+        return HARNESS_ERROR, f"pytest usage error (exit 4): {last}"
+    if code == 5:
+        return COLLECTION_ERROR, "no tests collected (exit 5)"
+    if code == 2:
+        text = (out or "") + (junit_text or "")
+        if "collection failure" in text or ("error" in text.lower() and ("collect" in text.lower() or _importish(out))):
+            return COLLECTION_ERROR, f"collection / import error (exit 2): {last}"
+        return HARNESS_ERROR, f"pytest interrupted (exit 2): {last}"
+    if code not in (0, 1):
+        return HARNESS_ERROR, f"unexpected pytest exit status {code}: {last}"
+    if not junit_text:
+        return HARNESS_ERROR, f"no JUnit report (exit {code})"
+    try:
+        root = ET.fromstring(junit_text)
+    except ET.ParseError as x:
+        return HARNESS_ERROR, f"unreadable JUnit report: {x}"
+    cases, failures, errors = 0, [], []
+    for c in root.iter("testcase"):
+        cases += 1
+        nid = f"{c.get('classname', '')}::{c.get('name', '')}"
+        if _is_harness(c.get("classname", ""), c.get("name", "")):
+            return HARNESS_ERROR, f"deselected harness self-test ran: {nid}"
+        for ch in c:
+            info = (nid, ch.get("message") or "", ch.text or "")
+            if ch.tag == "failure":
+                failures.append(info)
+            elif ch.tag == "error":
+                errors.append(info)
+    if cases == 0:
+        return COLLECTION_ERROR, "0 tests collected"
+    coll = [x for x in errors if "collection failure" in x[1] or not x[0].split("::")[-1]]
+    if coll:
+        return COLLECTION_ERROR, f"collection error: {coll[0][0]} {coll[0][1]}"[:160]
+    imp = [x for x in failures + errors if _importish(x[1]) or _importish(x[2])]
+    if imp:
+        return COLLECTION_ERROR, f"import / syntax error in {imp[0][0]}: {imp[0][1]}"[:160]
+    if code == 0:
+        if failures or errors:
+            return HARNESS_ERROR, "exit 0 but the report has failures / errors"
+        return SURVIVED, f"{cases} tests passed"
+    if failures:
+        return KILLED, f"FAILED {failures[0][0]}: {failures[0][1]}"[:160]
+    if errors:
+        return HARNESS_ERROR, f"only setup / teardown errors, no test failed: {errors[0][0]} {errors[0][1]}"[:160]
+    return HARNESS_ERROR, "exit 1 but the report has no failure"
+
+
+def run_and_classify(work: Path) -> tuple[str, str]:
+    junit = work.parent / "junit.xml"
+    try:
+        code, out = run_suite(work, junit)
+    except subprocess.TimeoutExpired:
+        return TIMEOUT, f"suite exceeded {SUITE_TIMEOUT}s"
+    except Exception as x:                                  # the runner itself failed: never KILLED
+        return HARNESS_ERROR, f"runner failed: {type(x).__name__}: {x}"[:160]
+    try:
+        text = junit.read_text() if junit.is_file() else None
+    except OSError as x:
+        return HARNESS_ERROR, f"cannot read JUnit report: {x}"
+    return classify(code, text, out)
+
+
+def _compiles(rel: str, path: Path) -> str:
+    """'' if the mutated file is still syntactically valid, else the error (a broken source is not a kill)."""
+    if rel.endswith(".py"):
+        try:
+            compile(path.read_text(), str(path), "exec")
+        except SyntaxError as x:
+            return f"{type(x).__name__}: {x}"
+    elif rel.endswith(".sh"):
+        p = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True)
+        if p.returncode != 0:
+            return f"bash -n: {p.stderr.strip()[:120]}"
+    return ""
+
+
+def make_copy(td: Path) -> Path:
+    """Private copy of the package AND the claude-* workflows the suite reads. Without the workflows every run in
+    the copy failed on a missing file, so every mutation was reported KILLED whatever it changed."""
+    work = td / "claude"
+    shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns(
+        "__pycache__", ".pytest_cache", ".hypothesis", "out", "*.egg-info"))
+    wf = ROOT.parent / ".github" / "workflows"
+    (td / ".github" / "workflows").mkdir(parents=True)
+    for f in sorted(wf.glob("claude-*.yml")):
+        shutil.copy2(f, td / ".github" / "workflows" / f.name)
+    return work
+
+
+def baseline() -> tuple[int, str]:
+    """The UNMUTATED suite must pass cleanly (collected, all passed) in the same kind of copy; otherwise KILLED
+    means nothing. Returns (0, detail) only for a clean pass."""
+    with tempfile.TemporaryDirectory() as td:
+        st, detail = run_and_classify(make_copy(Path(td)))
+    return (0, detail) if st == SURVIVED else (1, f"{st}: {detail}")
+
+
+def check_one(mut) -> dict:
+    """Apply one mutation to a private copy of the package and run the suite there. No shared state, so these
+    run in parallel; the report is still printed in MUTATIONS order. Never raises."""
+    mid = mut[0] if isinstance(mut, tuple) and mut else repr(mut)
+    try:
+        _, rel, old, new = mut
+        if not old or old == new:
+            return {"id": mid, "status": INVALID, "detail": "mutation changes nothing"}
+        with tempfile.TemporaryDirectory() as td:
+            work = make_copy(Path(td))
+            target = work / rel
+            if not target.is_file():
+                return {"id": mid, "status": INVALID, "detail": f"no such file {rel}"}
+            src = target.read_text()
+            if src.count(old) != 1:
+                return {"id": mid, "status": INVALID, "detail": f"pattern occurs {src.count(old)}x"}
+            target.write_text(src.replace(old, new))
+            if target.read_text() == src:
+                return {"id": mid, "status": INVALID, "detail": "mutated file is unchanged"}
+            bad = _compiles(rel, target)
+            if bad:
+                return {"id": mid, "status": COLLECTION_ERROR, "detail": f"mutated source does not compile: {bad}"[:160]}
+            st, detail = run_and_classify(work)
+            return {"id": mid, "status": st, "detail": detail}
+    except Exception as x:
+        return {"id": mid, "status": HARNESS_ERROR, "detail": f"runner failed: {type(x).__name__}: {x}"[:160]}
+
+
+def main() -> int:
+    only = [a for a in sys.argv[1:] if not a.startswith("-")]
+    muts = [m for m in MUTATIONS if not only or m[0].split("-")[0] in only or m[0] in only]
+    # one worker per CPU, but each worker runs a whole pytest suite, so leave one core free
+    workers = max(1, int(os.environ.get("MUTATION_WORKERS", max(1, (os.cpu_count() or 2) - 1))))
+    t0 = time.time()
+    code, tail = baseline()
+    if code != 0:
+        print("MUTATION_BASELINE_FAIL the unmutated suite fails in the copy, so no mutation result is valid:")
+        print(tail)
+        return 1
+    print(f"MUTATION_BASELINE_OK {round(time.time() - t0)}s", flush=True)
+    results: dict[str, dict] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(check_one, m): m[0] for m in muts}
+        for f in concurrent.futures.as_completed(futs):
+            try:
+                r = f.result()
+            except Exception as x:                          # a crashed worker is a harness failure, never a kill
+                r = {"id": futs[f], "status": HARNESS_ERROR, "detail": f"worker failed: {type(x).__name__}"}
+            if r.get("status") not in STATUSES:
+                r = {"id": futs[f], "status": HARNESS_ERROR, "detail": f"unknown status {r.get('status')!r}"}
+            results[r["id"]] = r
+            print(f"  {r['status']:9s} {r['id']}", flush=True)       # progress, unordered
+    ordered = [results[m[0]] for m in muts]
+    out_dir = ROOT / "out"
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / "mutation_report.json").write_text(json.dumps(ordered, indent=2))
+    print()
+    for r in ordered:
+        print(f"{r['status']:9s} {r['id']:36s} {r['detail']}")
+    bad = [r for r in ordered if r["status"] != KILLED]
+    counts = {s: sum(r["status"] == s for r in ordered) for s in STATUSES}
+    print("\nMUTATION_COUNTS " + json.dumps(counts))
+    print(f"{len(ordered) - len(bad)}/{len(ordered)} killed in {round(time.time() - t0)}s "
+          f"with {workers} workers")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
