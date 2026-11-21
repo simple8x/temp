@@ -339,11 +339,11 @@ def test_b3_zero_mapped_pins_with_zero_fp_does_not_pass():
     assert kr.ground_truth_gate(g, None)["state"] == kr.GT_BLOCKED
 
 
-def test_b3_partial_mapping_below_threshold_does_not_pass():
+def test_b3_electrically_equivalent_passive_pin_permutation_is_mapped_by_physical_position():
     g = _gt(ambiguous_r())
-    assert g["mapping_coverage"] == 0.5 and g["pairs"]["FP"] == 0
+    assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
     gate = kr.ground_truth_gate(g, POL)
-    assert gate["state"] == kr.GT_FAIL and "below the policy minimum" in gate["reason"]
+    assert gate["state"] == kr.GT_PASS and gate["mapping_coverage"] == 1.0
 
 
 def test_b3_sufficient_mapping_with_zero_fp_may_pass():
@@ -385,12 +385,11 @@ def test_b3_policy_file_loading_fails_closed(tmp_path):
     assert not (pathlib.Path(__file__).resolve().parents[2] / "tools" / "m4_gt_policy.json").exists()
 
 
-def test_b3_unmatched_pins_remain_unknown():
+def test_b3_electrically_equivalent_passive_pins_map_by_physical_position():
     sc = ambiguous_r()
     g = _gt(sc)
-    assert g["gt_pins_not_exported_UNKNOWN"] == len(g["unmatched_gt_pins"]) == 2
-    assert all(d["state"] == "UNKNOWN" for d in g["unmatched_gt_pins"])
-    assert {d["ref"] for d in g["unmatched_gt_pins"]} == {"R1"}
+    assert g["gt_pins_not_exported_UNKNOWN"] == len(g["unmatched_gt_pins"]) == 0
+    assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
     moved = [GtPin(x.ref, x.number, x.x + 50, x.y + 50, x.net, False, x.lib_id) for x in crossing().gt_pins()]
     g2 = _gt(crossing(), moved)
     assert g2["exported_pins_unmatched"] == len(g2["unmatched_exported_pins"]) > 0
