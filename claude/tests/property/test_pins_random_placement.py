@@ -6,8 +6,9 @@ Claims checked per case:
   * every true pin number has a detected pin whose tip is within tolerance and which lists
     that number among its candidates (never a wrong assignment);
   * positions are CONFIRMED (two independent sources) because stubs are drawn;
-  * id_state is CONFIRMED exactly for geometrically asymmetric symbols (D, OSC) and AMBIGUOUS
-    for symmetric ones (R, U4): pin numbers are then NOT guessed.
+  * id_state is CONFIRMED for geometrically asymmetric symbols (D, OSC), EQUIVALENT for symmetric
+    passive pins with identical library electrical signatures (R), and AMBIGUOUS for non-equivalent
+    symmetric pins (U4): no source pin-number identity is guessed.
 """
 
 import math
@@ -25,7 +26,7 @@ ALL = load_library(str(Path(__file__).resolve().parents[1] / "fixtures" / "lib_m
 LIB = Library(ALL.path, ALL.sha256, {k: v for k, v in ALL.symbols.items() if k != "R_LONG"})
 W, H = 300, 200
 WIRES = b"0.45 w 10 190 m 80 190 l S 10 185 m 10 150 l S 90 185 m 90 150 l S\n"
-EXPECT_ID = {"R": "AMBIGUOUS", "U4": "AMBIGUOUS", "D": "CONFIRMED", "OSC": "CONFIRMED"}
+EXPECT_ID = {"R": "EQUIVALENT", "U4": "AMBIGUOUS", "D": "CONFIRMED", "OSC": "CONFIRMED"}
 
 
 @settings(max_examples=120, deadline=None, suppress_health_check=[HealthCheck.too_slow])
