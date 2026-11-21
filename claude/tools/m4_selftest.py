@@ -27,10 +27,12 @@ def failclosed(name: str, man_path: Path) -> list[str]:
         P.append(f"{name}: expected 2 placed symbols and 1 net, got {len(placed)} / {len(nets)}")
     if name == "ambiguous_r":
         r = [d for d in man["symbols"] if any(c["symbol"] == "R" for c in d["candidates"])]
-        if not r or any(d["decision"] == "PLACED" for d in r) or not any("transform AMBIGUOUS" in x for d in r for x in d["reasons"]):
-            P.append("ambiguous_r: the symmetric R must be NOT_PLACED for its AMBIGUOUS transform")
-        if nets:
-            P.append("ambiguous_r: no net may be exported (one exportable pin only)")
+        if len(r) != 1 or r[0]["decision"] != "PLACED":
+            P.append("ambiguous_r: electrically equivalent resistor pins should be placed with a canonical mapping")
+        elif any(p["number_assignment"] != "EQUIVALENT_CANONICAL" for p in r[0]["pins"]):
+            P.append("ambiguous_r: source pin-number ambiguity must remain explicit in the export manifest")
+        if len(nets) != 1 or len(nets[0]["pins"]) != 2:
+            P.append("ambiguous_r: the independently constructed wire must connect exactly the R and D terminals")
     if name == "crossing":
         if len(nets) != 2 or any(len({p[0] for p in n["pins"]} & {"ECCI0", "ECCI1"}) and len(n["pins"]) > 2 for n in nets):
             P.append("crossing: the two crossing wires must stay two nets of two pins each")
