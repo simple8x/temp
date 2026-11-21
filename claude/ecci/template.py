@@ -172,17 +172,35 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
     # numbers per tip across all hits; id is CONFIRMED only if every hit agrees on every number
     pins: list[ResolvedPin] = []
     agree = True
+    electrically_equivalent = len(names) == 1
     for num0, tip0, base0 in first:
         nums = set()
-        for s in sets:
-            for n, t, _ in s:
-                if math.hypot(t[0] - tip0[0], t[1] - tip0[1]) <= tau:
-                    nums.add(n)
+        signatures = []
+        for hit, hit_pins in zip(hits, sets):
+            matches = [(n, t) for n, t, _ in hit_pins if math.hypot(t[0] - tip0[0], t[1] - tip0[1]) <= tau]
+            nums.update(n for n, _ in matches)
+            # A geometric permutation is safe only when every candidate maps this physical terminal to
+            # exactly one pin with the same electrical signature. Pin numbers alone are not a signature.
+            defs = [p for p in hit.symbol.pins if math.hypot(*(a - b for a, b in zip(hit.place(*p.tip), tip0))) <= tau]
+            if len(matches) != 1 or len(defs) != 1:
+                electrically_equivalent = False
+            else:
+                pin = defs[0]
+                signatures.append((pin.name, pin.electrical_type, pin.shape, pin.hidden, round(pin.length, 9)))
         if nums != {num0}:
             agree = False
+            if len(signatures) != len(hits) or len(set(signatures)) != 1:
+                electrically_equivalent = False
         pins.append(ResolvedPin(tip0, base0, tuple(sorted(nums))))
-    return Resolution(tuple(hits), "UNIQUE", "CONFIRMED" if agree else "AMBIGUOUS", tuple(pins), names,
-                      "" if agree else "symmetric template: pin numbers cannot be assigned from geometry alone")
+    if agree:
+        id_state, note = "CONFIRMED", ""
+    elif electrically_equivalent:
+        id_state = "EQUIVALENT"
+        note = "pin numbers permute only among pins with identical electrical signatures; candidate 0 is the explicit canonical export mapping"
+    else:
+        id_state = "AMBIGUOUS"
+        note = "pin numbers cannot be assigned from geometry without an electrically equivalent pin mapping"
+    return Resolution(tuple(hits), "UNIQUE", id_state, tuple(pins), names, note)
 
 
 def diagnose_match(cl: Cluster, sym: SymbolDef, params: MatchParams = MatchParams()) -> list[str]:
