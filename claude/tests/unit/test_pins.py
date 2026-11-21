@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import replace
 import math
 
 import pytest
@@ -48,10 +49,23 @@ def test_p1_resistor_with_stubs_positions_confirmed_by_independent_sources():
         assert independent(s1, s2, cls.registry)
 
 
-def test_p4_symmetric_resistor_has_ambiguous_numbers_not_guessed():
+def test_p4_symmetric_resistor_numbers_are_electrically_equivalent_not_guessed_as_source_ids():
     _, _, (cr,) = run(sym("R"))
     for pin in cr.pins:
-        assert pin.id_state == "AMBIGUOUS" and pin.numbers == ("1", "2")
+        assert pin.id_state == "EQUIVALENT" and pin.numbers == ("1", "2")
+
+
+def test_symmetric_geometry_with_different_electrical_pin_signatures_stays_ambiguous():
+    # Same body and pin locations as R, but the two terminals have different names/types. Geometry may not
+    # canonically swap these pins: electrical equivalence must be proven by the library, not assumed by shape.
+    base = LIB.symbols["R"]
+    pins = tuple(replace(p, name=("A" if p.number == "1" else "B"),
+                         electrical_type=("input" if p.number == "1" else "output")) for p in base.pins)
+    polarized = replace(base, name="R_POLARIZED", pins=pins)
+    _, _, (cr,) = run(sym("R"), symbols={"R_POLARIZED": polarized})
+    assert cr.resolution.status == "UNIQUE"
+    assert cr.resolution.id_state == "AMBIGUOUS"
+    assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
 
 
 def test_p2_no_stub_drawn_gives_candidate_only():
