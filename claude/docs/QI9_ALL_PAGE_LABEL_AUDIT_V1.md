@@ -1,0 +1,238 @@
+# QI9 all-page OCR label / wire proximity audit v1
+
+- Source PDF SHA-256: `a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc`
+- OCR observations: 437 (128 net-label candidates, 309 reference candidates)
+- Net-label candidates within 2.5 pt of a wire segment: 4
+- Reference candidates within 2.5 pt of a wire segment: 0
+
+## Token summary
+- `+24V` [NET_LABEL_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `+3.3V` [NET_LABEL_CANDIDATE]: 33 OCR observations, pages [5, 6, 7, 8, 9, 10, 11], near-wire 0
+- `+3.5V` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `+35.3V` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `+5V` [NET_LABEL_CANDIDATE]: 5 OCR observations, pages [5], near-wire 0
+- `A` [NET_LABEL_CANDIDATE]: 8 OCR observations, pages [6, 7, 10, 11], near-wire 0
+- `B` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `DE` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `DI` [NET_LABEL_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `EN` [NET_LABEL_CANDIDATE]: 4 OCR observations, pages [5, 9], near-wire 0
+- `GND` [NET_LABEL_CANDIDATE]: 15 OCR observations, pages [5, 6, 7, 8], near-wire 0
+- `IN` [NET_LABEL_CANDIDATE]: 2 OCR observations, pages [9, 11], near-wire 0
+- `OUT` [NET_LABEL_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `RO` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [7], near-wire 1
+- `RX` [NET_LABEL_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `Ro` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `TX` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `VBUS` [NET_LABEL_CANDIDATE]: 14 OCR observations, pages [5], near-wire 0
+- `VIN` [NET_LABEL_CANDIDATE]: 4 OCR observations, pages [5], near-wire 0
+- `a` [NET_LABEL_CANDIDATE]: 19 OCR observations, pages [5, 6, 7, 9, 10, 11], near-wire 3
+- `b` [NET_LABEL_CANDIDATE]: 2 OCR observations, pages [6, 10], near-wire 0
+- `ro` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `vBUS` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `vcc` [NET_LABEL_CANDIDATE]: 4 OCR observations, pages [6, 7], near-wire 0
+- `vin` [NET_LABEL_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `C1` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C10` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C11` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C12` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C13` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C14` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `C15` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C16` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `C17` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `C18` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `C19` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `C2` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `C20` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `C21` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `C22` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `C23` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `C24` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C25` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C26` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C27` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `C28` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `C29` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `C3` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `C30` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C31` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C32` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [9], near-wire 0
+- `C34` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C4` [REFERENCE_CANDIDATE]: 5 OCR observations, pages [5, 8], near-wire 0
+- `C411` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C45` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `C56` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `C6` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `C7` [REFERENCE_CANDIDATE]: 4 OCR observations, pages [5, 8], near-wire 0
+- `C8` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `D1` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `D12` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `D16` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `D18` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `D20` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [9], near-wire 0
+- `D21` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D22` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D23` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D24` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D241` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D25` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D26` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D27` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D28` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D284` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D29` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D30` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D31` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D32` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D33` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D34` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D35` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D36` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D37` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D38` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D39` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D4` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `D40` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D413` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `D42` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D43` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `D44` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D441` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `D45` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D46` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `D47` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D48` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D49` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D5` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `D50` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D51` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `D514` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `D52` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D53` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D54` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D55` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `D56` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D57` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D58` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D59` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `D6` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5, 11], near-wire 0
+- `D60` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D614` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `D7` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `D8` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `D9` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `J2` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `J3` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `J4` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `J5` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `J6` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `J7` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `L2` [REFERENCE_CANDIDATE]: 3 OCR observations, pages [5, 6], near-wire 0
+- `L435` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `L8` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `Q2` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `Q3` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `Q5` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `Q8` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `R10` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `R11` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `R12` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `R13` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `R14` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `R15` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5, 6], near-wire 0
+- `R16` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `R17` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `R18` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `R19` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `R2` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `R20` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `R21` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `R22` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `R23` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `R24` [REFERENCE_CANDIDATE]: 3 OCR observations, pages [6, 7], near-wire 0
+- `R25` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `R26` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `R27` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `R28` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `R29` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `R3` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `R30` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `R31` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `R32` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `R33` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `R34` [REFERENCE_CANDIDATE]: 3 OCR observations, pages [7, 8], near-wire 0
+- `R35` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `R36` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [9], near-wire 0
+- `R37` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [9], near-wire 0
+- `R38` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [9], near-wire 0
+- `R39` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [9], near-wire 0
+- `R4` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `R40` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R42` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R43` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R44` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R45` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `R46` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `R47` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R48` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `R49` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R5` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `R50` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `R51` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [10], near-wire 0
+- `R52` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `R53` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R54` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `R55` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R56` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R57` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `R58` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R59` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R6` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `R60` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R61` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R62` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R63` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R64` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `R65` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R66` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `R67` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `R7` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `RN2` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `RN3` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [10], near-wire 0
+- `RN4` [REFERENCE_CANDIDATE]: 3 OCR observations, pages [10], near-wire 0
+- `RN5` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `RN6` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [11], near-wire 0
+- `RN7` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [11], near-wire 0
+- `SW2` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [9], near-wire 0
+- `Sw2` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [9], near-wire 0
+- `U1` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `U10` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `U11` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `U12` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `U13` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [7], near-wire 0
+- `U14` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `U2` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5], near-wire 0
+- `U3` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `U4` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+- `U5` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `U6` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `U7` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `U8` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `U9` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `Y4` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `c10` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [6], near-wire 0
+- `c19` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [7], near-wire 0
+- `c2` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [5, 8], near-wire 0
+- `c3` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [8], near-wire 0
+- `c6` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [8], near-wire 0
+- `c9` [REFERENCE_CANDIDATE]: 2 OCR observations, pages [6], near-wire 0
+- `x1` [REFERENCE_CANDIDATE]: 1 OCR observations, pages [5], near-wire 0
+
+## Authority / limits
+- All OCR observations and nearest-wire matches remain `UNKNOWN`.
+- PSM6/PSM11 are same-engine correlated observations, not independent ground truth.
+- Regex token class is not semantic proof of net-label/reference identity.
+- Nearest-wire distance is geometric proximity only, not attachment or electrical connectivity.
+- Importer limitations `clip_not_applied` and `text_show_ops` mean label extraction is incomplete.
+- No net names bound; no solver; no net writer; no VERIFIED_CONNECTED / VERIFIED_SEPARATE promotion.
+[exit status 0]
