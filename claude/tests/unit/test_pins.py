@@ -81,6 +81,15 @@ def test_allowlisted_library_name_does_not_override_different_pin_signatures():
     assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
 
 
+def test_hidden_passive_two_terminal_lookalike_is_not_pin_equivalent():
+    base = LIB.symbols["R"]
+    hidden = replace(base, pins=tuple(replace(p, hidden=True) for p in base.pins))
+    _, _, (cr,) = run(sym("R"), symbols={"R_HIDDEN": hidden})
+    assert cr.resolution.status == "UNIQUE"
+    assert cr.resolution.id_state == "AMBIGUOUS"
+    assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
+
+
 def test_stacked_duplicate_pin_number_is_not_misreported_as_confirmed():
     base = LIB.symbols["R"]
     # Two library pin definitions occupy the same physical terminal and reuse its number.

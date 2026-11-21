@@ -44,7 +44,14 @@ PIN_NUMBER_EXCHANGE_ALLOWLIST = {
 def _pin_number_exchange_allowed(symbol: SymbolDef) -> bool:
     token = symbol.lib_token.split("@", 1)[0]
     library_file = token.rsplit("/", 1)[-1].removeprefix("lib:")
-    return symbol.name in PIN_NUMBER_EXCHANGE_ALLOWLIST.get(library_file, ())
+    if symbol.name not in PIN_NUMBER_EXCHANGE_ALLOWLIST.get(library_file, ()):
+        return False
+    # A library filename/name is only an allowlist selector, never proof by itself.
+    # Require exactly two visible, unnamed passive line pins. This rejects hidden-pin
+    # lookalikes and custom symbols whose two pins merely happen to share a weak type.
+    return (len(symbol.pins) == 2 and
+            all(p.name == "~" and p.electrical_type == "passive" and
+                p.shape == "line" and not p.hidden for p in symbol.pins))
 
 
 @dataclass(frozen=True)

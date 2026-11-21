@@ -137,13 +137,13 @@ so the mutation job installs KiCad and sets `ECCI_KICAD_TESTS=1`).
   GT scoreable / mapped / unmatched pins, coverage, TP / FP / FN / TN, precision, recall, gate state + reason.
 
 ### Tests / mutations
-`tests/unit/test_m42_blockers.py` (57): B1 valid / unrelated primitive / foreign lineage / wrong endpoint /
+`tests/unit/test_m42_blockers.py` (65): B1 valid / unrelated primitive / foreign lineage / wrong endpoint /
 widened tolerance / reversed / malformed / degenerate / missing lineage (4 forms) / symbol reader / page audit
 without page / primitive missing from page; B2 valid / no promotion / wrong page / nonexistent / unrelated /
 non-line primitive / shifted endpoint / foreign content_ref / line removed from page / no geometry / record
 required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
 policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
-`tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
+`tests/kicad`). Mutations M165–M191 (including M188 electrical-signature, M189 canonical-tip, M190 synthetic-identity gate, M191 missing-assignment guards). `tests/unit/test_pins.py` also rejects hidden passive two-terminal lookalikes; M88 and M161 re-targeted to the refactored code (same bug class).
 
 ### F3 consequence in generated T-junction self-test
 The generated `t_nodot` scene deliberately has a wire endpoint touching another wire without a junction dot. KiCad's ground-truth netlist treats that endpoint as connected, while ECCI keeps the unsupported edge `INFERRED` and does not export it. The stricter FN gate therefore reports `ground_truth=FAIL` for this scene. This is an intentional fail-closed result, not a green self-test: `tests/kicad/test_kicad_cli.py` asserts the expected FN failure explicitly, and `tools/m4_selftest.py` records it as an expected non-PASS control. The `ambiguous_r` control likewise remains INCONCLUSIVE because its synthetic canonical source pin identity is not GT-confirmed; the self-test summary labels its aggregate result `PASS_WITH_EXPECTED_NONPASS_CONTROLS`, never electrical PASS.

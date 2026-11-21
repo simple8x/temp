@@ -267,9 +267,9 @@ def load_gt_policy(path) -> dict | None:
 
 
 def ground_truth_gate(g: dict, policy) -> dict:
-    """PASS needs ALL of: a valid policy, at least one scored pin pair (>= 2 mapped pins), mapping coverage >= the
-    policy minimum, and FP == 0. FP > 0 is FAIL whatever else holds (a wrong connection was exported); no policy
-    is BLOCKED; nothing scoreable is INCONCLUSIVE; coverage below the minimum is FAIL. Unmatched pins stay UNKNOWN."""
+    """PASS requires valid policy, >=2 scored pins, mapping coverage at/above minimum, and FP=FN=0.
+    Any FP or FN is FAIL; pin-number mismatch is FAIL; missing policy is BLOCKED; zero/insufficient evidence,
+    synthetic-canonical identity, or no scored pair is INCONCLUSIVE. Unmatched pins remain UNKNOWN."""
     pairs = g["pairs"]
     scored = sum(pairs.values())
     rep = {"gt_scoreable_pins": g["gt_scoreable_pins"], "exported_pins_mapped": g["exported_pins_mapped"],
