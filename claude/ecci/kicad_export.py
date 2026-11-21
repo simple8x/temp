@@ -2,7 +2,7 @@
 
 Fail-closed policy (every decision is written to the manifest with its reason):
   * A symbol is PLACED only if the symbol record says identity CONFIRMED, transform UNIQUE or EQUIVALENT,
-    or pin id_state EQUIVALENT under the library's identical electrical pin signatures (then candidate 0 is
+    or pin id_state PIN_EQUIVALENT_CANONICAL under the library's identical electrical pin signatures (then candidate 0 is
     recorded as a canonical pin-number mapping); the library holds the symbol's text, its scale matches the
     page scale, its D4 orientation has a KiCad (rotation, mirror) whose meaning does not depend on the
     mirror/rotate order, and it cannot create a connection of its own (power symbols, hidden power-input pins).
@@ -279,12 +279,12 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
         if c["identity"]["state"] != "CONFIRMED":
             R.append(f"identity {c['identity']['state']} ({len(c['identity']['names'])} symbol names)")
         pin_equivalent = (c["resolution"]["status"] == "UNIQUE" and
-                          c["resolution"]["id_state"] == "EQUIVALENT" and
+                          c["resolution"]["id_state"] == "PIN_EQUIVALENT_CANONICAL" and
                           len(c["pins"]) == 2 and
                           all(len(x.get("pins", [])) == 2 for x in c["candidates"] if x.get("selected")))
         if c["transform"]["state"] not in ("UNIQUE", "EQUIVALENT") and not pin_equivalent:
             R.append(f"transform {c['transform']['state']} ({c['transform']['n_candidates']} candidates)")
-        if c["resolution"]["status"] != "UNIQUE" or c["resolution"]["id_state"] not in ("CONFIRMED", "EQUIVALENT"):
+        if c["resolution"]["status"] != "UNIQUE" or c["resolution"]["id_state"] not in ("CONFIRMED", "PIN_EQUIVALENT_CANONICAL"):
             R.append(f"resolution {c['resolution']['status']}/{c['resolution']['id_state']}")
         if not c["pins"]:
             R.append("no pins")
@@ -504,5 +504,4 @@ def verify_manifest(man: dict, conn: dict, syms: dict, lib_text: str, sch_text: 
         diff = sorted(k for k in set(man) | set(man2) if man.get(k) != man2.get(k))
         P.append(f"manifest is not what the inputs give (differs in {diff})")
     if sch_text is not None and sch_text != sch2:
-        P.append("schematic text is not what the inputs give")
-    return P
+        P.append("schematic text i

@@ -52,7 +52,7 @@ def test_p1_resistor_with_stubs_positions_confirmed_by_independent_sources():
 def test_p4_symmetric_resistor_numbers_are_electrically_equivalent_not_guessed_as_source_ids():
     _, _, (cr,) = run(sym("R"))
     for pin in cr.pins:
-        assert pin.id_state == "EQUIVALENT" and pin.numbers == ("1", "2")
+        assert pin.id_state == "PIN_EQUIVALENT_CANONICAL" and pin.numbers == ("1", "2")
 
 
 def test_symmetric_geometry_with_different_electrical_pin_signatures_stays_ambiguous():

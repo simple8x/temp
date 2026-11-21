@@ -8,7 +8,7 @@ What a record says, and only what the evidence supports:
                UNKNOWN if none matched
   transform    UNIQUE (one selected hit), EQUIVALENT (several hits of one symbol that put every pin number on
                the same tip, e.g. a diode mirrored about its axis), AMBIGUOUS, or UNKNOWN; this is geometric
-               transform equivalence and is distinct from resolution.id_state EQUIVALENT (pin identity).
+               transform equivalence and is distinct from resolution.id_state PIN_EQUIVALENT_CANONICAL (pin identity).
   pins         the pin objects of the connectivity document for this cluster (tip, base, numbers, states);
                EQUIVALENT (pin identity, not transform) means a two-terminal symbol is on the explicit
                non-polarized allowlist and every candidate's corresponding pins have matching
@@ -611,4 +611,3 @@ def build_symbols_like(doc: dict, conn_doc: dict) -> dict:
     d = {k: v for k, v in doc.items() if k != "content_sha256"}
     d["connectivity_sha256"] = conn_doc["content_sha256"]
     d["content_sha256"] = content_hash(d)
-    return d

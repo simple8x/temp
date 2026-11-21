@@ -67,7 +67,7 @@ def run_page(out: Path, pi, cls, clusters, built, res, library, lib_text: str, s
                              "transform_AMBIGUOUS": sum(c["transform"]["state"] == "AMBIGUOUS" for c in syms["clusters"]),
                              "pin_id_NOT_SOURCE_CONFIRMED": sum(p["id_state"] != "CONFIRMED"
                                                                 for c in syms["clusters"] for p in c["pins"]),
-                             "pin_id_SYNTHETIC_CANONICAL_NOT_SOURCE_CONFIRMED": sum(p["id_state"] == "EQUIVALENT"
+                             "pin_id_SYNTHETIC_CANONICAL_NOT_SOURCE_CONFIRMED": sum(p["id_state"] == "PIN_EQUIVALENT_CANONICAL"
                                                                     for c in syms["clusters"] for p in c["pins"])}
     # 4. the real kicad-cli
     if cli is None:
@@ -131,4 +131,4 @@ def gate_table(records: list[dict], cli: str | None, extra: dict | None = None) 
 
 
 def env_cli() -> str | None:
-    return kr.kicad_cli() if os.environ.get("ECCI_NO_KICAD") != "1" else None
+    return kr.kicad_cli() if os.environ.get("ECCI_NO_KICAD") !=

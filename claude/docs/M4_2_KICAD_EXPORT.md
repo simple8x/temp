@@ -21,14 +21,14 @@ pipeline's `provenance` stage).
 
 ## Export policy (`ecci/kicad_export.py`, fail-closed, every decision + reason in the manifest)
 - PLACED only with identity CONFIRMED and either (a) transform UNIQUE/EQUIVALENT with resolution UNIQUE and
-  pin ids CONFIRMED, or (b) resolution UNIQUE with pin id state EQUIVALENT: exactly two pins on an explicit
+  pin ids CONFIRMED, or (b) resolution UNIQUE with pin id state PIN_EQUIVALENT_CANONICAL: exactly two pins on an explicit
   library-qualified non-polarized allowlist (`Device.kicad_sym` names `R`, `R_US`, `C`, `C_Small`, `L`,
   `L_Small`, `L_Core`, `Fuse`, `Fuse_Small`; `lib_min.kicad_sym:R` is test-only),
   with matching pin name/type/shape/hidden/length and page-space pin direction. Passive type alone is never enough.
   Case (b) uses candidate 0 as synthetic canonical numbering; source pin identity remains unconfirmed. Library text, scale = page scale (±0.5 %), KiCad
   orientation, library pin geometry, exact pin tips (≤ 10 µm), implicit connections and coincident pins are
   still checked.
-- Transform EQUIVALENT = several hits of ONE symbol putting every pin number on the same tip. Pin-id EQUIVALENT
+- Transform EQUIVALENT = several hits of ONE symbol putting every pin number on the same tip. Pin-id PIN_EQUIVALENT_CANONICAL
   is a different state: only explicitly allowlisted two-terminal non-polarized symbols may use a synthetic
   canonical pin numbering. A four-pin passive `~` symbol and `C_Polarized` remain AMBIGUOUS/NOT_PLACED.
   Manifest pin records retain `source_number_candidates` and `number_assignment=EQUIVALENT_CANONICAL`; this
@@ -142,4 +142,4 @@ without page / primitive missing from page; B2 valid / no promotion / wrong page
 non-line primitive / shifted endpoint / foreign content_ref / line removed from page / no geometry / record
 required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
 policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
-`tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
+`tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refac

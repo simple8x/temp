@@ -120,7 +120,7 @@ def test_dropped_or_injected_candidate_and_forged_transform_state_are_rejected()
 def test_electrically_equivalent_pin_numbers_use_a_declared_canonical_mapping():
     pi, conn, syms, sch, man = export(ambiguous_r())
     r = next(c for c in syms["clusters"] if any(x["symbol"] == "R" for x in c["candidates"]))
-    assert {p["id_state"] for p in r["pins"]} == {"EQUIVALENT"} and all(len(p["numbers"]) == 2 for p in r["pins"])
+    assert {p["id_state"] for p in r["pins"]} == {"PIN_EQUIVALENT_CANONICAL"} and all(len(p["numbers"]) == 2 for p in r["pins"])
     placed_r = by_cluster_symbol(man, "R")[0]
     assert placed_r["decision"] == "PLACED"
     assert all(p["number_assignment"] == "EQUIVALENT_CANONICAL" and len(p["numbers"]) == 1
