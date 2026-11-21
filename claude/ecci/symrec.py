@@ -9,7 +9,9 @@ What a record says, and only what the evidence supports:
   transform    UNIQUE (one selected hit), EQUIVALENT (several hits of one symbol that put every pin number on
                the same tip, e.g. a diode mirrored about its axis), AMBIGUOUS, or UNKNOWN; no transform is
                chosen when the candidates disagree
-  pins         the pin objects of the connectivity document for this cluster (tip, base, numbers, states)
+  pins         the pin objects of the connectivity document for this cluster (tip, base, numbers, states);
+               EQUIVALENT means pin numbers are ambiguous but every number permutation maps only pins with
+               identical library electrical signatures, so export may use a declared synthetic canonical mapping
   reference    always UNKNOWN in schema 1: no stage of ECCI reads designators or values from the PDF yet, so
   value        a non-UNKNOWN value is rejected on read rather than trusted
 
