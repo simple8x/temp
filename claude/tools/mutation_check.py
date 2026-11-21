@@ -579,6 +579,23 @@ MUTATIONS = [
     ('C05-gt-eval-recovery-dup-counted-new', "tools/gt_eval.py",
      '        if gi in used_gt:\n            dup += 1\n            continue\n',
      ''),
+    # GT forensic repair (tests/unit/test_gt_repair.py)
+    ("G01-netlist-conflict-last-wins", "ecci/gt_kicad.py",
+     "out = {k: next(iter(v)) for k, v in seen.items() if len(v) == 1}", "out = {k: sorted(v)[-1] for k, v in seen.items()}"),
+    ("G02-claim-status-promotes", "ecci/gt_kicad.py",
+     "return min(parts, key=_RANK.__getitem__)", "return max(parts, key=_RANK.__getitem__)"),
+    ("G03-audit-allows-promotion", "tools/gt_audit.py",
+     'if e["promotion"] and (e["rule"] not in RESTORING_RULES', 'if False and (e["rule"] not in RESTORING_RULES'),
+    ("G04-audit-denominator-unchecked", "tools/gt_audit.py", "if delta != led:", "if False:"),
+    ("G05-same-point-no-neighbour-cells", "ecci/gt_kicad.py", "        for dx in (-1, 0, 1):", "        for dx in (0,):"),
+    ("G06-body-style-ignored", "ecci/gt_kicad.py",
+     '"body_style_unhandled": bs is not None and conv is None,', '"body_style_unhandled": False,'),
+    ("G07-duplicate-ref-pin-scored", "ecci/gt_kicad.py",
+     "dup = {k for k, n in cnt.items() if n > 1}", "dup = set()"),
+    ("G08-audit-unexplained-change-allowed", "tools/gt_audit.py",
+     'if e["rule"] is None:', 'if False:'),
+    ("G09-gt-reader-impl-silent-fallback", "tools/gt_audit.py",
+     'raise SystemExit(f"GT_PINS_IMPL={impl!r} unknown")', 'from ecci.gt_kicad import gt_pins\n    return gt_pins'),
 ]
 
 

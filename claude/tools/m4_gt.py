@@ -28,7 +28,7 @@ os.environ.setdefault("GT_ONLY", os.environ.get("M4_ONLY", ""))
 
 import gt_eval  # noqa: E402
 from ecci import kicad_roundtrip as kr  # noqa: E402
-from ecci.gt_kicad import gt_pins
+from gt_audit import select_gt_pins  # noqa: E402
 from ecci.kicad_export import raw_library_from_schematic  # noqa: E402
 from ecci.ingest_vector import ingest_pdf  # noqa: E402
 from ecci.kicad_lib import load_library  # noqa: E402
@@ -37,7 +37,8 @@ from ecci.rules import analyze_page  # noqa: E402
 
 PAGE_SECONDS = int(os.environ.get("M4_PAGE_SECONDS", "600"))
 POLICY_PATH = os.environ.get("M4_GT_POLICY") or str(ROOT / "tools" / "m4_gt_policy.json")
-OUT = ROOT / "out" / "m4" / "gt"
+OUT = pathlib.Path(os.environ["M4_GT_OUT"]) if os.environ.get("M4_GT_OUT") else ROOT / "out" / "m4" / "gt"
+gt_pins = select_gt_pins()
 
 
 def _alarm(signum, frame):

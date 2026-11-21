@@ -23,7 +23,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import pikepdf  # noqa: E402
 
-from ecci.gt_kicad import embedded_library_text, find_root, gt_pins, hierarchy, wire_component_index  # noqa: E402
+from ecci.gt_kicad import embedded_library_text, find_root, hierarchy, wire_component_index  # noqa: E402
+from gt_audit import select_gt_pins  # noqa: E402
+
+gt_pins = select_gt_pins()      # GT_PINS_IMPL: repaired (default) or the frozen 873bfbb reader
 from ecci.ingest_vector import ingest_pdf  # noqa: E402
 from ecci.kicad_lib import load_library  # noqa: E402
 from ecci.rules import analyze_page  # noqa: E402
