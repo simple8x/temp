@@ -28,6 +28,30 @@ D4 = (
 )
 DIM_EPS = 1e-9
 COVER_SAMPLES = 5
+# Explicitly non-polarized, two-terminal primitives whose terminal numbers may be
+# canonically exchanged without changing the electrical meaning of the symbol.
+# This is intentionally an allowlist, not a rule inferred from passive pin types.
+PIN_NUMBER_EXCHANGE_ALLOWLIST = {
+    # Production KiCad device library. Names are deliberately library-qualified so a custom
+    # symbol named "R" cannot inherit the standard resistor's exchange permission.
+    "Device.kicad_sym": frozenset({"R", "R_US", "C", "C_Small", "L", "L_Small",
+                                   "L_Core", "Fuse", "Fuse_Small"}),
+    # Minimal synthetic library used only by this repository's generated regression scenes.
+    "lib_min.kicad_sym": frozenset({"R", "C"}),
+}
+
+
+def _pin_number_exchange_allowed(symbol: SymbolDef) -> bool:
+    token = symbol.lib_token.split("@", 1)[0]
+    library_file = token.rsplit("/", 1)[-1].removeprefix("lib:")
+    if symbol.name not in PIN_NUMBER_EXCHANGE_ALLOWLIST.get(library_file, ()):
+        return False
+    # A library filename/name is only an allowlist selector, never proof by itself.
+    # Require exactly two visible, unnamed passive line pins. This rejects hidden-pin
+    # lookalikes and custom symbols whose two pins merely happen to share a weak type.
+    return (len(symbol.pins) == 2 and
+            all(p.name == "~" and p.electrical_type == "passive" and
+                p.shape == "line" and not p.hidden for p in symbol.pins))
 
 
 @dataclass(frozen=True)
@@ -134,7 +158,7 @@ class ResolvedPin:
 class Resolution:
     hits: tuple[Hit, ...]
     status: str                       # "NONE" | "UNIQUE" | "DIFFERENT_TIP_SETS"
-    id_state: str                     # "CONFIRMED" | "AMBIGUOUS" | "UNKNOWN"
+    id_state: str                     # "CONFIRMED" | "PIN_EQUIVALENT_CANONICAL" | "AMBIGUOUS" | "UNKNOWN"
     pins: tuple[ResolvedPin, ...]
     symbols: tuple[str, ...]
     note: str = ""
@@ -172,17 +196,87 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
     # numbers per tip across all hits; id is CONFIRMED only if every hit agrees on every number
     pins: list[ResolvedPin] = []
     agree = True
+    electrically_equivalent = len(names) == 1 and all(_pin_number_exchange_allowed(h.symbol) for h in hits)
     for num0, tip0, base0 in first:
         nums = set()
-        for s in sets:
-            for n, t, _ in s:
-                if math.hypot(t[0] - tip0[0], t[1] - tip0[1]) <= tau:
-                    nums.add(n)
+        signatures = []
+        for hit, hit_pins in zip(hits, sets):
+            matches = [(n, t) for n, t, _ in hit_pins if math.hypot(t[0] - tip0[0], t[1] - tip0[1]) <= tau]
+            nums.update(n for n, _ in matches)
+            # A geometric permutation is safe only when every candidate maps this physical terminal to
+            # exactly one pin with the same electrical signature. Pin numbers alone are not a signature.
+            defs = [p for p in hit.symbol.pins if math.hypot(*(a - b for a, b in zip(hit.place(*p.tip), tip0))) <= tau]
+            if len(matches) != 1 or len(defs) != 1:
+                # A stacked / duplicate physical terminal is not a unique pin identity, even
+                # when the duplicate happens to reuse the same pin number. Never label it
+                # CONFIRMED merely because the set of numbers collapsed to one value.
+                agree = False
+                electrically_equivalent = False
+            else:
+                pin = defs[0]
+                # Compare the pin's direction in page coordinates as well as its electrical
+                # attributes. A matching tip alone is not sufficient evidence of an identical pin.
+                placed_tip = hit.place(*pin.tip)
+                placed_base = hit.place(*pin.base)
+                direction = (round(placed_base[0] - placed_tip[0], 6),
+                             round(placed_base[1] - placed_tip[1], 6))
+                signatures.append((pin.name, pin.electrical_type, pin.shape, pin.hidden,
+                                   round(pin.length, 9), direction))
         if nums != {num0}:
             agree = False
+            if len(signatures) != len(hits) or len(set(signatures)) != 1:
+                electrically_equivalent = False
         pins.append(ResolvedPin(tip0, base0, tuple(sorted(nums))))
-    return Resolution(tuple(hits), "UNIQUE", "CONFIRMED" if agree else "AMBIGUOUS", tuple(pins), names,
-                      "" if agree else "symmetric template: pin numbers cannot be assigned from geometry alone")
+    if agree:
+        id_state, note = "CONFIRMED", ""
+    elif electrically_equivalent and len(first) == 2 and all(len(h.symbol.pins) == 2 for h in hits):
+        id_state = "PIN_EQUIVALENT_CANONICAL"
+        note = "pin numbers permute only on an allowlisted, non-polarized two-terminal symbol with matching pin signatures; candidate 0 is synthetic canonical numbering, not source identity"
+    else:
+        id_state = "AMBIGUOUS"
+        note = "pin numbers cannot be assigned from geometry without an electrically equivalent pin mapping"
+    return Resolution(tuple(hits), "UNIQUE", id_state, tuple(pins), names, note)
+
+
+# ----------------------------------------------------------------------------------------------- qualified (recovery)
+# Purely additive layer used by ecci.recovery only. The baseline `resolve` / `Resolution` above are byte-identical to
+# 873bfbb and are NOT called with different arguments here, so baseline output, pickles and fingerprints cannot change.
+
+def symbol_identity(symbol: SymbolDef) -> tuple[str, str]:
+    """Canonical symbol identity: (lib_token, name). A name alone does not identify a library symbol."""
+    return (symbol.lib_token, symbol.name)
+
+
+def hit_sort_key(h: Hit) -> tuple:
+    """Order-independent canonical key of one accepted (symbol, transform) alternative."""
+    return (h.symbol.name, h.symbol.lib_token, h.orient, round(h.scale, 9), round(h.tx, 6), round(h.ty, 6))
+
+
+@dataclass(frozen=True)
+class QualifiedResolution:
+    resolution: Resolution                         # legacy resolve() over the hits in canonical order
+    identities: tuple[tuple[str, str], ...]        # sorted distinct (lib_token, name)
+    status: str
+    id_state: str
+    note: str
+
+
+QUALIFIED_DOWNGRADE_NOTE = ("pin numbers permute across more than one library-qualified symbol identity; "
+                            "the canonical-numbering shortcut needs exactly one identity")
+
+
+def resolve_qualified(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -> QualifiedResolution:
+    """Library-qualified resolution for recovery. = legacy resolve() on the canonically ordered hits (input order
+    never matters), except that PIN_EQUIVALENT_CANONICAL requires ONE (lib_token, name) identity: the legacy shortcut
+    tests one NAME, so with several identities that verdict is downgraded to AMBIGUOUS (exactly what the legacy
+    code returns when its equivalence test fails). Nothing is ever upgraded."""
+    ordered = sorted(hits, key=hit_sort_key)
+    res = resolve(cl, ordered, params)
+    idents = tuple(sorted({symbol_identity(h.symbol) for h in ordered}))
+    id_state, note = res.id_state, res.note
+    if id_state == "PIN_EQUIVALENT_CANONICAL" and len(idents) != 1:
+        id_state, note = "AMBIGUOUS", QUALIFIED_DOWNGRADE_NOTE
+    return QualifiedResolution(res, idents, res.status, id_state, note)
 
 
 def diagnose_match(cl: Cluster, sym: SymbolDef, params: MatchParams = MatchParams()) -> list[str]:

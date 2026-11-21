@@ -2,6 +2,7 @@
 logic (the real kicad-cli round trip is in tests/kicad)."""
 import copy
 import dataclasses
+import hashlib
 
 import pytest
 
@@ -13,16 +14,17 @@ from test_rules import H
 
 
 # ------------------------------------------------------------------ symbol records: candidates / identity
-def test_multiple_candidates_in_one_cluster_are_all_recorded_and_not_chosen():
+def test_multiple_candidates_are_recorded_and_electrically_equivalent_pins_get_canonical_export():
     pi, conn, syms, sch, man = export(ambiguous_r())
     r = next(c for c in syms["clusters"] if any(x["symbol"] == "R" for x in c["candidates"]))
     assert len(r["candidates"]) >= 2 and all(x["selected"] for x in r["candidates"])
     assert r["transform"] == {"state": "AMBIGUOUS", "candidate": None, "n_candidates": len(r["candidates"])}
     d = next(d for d in man["symbols"] if d["cluster"] == r["id"])
-    assert d["decision"] == "NOT_PLACED" and "lib_id" not in d and d["pins"] == []
-    assert any("transform AMBIGUOUS" in x for x in d["reasons"])
+    assert d["decision"] == "PLACED" and d["lib_id"].endswith(":R")
+    assert d["transform_choice"].startswith("SYNTHETIC_CANONICAL:")
+    assert all(p["number_assignment"] == "EQUIVALENT_CANONICAL" for p in d["pins"])
     assert len(d["candidates"]) == len(r["candidates"])            # every candidate is in the manifest
-    assert "R" not in sch.split("(lib_symbols")[1].split("(symbol (lib_id")[0]
+    assert "R" in sch.split("(lib_symbols")[1].split("(symbol (lib_id")[0]
 
 
 def test_two_library_symbols_with_the_same_geometry_make_identity_ambiguous():
@@ -34,6 +36,24 @@ def test_two_library_symbols_with_the_same_geometry_make_identity_ambiguous():
     man = kx.plan(conn, syms, LIB_TEXT)
     d = next(d for d in man["symbols"] if d["cluster"] == c["id"])
     assert d["decision"] == "NOT_PLACED" and any("identity AMBIGUOUS" in x for x in d["reasons"])
+
+
+def test_symmetric_pin_number_permutation_with_different_electrical_signatures_is_not_placed():
+    base = LIB.symbols["R"]
+    pins = tuple(dataclasses.replace(p, name=("A" if p.number == "1" else "B"),
+                                     electrical_type=("input" if p.number == "1" else "output"))
+                 for p in base.pins)
+    polarized = dataclasses.replace(base, name="R_POLARIZED", pins=pins)
+    lib_text = LIB_TEXT.replace('(symbol "R"', '(symbol "R_POLARIZED"', 1)
+    lib = Library(LIB.path, hashlib.sha256(lib_text.encode()).hexdigest(),
+                  {k: v for k, v in LIB.symbols.items() if k != "R"} | {"R_POLARIZED": polarized})
+    pi, conn, syms = docs(ambiguous_r(), lib)
+    c = next(c for c in syms["clusters"] if c["identity"]["lib_symbol"] == "R_POLARIZED")
+    assert c["resolution"]["id_state"] == "AMBIGUOUS"
+    man = kx.plan(conn, syms, lib_text)
+    d = next(d for d in man["symbols"] if d["cluster"] == c["id"])
+    assert d["decision"] == "NOT_PLACED"
+    assert any("resolution UNIQUE/AMBIGUOUS" in reason for reason in d["reasons"])
 
 
 def test_symbol_identity_unknown_is_never_placed():
@@ -97,11 +117,14 @@ def test_dropped_or_injected_candidate_and_forged_transform_state_are_rejected()
         symrec.loads(rehash_syms(desel), conn, LIB)
 
 
-def test_pin_number_unknown_blocks_placement_and_cannot_be_forged():
+def test_electrically_equivalent_pin_numbers_use_a_declared_canonical_mapping():
     pi, conn, syms, sch, man = export(ambiguous_r())
     r = next(c for c in syms["clusters"] if any(x["symbol"] == "R" for x in c["candidates"]))
-    assert {p["id_state"] for p in r["pins"]} == {"AMBIGUOUS"} and all(len(p["numbers"]) == 2 for p in r["pins"])
-    assert by_cluster_symbol(man, "R")[0]["decision"] == "NOT_PLACED"
+    assert {p["id_state"] for p in r["pins"]} == {"PIN_EQUIVALENT_CANONICAL"} and all(len(p["numbers"]) == 2 for p in r["pins"])
+    placed_r = by_cluster_symbol(man, "R")[0]
+    assert placed_r["decision"] == "PLACED"
+    assert all(p["number_assignment"] == "EQUIVALENT_CANONICAL" and len(p["numbers"]) == 1
+               and len(p["source_number_candidates"]) == 2 for p in placed_r["pins"])
     for mut in ("id_state", "numbers"):
         bad = copy.deepcopy(syms)
         p = next(c for c in bad["clusters"] if c["id"] == r["id"])["pins"][0]

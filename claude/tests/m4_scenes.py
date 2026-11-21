@@ -103,13 +103,15 @@ def t_junction(dot: bool) -> Scene:
 
 
 def ambiguous_r() -> Scene:
-    """A symmetric R (pin numbers not decidable) wired to a D: the R is never placed."""
+    """A symmetric R wired to a D: R pin numbers are not source-identifiable, but are electrically equivalent."""
     s = Scene("ambiguous_r")
     s.add("R1", "R", "r90", (100.0, 100.0))
-    s.add("D1", "D", "r0", (200.0, 100.0))
-    s.wire(tip("R", "r90", (100.0, 100.0), "1"), tip("D", "r0", (200.0, 100.0), "2"))
-    rt = tip("R", "r90", (100.0, 100.0), "1")
-    s.nets = [{("R1", "1"), ("D1", "2")}] if rt[0] < 100 else [{("R1", "2"), ("D1", "2")}]
+    # Put D to the left and rotate it so both external wires leave the pin tips away from their bodies.
+    # The previous geometry routed the wire through the resistor and diode bodies, so it was not a valid
+    # electrical-connectivity oracle for this scene.
+    s.add("D1", "D", "r180", (40.0, 100.0))
+    s.wire(tip("R", "r90", (100.0, 100.0), "1"), tip("D", "r180", (40.0, 100.0), "2"))
+    s.nets = [{("R1", "1"), ("D1", "2")}]
     s.gt_min_coverage = 0.5      # the R (2 of the 4 GT pins) is NOT_PLACED by design: its pins stay UNKNOWN
     return s
 

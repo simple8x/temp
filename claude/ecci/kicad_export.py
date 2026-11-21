@@ -2,7 +2,8 @@
 
 Fail-closed policy (every decision is written to the manifest with its reason):
   * A symbol is PLACED only if the symbol record says identity CONFIRMED, transform UNIQUE or EQUIVALENT,
-    resolution UNIQUE with pin id_state CONFIRMED, the library holds the symbol's text, its scale matches the
+    or pin id_state PIN_EQUIVALENT_CANONICAL under the library's identical electrical pin signatures (then candidate 0 is
+    recorded as a canonical pin-number mapping); the library holds the symbol's text, its scale matches the
     page scale, its D4 orientation has a KiCad (rotation, mirror) whose meaning does not depend on the
     mirror/rotate order, and it cannot create a connection of its own (power symbols, hidden power-input pins).
     Everything else is NOT_PLACED: ambiguous, unknown, or unsupported states are never resolved here.
@@ -277,9 +278,13 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
         R = d["reasons"]
         if c["identity"]["state"] != "CONFIRMED":
             R.append(f"identity {c['identity']['state']} ({len(c['identity']['names'])} symbol names)")
-        if c["transform"]["state"] not in ("UNIQUE", "EQUIVALENT"):
+        pin_equivalent = (c["resolution"]["status"] == "UNIQUE" and
+                          c["resolution"]["id_state"] == "PIN_EQUIVALENT_CANONICAL" and
+                          len(c["pins"]) == 2 and
+                          all(len(x.get("pins", [])) == 2 for x in c["candidates"] if x.get("selected")))
+        if c["transform"]["state"] not in ("UNIQUE", "EQUIVALENT") and not pin_equivalent:
             R.append(f"transform {c['transform']['state']} ({c['transform']['n_candidates']} candidates)")
-        if c["resolution"]["status"] != "UNIQUE" or c["resolution"]["id_state"] != "CONFIRMED":
+        if c["resolution"]["status"] != "UNIQUE" or c["resolution"]["id_state"] not in ("CONFIRMED", "PIN_EQUIVALENT_CANONICAL"):
             R.append(f"resolution {c['resolution']['status']}/{c['resolution']['id_state']}")
         if not c["pins"]:
             R.append("no pins")
@@ -288,7 +293,11 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
             continue
         sel = [x for x in c["candidates"] if x["selected"]]
         ci = c["transform"]["candidate"]
-        if c["transform"]["state"] == "EQUIVALENT":
+        if pin_equivalent:
+            # Pin numbers are not recoverable from the drawing, but the library proves the pins at each physical
+            # terminal are electrically identical. Use candidate 0 as a SYNTHETIC canonical numbering only.
+            ci = 0
+        elif c["transform"]["state"] == "EQUIVALENT":
             # every selected candidate puts every pin number on the same tip; take the first one that KiCad can
             # express without the mirror/rotate-order question. This is a choice and the manifest says so.
             ci = next((i for i, x in enumerate(sel) if orientation_for(x["matrix"], MIRROR_ORDER) is not None), ci)
@@ -317,8 +326,20 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
         tol_iu = 0.01 * IU_PER_MM            # 10 um: the tip and the KiCad pin end come from the same template
         pins = []
         for p in c["pins"]:
+            numbers = list(p["numbers"])
+            number_assignment = "CONFIRMED"
+            if pin_equivalent:
+                near = [q for q in cand["pins"] if math.hypot(q["tip"][0] - p["tip"][0],
+                                                                 q["tip"][1] - p["tip"][1]) <= 1e-6]
+                if len(near) != 1:
+                    R.append(f"pin {p['object']}: canonical candidate does not identify exactly one physical pin")
+                    break
+                numbers = [near[0]["number"]]
+                number_assignment = "EQUIVALENT_CANONICAL"
+            elif c["transform"]["state"] == "EQUIVALENT":
+                number_assignment = "TRANSFORM_EQUIVALENT"
             ends = set()
-            for num in p["numbers"]:
+            for num in numbers:
                 lx, ly = lib_pins[num]
                 ends.add((at[0] + T[0] * lx + T[1] * ly, at[1] + T[2] * lx + T[3] * ly))
             exp = (_iu(p["tip"][0] / k), _iu(p["tip"][1] / k))
@@ -329,7 +350,8 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
             if math.hypot(end[0] - exp[0], end[1] - exp[1]) > tol_iu:
                 R.append(f"pin {p['object']}: KiCad pin end {end} is not the detected tip {exp}")
                 break
-            pins.append({"object": p["object"], "numbers": p["numbers"], "pos_state": p["pos_state"],
+            pins.append({"object": p["object"], "numbers": numbers, "source_number_candidates": p["numbers"],
+                         "number_assignment": number_assignment, "pos_state": p["pos_state"],
                          "kicad_iu": list(end), "page_tip": p["tip"], "verified_group": vgroup.get(p["object"])})
         if R:
             decisions.append(d)
@@ -337,7 +359,8 @@ def plan(conn: dict, syms: dict, lib_text: str, stem: str = "ecci_export") -> di
         d.update({"decision": PLACED, "lib_symbol": cand["symbol"], "lib_id": _lib_id(base), "lib_base": base,
                   "unit": unit, "at_iu": list(at), "rot": rot, "mirror": mir,
                   "transform_choice": "ONLY" if c["transform"]["state"] == "UNIQUE" else
-                  f"SYNTHETIC_CANONICAL: candidate {ci} of {len(sel)} electrically equivalent candidates",
+                  f"SYNTHETIC_CANONICAL: candidate {ci} of {len(sel)} candidates; " +
+                  ("electrically equivalent pin-number permutation" if pin_equivalent else "geometrically equivalent transform"),
                   "synthetic_reference": {"value": f"ECCI{c['id']}", "kind": SYNTHETIC,
                                           "note": "technical id for KiCad; the source reference is UNKNOWN"},
                   "pins": pins})

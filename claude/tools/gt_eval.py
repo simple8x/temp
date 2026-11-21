@@ -30,6 +30,10 @@ from ecci.rules import analyze_page  # noqa: E402
 
 TOL_WIRE = 0.6      # pt: wire end within this distance of a GT pin position
 TOL_PIN = 1.0       # pt: detected pin tip within this distance of a GT pin position
+# P0 recovery candidates (ecci.recovery): reported separately, never merged into the baseline metrics. GT_RECOVERY=0
+# switches the whole block off; the baseline part of every record is then byte-identical.
+RECOVERY = os.environ.get("GT_RECOVERY", "1") != "0"
+RECOVERY_MIN_SECONDS = 20
 LEVELS = ("VERIFIED", "INFERRED")
 
 
@@ -422,7 +426,7 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
             miss[("giant_" if big else "") + c.resolution.status] += 1
             miss_lib[("giant_" if big else "") + c.resolution.status + ":" + gp.lib_id] += 1
     nets = res.nets
-    return {
+    out = {
         "project": name, "seconds": round(time.time() - t0, 1), "gt": info,
         "gt_pins": len(pins), "gt_pins_visible_with_net": len(vis),
         "oracle_attached_pins": len(attached), "local_pins": n_local_pins, "local_pins_found": n_local_found, "miss_reasons": dict(miss), "miss_libs": dict(miss_lib), "detected_pins": len(tips), "detected_matched_gt": len(matched),
@@ -437,6 +441,65 @@ def evaluate(pdir: pathlib.Path, page: int, sch: pathlib.Path, name: str, instan
         "library_names_sample": sorted(lib.symbols)[:3],
         "dot_radii": sorted(round(v[1], 2) for v in built.dots.values())[:8],
     }
+    if RECOVERY:
+        # P0 recovery candidates: computed AFTER every baseline number above and reported under their own key.
+        # A recovery failure (mutation of the baseline, error, page budget) never removes the baseline result.
+        out["recovery"] = recovery_block(pi, cls, clusters, built, res, lib, vis, used_gt, comp_of, t0)
+    return out
+
+
+def recovery_block(pi, cls, clusters, built, res, lib, vis, used_gt, comp_of, t0) -> dict:
+    from ecci import recovery as rc
+    left = PAGE_SECONDS - (time.time() - t0)
+    if left < RECOVERY_MIN_SECONDS:
+        return {"status": "SKIPPED_BUDGET", "invariant": None, "seconds_left": round(left, 1)}
+    t1 = time.time()
+    try:
+        rep = rc.recover_page(pi, cls, clusters, lib.symbols.values(), guard_objs=(built, res),
+                              deadline=t0 + PAGE_SECONDS - RECOVERY_MIN_SECONDS / 2)
+    except AssertionError as e:
+        return {"status": "INVARIANCE_FAIL", "invariant": False, "error": str(e)}
+    except TimeoutError:
+        return {"status": "TIMEOUT", "invariant": None, "seconds": round(time.time() - t1, 1)}
+    except Exception as e:  # noqa: BLE001
+        return {"status": "ERROR", "invariant": None, "error": f"{type(e).__name__}: {e}"}
+    return recovery_score(rep, vis, used_gt, comp_of) | {"seconds": round(time.time() - t1, 2)}
+
+
+def recovery_score(rep, vis, used_gt, comp_of) -> dict:
+    """Score PROMOTABLE candidate pins against the SAME GT pins and TOL_PIN as the baseline (greedy nearest,
+    one-to-one). new_tp: a GT pin the baseline did not find; dup: a GT pin the baseline already found (a second
+    claim on one terminal); fp: no GT pin within TOL_PIN. Recovery adds no connectivity, so V/I counts are those
+    of the baseline by construction."""
+    from ecci import recovery as rc
+    tips = [(c, p) for c, p in rep.promotable_pins()]
+    by_c = {c.id: c for c in rep.candidates}
+    cand = sorted((math.hypot(p.predicted_tip[0] - gp.x, p.predicted_tip[1] - gp.y), k, gi)
+                  for k, (_cid, p) in enumerate(tips) for gi, gp in enumerate(vis)
+                  if math.hypot(p.predicted_tip[0] - gp.x, p.predicted_tip[1] - gp.y) <= TOL_PIN)
+    took_t, took_g, new_tp, new_local, dup, num_bad = set(), set(), 0, 0, 0, 0
+    for _d, k, gi in cand:
+        if k in took_t or gi in took_g:
+            continue
+        took_t.add(k)
+        took_g.add(gi)
+        cid, p = tips[k]
+        if gi in used_gt:
+            dup += 1
+            continue
+        new_tp += 1
+        new_local += comp_of(vis[gi].x, vis[gi].y) is not None
+        if by_c[cid].identity["id_state"] == "CONFIRMED" and str(vis[gi].number) not in p.numbers:
+            num_bad += 1
+    pins_by_state = collections.Counter()
+    for c in rep.candidates:
+        pins_by_state[c.state] += len(c.identity["pins"])
+    return {"status": rep.status, "invariant": True, "problems": rep.problems[:5],
+            "candidates": rep.by_state(), "candidate_pins": dict(pins_by_state), "reasons": rep.reason_counts(),
+            "promotable_pins": len(tips), "new_tp": new_tp, "new_local_found": new_local, "dup": dup,
+            "fp": len(tips) - len(took_t), "number_mismatch": num_bad,
+            "stats": {k: v for k, v in rep.stats.items() if k not in ("baseline_fingerprint", "seconds")},
+            "baseline_fingerprint": rep.stats.get("baseline_fingerprint")}
 
 
 def _safe_plan(d: pathlib.Path) -> list[dict]:
@@ -485,6 +548,17 @@ def main(root: str) -> int:
             for k, v in (r.get("miss_reasons") or {}).items():
                 tot["miss_" + k] += v
             tot["local_pins"] += r.get("local_pins", 0)
+            rv = r.get("recovery")
+            if rv is not None:
+                tot["rec_pages"] += 1
+                tot["rec_status_" + rv["status"]] += 1
+                tot["rec_invariance_fail"] += rv.get("invariant") is False
+                for k in ("promotable_pins", "new_tp", "new_local_found", "dup", "fp", "number_mismatch", "seconds"):
+                    tot["rec_" + k] += rv.get(k, 0)
+                for k, v in (rv.get("candidates") or {}).items():
+                    tot["rec_state_" + k] += v
+                for k, v in (rv.get("reasons") or {}).items():
+                    tot["rec_reason_" + k] += v
             tot["local_pins_found"] += r.get("local_pins_found", 0)
             for mode in ("oracle", "detected"):
                 m = r.get(mode)
@@ -517,6 +591,19 @@ def main(root: str) -> int:
                              "pin_recall": round(tot["local_pins_found"] / max(1, tot["local_pins"]), 4),
                              "pins": tot["local_pins"],
                              "misses": {k[5:]: v for k, v in tot.items() if k.startswith("miss_")}}
+    if tot["rec_pages"]:
+        lp = max(1, tot["local_pins"])
+        out["recovery"] = {
+            "pages": tot["rec_pages"], "invariance_fail": tot["rec_invariance_fail"],
+            "status": {k[11:]: v for k, v in tot.items() if k.startswith("rec_status_")},
+            "candidates": {k[10:]: v for k, v in tot.items() if k.startswith("rec_state_")},
+            "reasons": {k[11:]: v for k, v in tot.items() if k.startswith("rec_reason_")},
+            **{k: tot["rec_" + k] for k in ("promotable_pins", "new_tp", "new_local_found", "dup", "fp", "number_mismatch")},
+            "seconds": round(tot["rec_seconds"], 1),
+            "baseline_pin_recall": round(tot["local_pins_found"] / lp, 4),
+            "candidate_pin_recall": round((tot["local_pins_found"] + tot["rec_new_local_found"]) / lp, 4),
+            "candidate_precision": round(tot["rec_new_tp"] / max(1, tot["rec_promotable_pins"]), 4)}
+        print("GT_RECOVERY " + json.dumps(out["recovery"], sort_keys=True))
     cov = coverage(results, dirs)
     out["coverage"] = cov
     # "every page is accounted for as pinned", NOT "the corpus is fully measured": pages skipped for a pinned
@@ -527,6 +614,9 @@ def main(root: str) -> int:
     if cov["problems"]:
         # fail-closed: totals over an incomplete corpus are NOT a result; the missing pages are UNKNOWN
         print("GT_INCOMPLETE " + "; ".join(cov["problems"]))
+        return 1
+    if tot["rec_invariance_fail"]:
+        print(f"GT_RECOVERY_INVARIANCE_FAIL {tot['rec_invariance_fail']} page(s): recovery changed the baseline")
         return 1
     return 0
 

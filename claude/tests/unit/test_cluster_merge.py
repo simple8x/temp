@@ -62,7 +62,7 @@ def test_m2_capacitor_plates_merge_and_match():
     (cr,) = pins(sym("C"))
     assert cr.resolution.symbols == ("C",) and len(cr.cluster.prim_ids) == 2
     assert [p.pos_state for p in cr.pins] == ["CONFIRMED", "CONFIRMED"]
-    assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
+    assert all(p.id_state == "PIN_EQUIVALENT_CANONICAL" for p in cr.pins)
 
 
 def test_m2b_without_gap_merging_the_plates_stay_apart_and_nothing_matches():

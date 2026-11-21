@@ -1,4 +1,62 @@
-# ECCI handoff (M4.0: ground-truth measurement)
+# ECCI handoff
+
+## P0 grouped-recovery redesign (PR #17, branch audit/m42-coverage-repair, base f08e052)
+- New module `ecci/recovery.py`; the baseline (`classify` -> `detect_pins` -> conn graph -> `solve`) is untouched
+  and READ-ONLY input. Recovery never registers evidence, never edits clusters/pins/edges/nets and never feeds
+  connectivity. `recover()` fingerprints (page, classification incl. registry, ClusterResults, graph, solve result)
+  before and after (pickle bytes, sha256) and raises if anything changed.
+- Lineage check first: the baseline body clusters are recomputed; every NONE cluster must be reproduced exactly and
+  every resolved cluster must be a subset of its recomputed cluster, else the page is BLOCKED (no candidates).
+- Proposals use ONLY primitives of baseline NONE clusters: SPLIT_TOUCH (touching components of a NONE cluster with
+  more than one) and MERGE_PAIR (two NONE units within gap <= 0.5 x larger dim of the smaller unit, <= 4 nearest
+  partners, units below the page minimum part size never merge). Matching = baseline `match_cluster`, then the
+  baseline `relaxations` (+RELAX). Budgets are counted in stats, never silent.
+- States PROPOSED -> EVIDENCE_SUPPORTED -> PROMOTABLE, else UNKNOWN / REJECTED; table `ALLOWED`, illegal moves raise.
+  No VERIFIED state exists; PROMOTABLE is terminal in P0 (no authority policy permits candidate -> VERIFIED).
+- Gate (all required): lineage complete (BODY polylines, matched/stripped within source); not degenerate, not below
+  the minimum part size; `resolve` UNIQUE, exactly one symbol, id_state CONFIRMED or PIN_EQUIVALENT_CANONICAL (the
+  allowlisted 2-pin passive canonical numbering of the baseline); no stacked terminals; EVERY pin has exactly one
+  distinct 2-point open non-TEXT line, not in the template-fit primitive set, whose BOTH ends agree with predicted
+  base and tip within `s2_tolerance` (the documented baseline S2 policy); no line supports two terminals.
+- Conflicts: a candidate touching a baseline-claimed primitive, pin line or terminal -> REJECTED (baseline wins);
+  candidates sharing a primitive, pin line or terminal -> ALL of them UNKNOWN. Then an independent audit re-derives
+  each survivor from the page (geometry hash, template re-match, predicted pins from symbol + transform, measured
+  lines, orientation, tolerance cap) -> PROMOTABLE, or REJECTED.
+- Stripped stubs of a relaxation may serve as pin lines (they are not template evidence, same rule as baseline S2).
+- GT: `gt_eval.py` adds a separate `recovery` block per page (GT_RECOVERY=0 switches it off) scored with the SAME
+  TOL_PIN / GT pins: new_tp, dup (GT pin already found by baseline), fp, number_mismatch; totals in GT_RECOVERY.
+  CI (`claude-gt`) runs the corpus again with GT_RECOVERY=0 and `recovery_compare.py gt_eval.log gt_eval_off.log`
+  fails unless every baseline field of every page is identical, invariant=true everywhere, fp=dup=mismatch=0,
+  and all 11 required corpus pages (HARMED + GAINED in the script) were compared.
+- Tests: `tests/unit/test_recovery.py`, `tests/unit/test_recovery_compare.py`; mutations R01-R20, C01-C05.
+- Known pre-existing flake: hypothesis finds `test_text_band_is_text_and_symbols_survive` counterexample
+  symbols=['R'], words=[('EEE',20,8,22),('0000',20,5,42)] (prim classified WIRE inside the text band) on the
+  unmodified baseline too. Not caused by recovery; assertion NOT relaxed.
+### P0 audit fixes (audit of 873bfbb: two blockers)
+- B1 identity: canonical identity `template.symbol_identity(sym) = (lib_token, name)`. Recovery uses
+  `template.resolve_qualified()` (additive; legacy `resolve`/`Resolution` byte-identical to 873bfbb): legacy resolve
+  on the hits in `hit_sort_key` order (input order never matters), PIN_EQUIVALENT_CANONICAL downgraded to AMBIGUOUS
+  when more than one qualified identity remains (never upgraded). F1 evidence: `tools/baseline_compat.py` +
+  golden `tests/fixtures/baseline_compat_873bfbb.json` (test_baseline_compat.py).
+  Recovery: hits stored in canonical order with every placed pin (`hits[i]["pins"]`); gate requires one
+  identity (`multiple_symbol_identities`), no library collision (same identity, different definition), and
+  `alternative_problems()`: EVERY alternative must map one-to-one onto the recorded terminals (tip + base within
+  template tau) with a recorded number (exactly that number when CONFIRMED). Audit looks symbols up by identity,
+  re-derives hits incl. placed pins, re-resolves and compares the FULL identity record
+  (`identity_record_problems`: exact status/id_state/symbols/identities/collision/note/numbers, positions within
+  IDENTITY_GEOM_TOL=1e-9) and the pin evidence against it (`pin_evidence_identity_problems`). `audit_candidate` and
+  `reaudit` take `baseline` as a REQUIRED argument (None fails closed).
+- B2 evidence roles: discovery (all prims of the source NONE clusters), proposal (source), template (matched),
+  stripped, excluded (= source - matched - stripped, left out by a relaxation). template/stripped/excluded must
+  partition the proposal exactly; stripped/excluded need +RELAX; duplicates / overlaps / missing discovery fail
+  closed (`evidence_role_problems`). A pin line may not be ANY lineage prim (`role_index`; reasons
+  `pin_line_reused_from_<role>`). The stripped-stub-as-pin-line exception is REMOVED (no independence policy).
+  Audit re-derives discovery from the baseline (`audit_candidate(..., baseline)`, `reaudit(rep, pi, cls, syms,
+  baseline)`; no baseline -> fail), re-runs the relaxation for +RELAX candidates and the role checks. Conflicts
+  use one key space, so a pin line of A that B groups is a conflict.
+- Tests `tests/unit/test_recovery_identity_evidence.py`; mutations R21-R36 (R01/R05 patterns updated).
+- NOT yet measured: full GT corpus (needs KiCad 9.0.9 / CI). No recall/precision claim without the claude-gt run.
+
 
 State (branch `claude`, simple8x/temp): see `git log`. Last evidence at d6aec44: m1 run 42786398844 (385 tests,
 mutation 111/111 killed, all jobs green), GT full run 42786399214 (`inventory_consistent: true`, 100 pages

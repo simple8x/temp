@@ -7,9 +7,13 @@ What a record says, and only what the evidence supports:
   identity     CONFIRMED only if every selected hit names the same library symbol; AMBIGUOUS if several do;
                UNKNOWN if none matched
   transform    UNIQUE (one selected hit), EQUIVALENT (several hits of one symbol that put every pin number on
-               the same tip, e.g. a diode mirrored about its axis), AMBIGUOUS, or UNKNOWN; no transform is
-               chosen when the candidates disagree
-  pins         the pin objects of the connectivity document for this cluster (tip, base, numbers, states)
+               the same tip, e.g. a diode mirrored about its axis), AMBIGUOUS, or UNKNOWN; this is geometric
+               transform equivalence and is distinct from resolution.id_state PIN_EQUIVALENT_CANONICAL (pin identity).
+  pins         the pin objects of the connectivity document for this cluster (tip, base, numbers, states);
+               PIN_EQUIVALENT_CANONICAL means a two-terminal symbol is on the explicit non-polarized
+               allowlist and every candidate's corresponding pins have matching electrical and
+               page-space direction signatures; export uses synthetic canonical numbering. This
+               does NOT prove source pin identity.
   reference    always UNKNOWN in schema 1: no stage of ECCI reads designators or values from the PDF yet, so
   value        a non-UNKNOWN value is rejected on read rather than trusted
 

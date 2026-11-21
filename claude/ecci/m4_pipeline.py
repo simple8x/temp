@@ -65,8 +65,10 @@ def run_page(out: Path, pi, cls, clusters, built, res, library, lib_text: str, s
                              "identity_UNKNOWN": sum(c["identity"]["state"] == "UNKNOWN" for c in syms["clusters"]),
                              "identity_AMBIGUOUS": sum(c["identity"]["state"] == "AMBIGUOUS" for c in syms["clusters"]),
                              "transform_AMBIGUOUS": sum(c["transform"]["state"] == "AMBIGUOUS" for c in syms["clusters"]),
-                             "pin_id_AMBIGUOUS_or_UNKNOWN": sum(p["id_state"] != "CONFIRMED" for c in syms["clusters"]
-                                                                for p in c["pins"])}
+                             "pin_id_NOT_SOURCE_CONFIRMED": sum(p["id_state"] != "CONFIRMED"
+                                                                for c in syms["clusters"] for p in c["pins"]),
+                             "pin_id_SYNTHETIC_CANONICAL_NOT_SOURCE_CONFIRMED": sum(p["id_state"] == "PIN_EQUIVALENT_CANONICAL"
+                                                                    for c in syms["clusters"] for p in c["pins"])}
     # 4. the real kicad-cli
     if cli is None:
         S["kicad_read"] = S["netlist_roundtrip"] = S["ground_truth"] = BLOCKED
@@ -99,7 +101,8 @@ def run_page(out: Path, pi, cls, clusters, built, res, library, lib_text: str, s
     S["ground_truth"] = gate["state"]          # PASS / FAIL / BLOCKED / INCONCLUSIVE (never PASS by default)
     rec["ground_truth"] = {k: g[k] for k in ("pairs", "precision", "recall_over_mapped_pairs", "gt_scoreable_pins",
                                              "exported_pins_mapped", "exported_pins_unmatched",
-                                             "gt_pins_not_exported_UNKNOWN", "mapping_coverage")}
+                                             "gt_pins_not_exported_UNKNOWN", "mapping_coverage",
+                                             "pin_identity_mismatches", "pin_identity_unverified_synthetic_canonical")}
     rec["ground_truth"]["gate"] = {k: gate[k] for k in ("state", "reason", "min_mapping_coverage")}
     return rec
 
