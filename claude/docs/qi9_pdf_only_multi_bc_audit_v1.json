@@ -1,0 +1,1160 @@
+{
+  "schema": "qi9.pdf-only.multi-bc-audit.v1",
+  "source_pdf_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+  "pdf_forensics": {
+    "source_pdf": "[QI9-2604-A01] Module IO.pdf",
+    "source_pdf_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+    "expected_sha256_match": true,
+    "page_count": 14,
+    "schematic_pages": [
+      {
+        "page": 5,
+        "page_rect_pdf_pt": [
+          0.0,
+          0.0,
+          841.92,
+          595.32
+        ],
+        "content_xrefs": [
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54
+        ],
+        "decoded_content_bytes": 1313310,
+        "decoded_content_sha256": "002aaeff8ff227627041f4e78dc58230a6c9b538c15e045c63159e2d3c4d7812",
+        "operator_counts": {
+          "BT": 22,
+          "ET": 22,
+          "Tj": 0,
+          "TJ": 22,
+          "Tf": 22,
+          "Tm": 22,
+          "Td": 0,
+          "TD": 0,
+          "Do": 0,
+          "W": 0,
+          "W*": 18,
+          "cm": 110
+        },
+        "font_resources": [
+          {
+            "xref": 27,
+            "type": "ttf",
+            "subtype": "Type0",
+            "basefont": "CIDFont+F3",
+            "resource_name": "F1",
+            "encoding": "Identity-H"
+          },
+          {
+            "xref": 19,
+            "type": "ttf",
+            "subtype": "Type0",
+            "basefont": "CIDFont+F2",
+            "resource_name": "F2",
+            "encoding": "Identity-H"
+          },
+          {
+            "xref": 11,
+            "type": "ttf",
+            "subtype": "Type0",
+            "basefont": "CIDFont+F1",
+            "resource_name": "F3",
+            "encoding": "Identity-H"
+          }
+        ],
+        "text_spans": [
+          {
+            "text": "R2 CONFIDENTIAL",
+            "bbox_pdf_pt": [
+              543.1193,
+              12.4362,
+              669.4092,
+              26.5037
+            ],
+            "font": "CIDFont+F3",
+            "size": 13.1747
+          },
+          {
+            "text": "MFE2-0003",
+            "bbox_pdf_pt": [
+              776.1549,
+              8.6386,
+              822.4286,
+              20.7897
+            ],
+            "font": "CIDFont+F2",
+            "size": 9.9599
+          },
+          {
+            "text": "Attachment 04/ Rev.02",
+            "bbox_pdf_pt": [
+              728.1547,
+              20.6362,
+              822.6346,
+              32.7873
+            ],
+            "font": "CIDFont+F2",
+            "size": 9.9599
+          },
+          {
+            "text": "Size: A4",
+            "bbox_pdf_pt": [
+              13.1988,
+              21.7207,
+              44.7319,
+              33.8718
+            ],
+            "font": "CIDFont+F2",
+            "size": 9.9599
+          },
+          {
+            "text": "Page",
+            "bbox_pdf_pt": [
+              801.3556,
+              516.3652,
+              821.4049,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "2",
+            "bbox_pdf_pt": [
+              276.2369,
+              516.3652,
+              281.2766,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "nd",
+            "bbox_pdf_pt": [
+              281.2816,
+              516.4391,
+              288.5124,
+              524.6373
+            ],
+            "font": "CIDFont+F1",
+            "size": 6.7199
+          },
+          {
+            "text": " Approved by",
+            "bbox_pdf_pt": [
+              288.3561,
+              516.3652,
+              343.8627,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "1",
+            "bbox_pdf_pt": [
+              352.1959,
+              516.3652,
+              357.2356,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "st",
+            "bbox_pdf_pt": [
+              357.2432,
+              516.4391,
+              362.1891,
+              524.6373
+            ],
+            "font": "CIDFont+F1",
+            "size": 6.7199
+          },
+          {
+            "text": " Approved by",
+            "bbox_pdf_pt": [
+              362.278,
+              516.3652,
+              417.5853,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "Checked  by",
+            "bbox_pdf_pt": [
+              428.5153,
+              516.3652,
+              478.2452,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "Designed by",
+            "bbox_pdf_pt": [
+              491.9958,
+              516.3652,
+              542.6219,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "Page name/ Machine code",
+            "bbox_pdf_pt": [
+              584.5128,
+              516.3652,
+              695.0978,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "Rev.",
+            "bbox_pdf_pt": [
+              771.8358,
+              516.3652,
+              789.8333,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "Rank",
+            "bbox_pdf_pt": [
+              737.7535,
+              516.3652,
+              758.4603,
+              528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "MODULE IO",
+            "bbox_pdf_pt": [
+              615.3549,
+              532.6874,
+              664.4174,
+              544.8385
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "QI9-2604-A01",
+            "bbox_pdf_pt": [
+              611.3975,
+              544.6844,
+              668.5275,
+              556.8354
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "A",
+            "bbox_pdf_pt": [
+              745.6786,
+              551.8281,
+              750.8806,
+              562.8077
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "01",
+            "bbox_pdf_pt": [
+              776.3685,
+              551.8281,
+              785.5126,
+              562.8077
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "5",
+            "bbox_pdf_pt": [
+              808.5885,
+              551.8281,
+              813.1425,
+              562.8077
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "N.C.BINH",
+            "bbox_pdf_pt": [
+              500.3985,
+              546.4285,
+              534.0853,
+              557.4081
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "Mar. 2026",
+            "bbox_pdf_pt": [
+              498.3606,
+              557.2277,
+              536.0345,
+              568.2074
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "Power",
+            "bbox_pdf_pt": [
+              627.4735,
+              563.645,
+              653.5485,
+              575.796
+            ],
+            "font": "CIDFont+F2",
+            "size": 9.9599
+          }
+        ],
+        "text_span_count": 24,
+        "diagram_body_text_span_count": 0,
+        "drawing_count": 11301,
+        "drawing_primitive_counts": {
+          "qu": 40,
+          "l": 11430,
+          "c": 238,
+          "re": 6
+        },
+        "clipping_operator_count": 18
+      },
+      {
+        "page": 6,
+        "page_rect_pdf_pt": [
+          0.0,
+          0.0,
+          841.92,
+          595.32
+        ],
+        "content_xrefs": [
+          57,
+          58,
+          59,
+          60,
+          61,
+          62
+        ],
+        "decoded_content_bytes": 1077835,
+        "decoded_content_sha256": "1732a1804f9e9d4066f9f085acbd3752b62dec9b46d882a567de8c0fe08192a1",
+        "operator_counts": {
+          "BT": 22,
+          "ET": 22,
+          "Tj": 0,
+          "TJ": 22,
+          "Tf": 22,
+          "Tm": 22,
+          "Td": 0,
+          "TD": 0,
+          "Do": 0,
+          "W": 0,
+          "W*": 12,
+          "cm": 84
+        },
+        "font_resources": [
+          {
+            "xref": 27,
+            "type": "ttf",
+            "subtype": "Type0",
+            "basefont": "CIDFont+F3",
+            "resource_name": "F1",
+            "encoding": "Identity-H"
+          },
+          {
+            "xref": 19,
+            "type": "ttf",
+            "subtype": "Type0",
+            "basefont": "CIDFont+F2",
+            "resource_name": "F2",
+            "encoding": "Identity-H"
+          },
+          {
+            "xref": 11,
+            "type": "ttf",
+            "subtype": "Type0",
+            "basefont": "CIDFont+F1",
+            "resource_name": "F3",
+            "encoding": "Identity-H"
+          }
+        ],
+        "text_spans": [
+          {
+            "text": "R2 CONFIDENTIAL",
+            "bbox_pdf_pt": [
+              543.1193,
+              12.4362,
+              669.4092,
+              26.5037
+            ],
+            "font": "CIDFont+F3",
+            "size": 13.1747
+          },
+          {
+            "text": "MFE2-0003",
+            "bbox_pdf_pt": [
+              776.1549,
+              8.6386,
+ 
+[... 42687 bytes omitted ...]
+ 528.5162
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "MODULE IO",
+            "bbox_pdf_pt": [
+              615.3549,
+              532.6874,
+              664.4174,
+              544.8385
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "QI9-2604-A01",
+            "bbox_pdf_pt": [
+              611.3975,
+              544.6844,
+              668.5275,
+              556.8354
+            ],
+            "font": "CIDFont+F1",
+            "size": 9.9599
+          },
+          {
+            "text": "A",
+            "bbox_pdf_pt": [
+              745.6786,
+              551.8281,
+              750.8806,
+              562.8077
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "01",
+            "bbox_pdf_pt": [
+              776.3685,
+              551.8281,
+              785.5126,
+              562.8077
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "11",
+            "bbox_pdf_pt": [
+              806.2485,
+              551.8281,
+              815.3925,
+              562.8077
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "N.C.BINH",
+            "bbox_pdf_pt": [
+              500.3985,
+              546.4285,
+              534.0853,
+              557.4081
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "Mar. 2026",
+            "bbox_pdf_pt": [
+              498.3606,
+              557.2277,
+              536.0345,
+              568.2074
+            ],
+            "font": "CIDFont+F2",
+            "size": 8.9999
+          },
+          {
+            "text": "Output",
+            "bbox_pdf_pt": [
+              626.0358,
+              563.645,
+              655.0589,
+              575.796
+            ],
+            "font": "CIDFont+F2",
+            "size": 9.9599
+          }
+        ],
+        "text_span_count": 24,
+        "diagram_body_text_span_count": 0,
+        "drawing_count": 13226,
+        "drawing_primitive_counts": {
+          "qu": 65,
+          "l": 13624,
+          "c": 310
+        },
+        "clipping_operator_count": 12
+      }
+    ],
+    "body_region_pdf_pt": [
+      35.0,
+      38.0,
+      810.0,
+      505.0
+    ],
+    "method": "PyMuPDF decoded page content streams, page text spans, font resources and drawing primitives; read-only"
+  },
+  "vector_summary": {
+    "source_pdf_sha256": "a7860fba0cf7ea30e7c209b0ba7405481edfffd2abdcfffa00b465e08b2d45fc",
+    "pages": [
+      {
+        "page": 5,
+        "drawings": 11301,
+        "primitive_counts": {
+          "qu": 40,
+          "l": 11430,
+          "c": 238,
+          "re": 6
+        },
+        "line_primitives": 11430,
+        "ocr_words": 894,
+        "candidate_wire_like_segments": 249,
+        "endpoint_nodes": 294,
+        "candidate_edges": 249,
+        "connected_components": 59,
+        "largest_component_nodes": 27,
+        "degree_histogram": {
+          "1": 147,
+          "2": 94,
+          "3": 49,
+          "4": 4
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      },
+      {
+        "page": 6,
+        "drawings": 9303,
+        "primitive_counts": {
+          "qu": 23,
+          "l": 9503,
+          "c": 158
+        },
+        "line_primitives": 9503,
+        "ocr_words": 567,
+        "candidate_wire_like_segments": 194,
+        "endpoint_nodes": 248,
+        "candidate_edges": 194,
+        "connected_components": 62,
+        "largest_component_nodes": 11,
+        "degree_histogram": {
+          "1": 142,
+          "2": 74,
+          "3": 30,
+          "4": 2
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      },
+      {
+        "page": 7,
+        "drawings": 10114,
+        "primitive_counts": {
+          "qu": 29,
+          "l": 10368,
+          "c": 126
+        },
+        "line_primitives": 10368,
+        "ocr_words": 521,
+        "candidate_wire_like_segments": 213,
+        "endpoint_nodes": 253,
+        "candidate_edges": 213,
+        "connected_components": 53,
+        "largest_component_nodes": 10,
+        "degree_histogram": {
+          "2": 93,
+          "3": 31,
+          "1": 123,
+          "4": 6
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      },
+      {
+        "page": 8,
+        "drawings": 5283,
+        "primitive_counts": {
+          "qu": 21,
+          "l": 5436,
+          "c": 126
+        },
+        "line_primitives": 5436,
+        "ocr_words": 371,
+        "candidate_wire_like_segments": 203,
+        "endpoint_nodes": 287,
+        "candidate_edges": 203,
+        "connected_components": 96,
+        "largest_component_nodes": 8,
+        "degree_histogram": {
+          "2": 71,
+          "1": 192,
+          "3": 24
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      },
+      {
+        "page": 9,
+        "drawings": 8217,
+        "primitive_counts": {
+          "qu": 15,
+          "l": 8438,
+          "c": 50
+        },
+        "line_primitives": 8438,
+        "ocr_words": 465,
+        "candidate_wire_like_segments": 178,
+        "endpoint_nodes": 215,
+        "candidate_edges": 178,
+        "connected_components": 43,
+        "largest_component_nodes": 7,
+        "degree_histogram": {
+          "1": 108,
+          "2": 74,
+          "3": 32,
+          "4": 1
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      },
+      {
+        "page": 10,
+        "drawings": 10956,
+        "primitive_counts": {
+          "qu": 76,
+          "l": 11487,
+          "c": 366
+        },
+        "line_primitives": 11487,
+        "ocr_words": 1088,
+        "candidate_wire_like_segments": 376,
+        "endpoint_nodes": 477,
+        "candidate_edges": 376,
+        "connected_components": 101,
+        "largest_component_nodes": 22,
+        "degree_histogram": {
+          "1": 286,
+          "2": 107,
+          "3": 84
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      },
+      {
+        "page": 11,
+        "drawings": 13226,
+        "primitive_counts": {
+          "qu": 65,
+          "l": 13624,
+          "c": 310
+        },
+        "line_primitives": 13624,
+        "ocr_words": 919,
+        "candidate_wire_like_segments": 349,
+        "endpoint_nodes": 403,
+        "candidate_edges": 349,
+        "connected_components": 83,
+        "largest_component_nodes": 29,
+        "degree_histogram": {
+          "1": 192,
+          "3": 72,
+          "2": 133,
+          "4": 6
+        },
+        "note": "endpoint-cluster graph of heuristic wire-like strokes only; not a netlist and not verified electrical connectivity"
+      }
+    ],
+    "authority": {
+      "may_create_or_modify_nets": false,
+      "may_promote_verified": false,
+      "connectivity_claims": 0,
+      "verified_items": 0
+    },
+    "totals": {
+      "drawings": 68400,
+      "line_primitives": 70286,
+      "ocr_words": 4825,
+      "candidate_wire_like_segments": 1762,
+      "endpoint_nodes": 2177,
+      "candidate_edges": 1762
+    }
+  },
+  "event_port_audit": {
+    "pages": [
+      {
+        "page": 5,
+        "source_segments": 249,
+        "geometric_events": 295,
+        "incidence_ports": 503,
+        "stroke_fragments": 254,
+        "pairwise_geometry_events": 370,
+        "geometry_classes": {
+          "collinear_overlap": 230,
+          "endpoint_interior": 3,
+          "endpoint_endpoint": 136,
+          "proper_crossing": 1
+        },
+        "event_port_degree_histogram": {
+          "3": 49,
+          "1": 144,
+          "2": 98,
+          "4": 4
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      },
+      {
+        "page": 6,
+        "source_segments": 194,
+        "geometric_events": 259,
+        "incidence_ports": 411,
+        "stroke_fragments": 217,
+        "pairwise_geometry_events": 244,
+        "geometry_classes": {
+          "collinear_overlap": 126,
+          "endpoint_endpoint": 106,
+          "proper_crossing": 12
+        },
+        "event_port_degree_histogram": {
+          "3": 31,
+          "1": 142,
+          "2": 84,
+          "4": 2
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      },
+      {
+        "page": 7,
+        "source_segments": 213,
+        "geometric_events": 256,
+        "incidence_ports": 436,
+        "stroke_fragments": 223,
+        "pairwise_geometry_events": 295,
+        "geometry_classes": {
+          "collinear_overlap": 152,
+          "endpoint_endpoint": 136,
+          "endpoint_interior": 3,
+          "proper_crossing": 4
+        },
+        "event_port_degree_histogram": {
+          "3": 32,
+          "1": 120,
+          "2": 98,
+          "4": 6
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      },
+      {
+        "page": 8,
+        "source_segments": 203,
+        "geometric_events": 291,
+        "incidence_ports": 423,
+        "stroke_fragments": 220,
+        "pairwise_geometry_events": 185,
+        "geometry_classes": {
+          "collinear_overlap": 72,
+          "endpoint_interior": 9,
+          "endpoint_endpoint": 100,
+          "proper_crossing": 4
+        },
+        "event_port_degree_histogram": {
+          "1": 183,
+          "3": 24,
+          "2": 84
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      },
+      {
+        "page": 9,
+        "source_segments": 178,
+        "geometric_events": 215,
+        "incidence_ports": 356,
+        "stroke_fragments": 178,
+        "pairwise_geometry_events": 199,
+        "geometry_classes": {
+          "collinear_overlap": 58,
+          "endpoint_endpoint": 141
+        },
+        "event_port_degree_histogram": {
+          "3": 32,
+          "1": 108,
+          "2": 74,
+          "4": 1
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      },
+      {
+        "page": 10,
+        "source_segments": 376,
+        "geometric_events": 518,
+        "incidence_ports": 835,
+        "stroke_fragments": 459,
+        "pairwise_geometry_events": 478,
+        "geometry_classes": {
+          "collinear_overlap": 154,
+          "endpoint_endpoint": 282,
+          "endpoint_interior": 1,
+          "proper_crossing": 41
+        },
+        "event_port_degree_histogram": {
+          "3": 84,
+          "1": 285,
+          "2": 149
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      },
+      {
+        "page": 11,
+        "source_segments": 349,
+        "geometric_events": 422,
+        "incidence_ports": 737,
+        "stroke_fragments": 388,
+        "pairwise_geometry_events": 492,
+        "geometry_classes": {
+          "endpoint_endpoint": 240,
+          "collinear_overlap": 232,
+          "proper_crossing": 19,
+          "endpoint_interior": 1
+        },
+        "event_port_degree_histogram": {
+          "3": 72,
+          "1": 191,
+          "2": 153,
+          "4": 6
+        },
+        "electrical_adjacency_count": 0,
+        "verified_connectivity_count": 0
+      }
+    ],
+    "totals": {
+      "source_segments": 1762,
+      "geometric_events": 2256,
+      "incidence_ports": 3701,
+      "stroke_fragments": 1939,
+      "pairwise_geometry_events": 2263
+    },
+    "all_electrical_adjacency_zero": true,
+    "all_verified_connectivity_zero": true
+  },
+  "ocr_label_proximity": {
+    "observation_count": 437,
+    "net_label_observation_count": 128,
+    "reference_observation_count": 309,
+    "by_kind": {
+      "NET_LABEL_CANDIDATE": {
+        "observations": 128,
+        "proximity_bands": {
+          "NO_CLOSE_WIRE_CANDIDATE": 124,
+          "NEAR_WIRE_GEOMETRY_CANDIDATE": 4
+        },
+        "distance_lt_2pt": 1,
+        "distance_lt_5pt": 20,
+        "all_unknown": true
+      },
+      "REFERENCE_CANDIDATE": {
+        "observations": 309,
+        "proximity_bands": {
+          "NO_CLOSE_WIRE_CANDIDATE": 309
+        },
+        "distance_lt_2pt": 0,
+        "distance_lt_5pt": 7,
+        "all_unknown": true
+      }
+    },
+    "semantic_and_attachment_status": "CANDIDATE_ONLY / GEOMETRIC_PROXIMITY_ONLY; all UNKNOWN"
+  },
+  "symbol_pin_audit": {
+    "matched_symbol_clusters": 93,
+    "pin_position_states": {
+      "CONFIRMED": 197,
+      "CANDIDATE": 17
+    },
+    "pin_number_identity_states": {
+      "AMBIGUOUS": 190,
+      "CONFIRMED": 24
+    },
+    "pin_number_cardinality": {
+      "multi_number": 188,
+      "single_number": 26
+    },
+    "candidate_pin_to_wire_edges": 197,
+    "per_page": [
+      {
+        "page": 5,
+        "matched_symbol_clusters": 17,
+        "pin_positions": 34,
+        "pin_pos_states": {
+          "CONFIRMED": 34
+        },
+        "ambiguity_sites": 29,
+        "unresolved_terminal_contact_records": 202,
+        "candidate_edges": 312
+      },
+      {
+        "page": 6,
+        "matched_symbol_clusters": 11,
+        "pin_positions": 22,
+        "pin_pos_states": {
+          "CONFIRMED": 22
+        },
+        "ambiguity_sites": 3,
+        "unresolved_terminal_contact_records": 156,
+        "candidate_edges": 179
+      },
+      {
+        "page": 7,
+        "matched_symbol_clusters": 11,
+        "pin_positions": 23,
+        "pin_pos_states": {
+          "CONFIRMED": 23
+        },
+        "ambiguity_sites": 3,
+        "unresolved_terminal_contact_records": 110,
+        "candidate_edges": 183
+      },
+      {
+        "page": 8,
+        "matched_symbol_clusters": 11,
+        "pin_positions": 22,
+        "pin_pos_states": {
+          "CONFIRMED": 19,
+          "CANDIDATE": 3
+        },
+        "ambiguity_sites": 4,
+        "unresolved_terminal_contact_records": 94,
+        "candidate_edges": 120
+      },
+      {
+        "page": 9,
+        "matched_symbol_clusters": 5,
+        "pin_positions": 10,
+        "pin_pos_states": {
+          "CONFIRMED": 9,
+          "CANDIDATE": 1
+        },
+        "ambiguity_sites": 1,
+        "unresolved_terminal_contact_records": 202,
+        "candidate_edges": 46
+      },
+      {
+        "page": 10,
+        "matched_symbol_clusters": 13,
+        "pin_positions": 37,
+        "pin_pos_states": {
+          "CONFIRMED": 24,
+          "CANDIDATE": 13
+        },
+        "ambiguity_sites": 52,
+        "unresolved_terminal_contact_records": 337,
+        "candidate_edges": 645
+      },
+      {
+        "page": 11,
+        "matched_symbol_clusters": 25,
+        "pin_positions": 66,
+        "pin_pos_states": {
+          "CONFIRMED": 66
+        },
+        "ambiguity_sites": 26,
+        "unresolved_terminal_contact_records": 236,
+        "candidate_edges": 466
+      }
+    ],
+    "totals": {
+      "primitives": 68644,
+      "body_clusters": 787,
+      "matched_symbol_clusters": 93,
+      "pin_positions": 214,
+      "dots": 202,
+      "dots_attached": 193,
+      "unresolved_terminal_contact_records": 1337,
+      "conflict_records": 0,
+      "candidate_edges": 1951,
+      "ambiguity_sites": 118,
+      "edge_TR1": 1028,
+      "edge_TR2": 597,
+      "edge_TR4": 100,
+      "edge_TR3": 197,
+      "edge_TR5": 29,
+      "object_WIRE": 2703,
+      "object_DOT": 202,
+      "object_PIN": 214,
+      "object_UNRESOLVED": 1337
+    },
+    "reference_mapping_summary": {
+      "references_mapped": 174,
+      "nearest_to_symbol_matched_cluster": 85,
+      "distinct_symbol_matched_clusters_with_reference_candidates": 81,
+      "reference_candidates_per_matched_cluster_gt1": 4
+    },
+    "reference_mapping_collisions": [
+      {
+        "page": 6,
+        "cluster_id": 14,
+        "references": [
+          "C13",
+          "C15"
+        ],
+        "status": "CONFLICT"
+      },
+      {
+        "page": 6,
+        "cluster_id": 37,
+        "references": [
+          "C16",
+          "R18"
+        ],
+        "status": "CONFLICT"
+      },
+      {
+        "page": 5,
+        "cluster_id": 4,
+        "references": [
+          "C3",
+          "U3"
+        ],
+        "status": "CONFLICT"
+      },
+      {
+        "page": 11,
+        "cluster_id": 57,
+        "references": [
+          "Q3",
+          "Q5"
+        ],
+        "status": "CONFLICT"
+      }
+    ],
+    "authority": {
+      "status": "CANDIDATE_ONLY",
+      "verified_connectivity": 0,
+      "net_membership_claims": 0,
+      "may_create_or_modify_nets": false,
+      "may_promote_verified": false,
+      "solver_executed": false,
+      "writer_executed": false,
+      "reference_to_symbol_mapping": "UNKNOWN_OR_CONFLICT",
+      "pin_positions_note": "ECCI internal CONFIRMED means S1 symbol-template + S2 measured-wire-stub evidence; it does not prove reference identity or electrical net membership."
+    }
+  },
+  "candidate_components": {
+    "totals": {
+      "page": 56,
+      "candidate_components_using_TR1_TR2_TR3_only": 1288,
+      "components_with_pins": 187,
+      "pins_in_components": 214,
+      "candidate_pins_without_TR3_edge": 17,
+      "TR1_TR2_TR3_edges_used": 1822,
+      "TR4_TR5_edges_excluded": 129,
+      "ambiguity_sites_left_unresolved": 118,
+      "unresolved_terminal_contact_records": 1337
+    },
+    "authority": {
+      "status": "CANDIDATE_ONLY",
+      "net_count_claimed": 0,
+      "net_membership_verified": 0,
+      "solver_executed": false,
+      "writer_executed": false,
+      "may_create_or_modify_nets": false,
+      "may_promote_verified": false,
+      "note": "These are page-local geometric candidate components, not electrical nets. Sheet labels, power/global labels, hierarchy, no-connect and 118 ambiguity sites remain unresolved."
+    }
+  },
+  "page11_reference_audit": {
+    "candidate_interpretation": {
+      "Q2": 27,
+      "Q3": 57,
+      "Q5": 58,
+      "Q6": 59,
+      "Q7": 60,
+      "Q8": 24
+    },
+    "conflicts": [
+      {
+        "label": "Q3/Q5",
+        "cluster_id": 57,
+        "reason": "prior OCR pass reads Q3 at this label position; another pass reads Q5 at the same position"
+      },
+      {
+        "label": "Q5",
+        "cluster_ids": [
+          57,
+          58
+        ],
+        "reason": "Q5 is observed at both the Q3 candidate position and a second position near cluster 58"
+      }
+    ],
+    "missing_labels": [
+      "Q4",
+      "Q9"
+    ],
+    "authority": {
+      "reference_to_cluster": "CANDIDATE_ONLY",
+      "electrical_connectivity": "NOT_EVALUATED",
+      "verified_connected": 0,
+      "verified_separate": 0,
+      "unknown_preserved": true,
+      "promotion_performed": false,
+      "notes": [
+        "OCR passes use the same Tesseract engine and same source PDF; they are correlated observations, not independent ground truth.",
+        "Nearest-centroid distance is a spatial heuristic, not semantic reference binding.",
+        "BCX56 pin identity and pin-position confirmation do not establish electrical connectivity."
+      ]
+    }
+  },
+  "release_gate": {
+    "status": "BLOCKED",
+    "verified_connected": 0,
+    "verified_separate": 0,
+    "electrical_net_memberships_verified": 0,
+    "net_writer_executed": false,
+    "solver_executed": false,
+    "all_connectivity_unknown_or_conflict": true,
+    "reason_codes": [
+      "PDF_DIAGRAM_TEXT_NOT_EXPOSED_AS_SEARCHABLE_TEXT",
+      "SYMBOL_REFERENCE_PIN_IDENTITY_INCOMPLETE",
+      "GEOMETRIC_INTERSECTIONS_NOT_ELECTRICAL_JUNCTIONS",
+      "LABEL_ATTACHMENT_NOT_PROVEN",
+      "CROSS_SHEET_LINKS_NOT_RESOLVED",
+      "NO_INDEPENDENT_MANUALLY_ADJUDICATED_GROUND_TRUTH"
+    ]
+  }
+}
