@@ -143,3 +143,6 @@ non-line primitive / shifted endpoint / foreign content_ref / line removed from 
 required / provenance wiring; B3 zero mapped / below threshold / sufficient / FP / missing & malformed policy /
 policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULATED there; the real one is
 `tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
+
+### F3 consequence in generated T-junction self-test
+The generated `t_nodot` scene deliberately has a wire endpoint touching another wire without a junction dot. KiCad's ground-truth netlist treats that endpoint as connected, while ECCI keeps the unsupported edge `INFERRED` and does not export it. The stricter FN gate therefore reports `ground_truth=FAIL` for this scene. This is an intentional fail-closed result, not a green self-test: `tests/kicad/test_kicad_cli.py` asserts the expected FN failure explicitly, while `tools/m4_selftest.py` remains non-zero until this connectivity gap is resolved from sufficient source evidence.
