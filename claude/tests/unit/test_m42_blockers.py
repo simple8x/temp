@@ -212,13 +212,8 @@ def pin_lines_docs(tmp_path_factory):
 
 def _pl_cluster(syms):
     return next(
-[... 119 bytes omitted ...]
-ence_is_verified_against_the_page(pin_lines_docs):
-    pi, cls, lib, conn, syms = pin_lines_docs
-    c = _pl_cluster(syms)
-    sup = c["resolution"]["pin_lines"]
-    n_sel = sum(x["selected"] for x in c["candidates"])
-    assert len(sup) == n_sel >= 1 and n_sel < len(c["candidates"])
+[... 348 bytes omitted ...]
+len(sup) == n_sel >= 1 and n_sel < len(c["candidates"])
     assert sorted(x["number"] for x in sup[0]) == ["1", "2", "3"]
     a1 = symrec.audit_pin_lines(syms, pi, cls)
     assert a1 == {"status": symrec.PL_VERIFIED, "problems": [], "clusters": [c["id"]]}
@@ -336,10 +331,13 @@ def _gt(scene, gt=None):
                            for i, xy in enumerate(((0, 5), (10, 5), (5, 0), (5, 10)))), (0, 2, 4, 5)),
     ("C_Polarized", (PinDef("1", "~", -2, 5, 0, 2, "passive"),
                      PinDef("2", "~", 12, 5, 180, 2, "passive")), (0, 2)),
+    ("R", (PinDef("1", "~", -2, 5, 0, 2, "passive"),
+           PinDef("2", "~", 12, 5, 180, 2, "passive")), (0, 2)),
 ])
 def test_f1_passive_signature_alone_never_authorizes_pin_number_exchange(name, pins, orientations):
     body = (BodyPath(((0, 0), (10, 0), (10, 10), (0, 10)), True),)
-    sym = SymbolDef(name, pins, body, "test-library")
+    # Even the name "R" is not sufficient when it comes from an untrusted/custom library.
+    sym = SymbolDef(name, pins, body, "custom_symbols.kicad_sym@deadbeef")
     cluster = Cluster(1, (1,), (0, 0, 10, 10), ((0, 0), (10, 0), (10, 10), (0, 10)),
                       (((0, 0), (10, 0)), ((10, 0), (10, 10)), ((10, 10), (0, 10)), ((0, 10), (0, 0))))
     shifts = {0: (0.0, 0.0), 2: (10.0, 10.0), 4: (10.0, 0.0), 5: (0.0, 10.0)}

@@ -22,7 +22,8 @@ pipeline's `provenance` stage).
 ## Export policy (`ecci/kicad_export.py`, fail-closed, every decision + reason in the manifest)
 - PLACED only with identity CONFIRMED and either (a) transform UNIQUE/EQUIVALENT with resolution UNIQUE and
   pin ids CONFIRMED, or (b) resolution UNIQUE with pin id state EQUIVALENT: exactly two pins on an explicit
-  non-polarized symbol allowlist (`R`, `R_US`, `C`, `C_Small`, `L`, `L_Small`, `L_Core`, `Fuse`, `Fuse_Small`),
+  library-qualified non-polarized allowlist (`Device.kicad_sym` names `R`, `R_US`, `C`, `C_Small`, `L`,
+  `L_Small`, `L_Core`, `Fuse`, `Fuse_Small`; `lib_min.kicad_sym:R` is test-only),
   with matching pin name/type/shape/hidden/length and page-space pin direction. Passive type alone is never enough.
   Case (b) uses candidate 0 as synthetic canonical numbering; source pin identity remains unconfirmed. Library text, scale = page scale (±0.5 %), KiCad
   orientation, library pin geometry, exact pin tips (≤ 10 µm), implicit connections and coincident pins are

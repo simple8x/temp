@@ -31,8 +31,20 @@ COVER_SAMPLES = 5
 # Explicitly non-polarized, two-terminal primitives whose terminal numbers may be
 # canonically exchanged without changing the electrical meaning of the symbol.
 # This is intentionally an allowlist, not a rule inferred from passive pin types.
-PIN_NUMBER_EXCHANGE_ALLOWLIST = frozenset({"R", "R_US", "C", "C_Small", "L", "L_Small",
-                                           "L_Core", "Fuse", "Fuse_Small"})
+PIN_NUMBER_EXCHANGE_ALLOWLIST = {
+    # Production KiCad device library. Names are deliberately library-qualified so a custom
+    # symbol named "R" cannot inherit the standard resistor's exchange permission.
+    "Device.kicad_sym": frozenset({"R", "R_US", "C", "C_Small", "L", "L_Small",
+                                   "L_Core", "Fuse", "Fuse_Small"}),
+    # Minimal synthetic library used only by this repository's generated regression scenes.
+    "lib_min.kicad_sym": frozenset({"R", "C"}),
+}
+
+
+def _pin_number_exchange_allowed(symbol: SymbolDef) -> bool:
+    token = symbol.lib_token.split("@", 1)[0]
+    library_file = token.rsplit("/", 1)[-1].removeprefix("lib:")
+    return symbol.name in PIN_NUMBER_EXCHANGE_ALLOWLIST.get(library_file, ())
 
 
 @dataclass(frozen=True)
@@ -177,7 +189,7 @@ def resolve(cl: Cluster, hits: list[Hit], params: MatchParams = MatchParams()) -
     # numbers per tip across all hits; id is CONFIRMED only if every hit agrees on every number
     pins: list[ResolvedPin] = []
     agree = True
-    electrically_equivalent = len(names) == 1 and names[0] in PIN_NUMBER_EXCHANGE_ALLOWLIST
+    electrically_equivalent = len(names) == 1 and all(_pin_number_exchange_allowed(h.symbol) for h in hits)
     for num0, tip0, base0 in first:
         nums = set()
         signatures = []
