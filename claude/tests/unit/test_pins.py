@@ -81,6 +81,19 @@ def test_allowlisted_library_name_does_not_override_different_pin_signatures():
     assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
 
 
+def test_allowlisted_passive_symbol_with_different_pin_lengths_stays_ambiguous():
+    base = LIB.symbols["R"]
+    pins = tuple(replace(p, length=(p.length * 1.5 if p.number == "2" else p.length))
+                 for p in base.pins)
+    # This passes the basic allowlist shape (two visible unnamed passive line pins), but
+    # the physical pin identity still differs across symmetric candidates by pin length.
+    custom = replace(base, pins=pins, lib_token="lib:Device.kicad_sym@deadbeef")
+    _, _, (cr,) = run(sym("R"), symbols={"R_LENGTH_MISMATCH": custom})
+    assert cr.resolution.status == "UNIQUE"
+    assert cr.resolution.id_state == "AMBIGUOUS"
+    assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
+
+
 def test_hidden_passive_two_terminal_lookalike_is_not_pin_equivalent():
     base = LIB.symbols["R"]
     hidden = replace(base, pins=tuple(replace(p, hidden=True) for p in base.pins))
