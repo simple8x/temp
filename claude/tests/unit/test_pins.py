@@ -68,6 +68,19 @@ def test_symmetric_geometry_with_different_electrical_pin_signatures_stays_ambig
     assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
 
 
+def test_allowlisted_library_name_does_not_override_different_pin_signatures():
+    base = LIB.symbols["R"]
+    pins = tuple(replace(p, name=("A" if p.number == "1" else "B"),
+                         electrical_type=("input" if p.number == "1" else "output")) for p in base.pins)
+    # Simulate a Device.kicad_sym file whose symbol is named R but whose terminals are not
+    # electrically interchangeable. The filename/name allowlist is necessary, not sufficient.
+    custom = replace(base, pins=pins, lib_token="lib:Device.kicad_sym@deadbeef")
+    _, _, (cr,) = run(sym("R"), symbols={"R": custom})
+    assert cr.resolution.status == "UNIQUE"
+    assert cr.resolution.id_state == "AMBIGUOUS"
+    assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
+
+
 def test_stacked_duplicate_pin_number_is_not_misreported_as_confirmed():
     base = LIB.symbols["R"]
     # Two library pin definitions occupy the same physical terminal and reuse its number.

@@ -404,12 +404,26 @@ def test_b3_zero_mapped_pins_with_zero_fp_does_not_pass():
     assert kr.ground_truth_gate(g, None)["state"] == kr.GT_BLOCKED
 
 
-def test_b3_electrically_equivalent_passive_pin_permutation_is_mapped_by_physical_position():
+def test_b3_synthetic_canonical_pin_identity_is_reported_but_never_counts_toward_gt_pass():
     g = _gt(ambiguous_r())
-    assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
-    assert g["pairs"]["TP"] == 1 and g["pairs"]["FN"] == 0
+    assert g["mapping_coverage"] == 0.5 and g["exported_pins_mapped"] == 2
+    assert g["pairs"]["FP"] == 0 and g["pairs"]["FN"] == 0
+    assert len(g["pin_identity_unverified_synthetic_canonical"]) == 2
+    assert g["gt_pins_not_exported_UNKNOWN"] == 2
+    assert all("synthetic canonical" in x["reason"] for x in g["unmatched_exported_pins"])
+    gate = kr.ground_truth_gate(g, {"min_mapping_coverage": 0.5})
+    assert gate["state"] == kr.GT_INCONCLUSIVE
+    assert "synthetic-canonical" in gate["reason"]
+
+
+def test_b3_coverage_below_explicit_policy_fails_even_when_no_pairs_are_wrong():
+    g = _gt(crossing())
+    assert g["pairs"]["FP"] == 0 and g["pairs"]["FN"] == 0
+    g["mapping_coverage"] = 0.5
+    g["exported_pins_mapped"] = max(2, g["exported_pins_mapped"] // 2)
     gate = kr.ground_truth_gate(g, POL)
-    assert gate["state"] == kr.GT_PASS and gate["mapping_coverage"] == 1.0
+    assert gate["state"] == kr.GT_FAIL
+    assert "below the policy minimum" in gate["reason"]
 
 
 def test_b3_sufficient_mapping_with_zero_fp_may_pass():
@@ -451,11 +465,13 @@ def test_b3_policy_file_loading_fails_closed(tmp_path):
     assert not (pathlib.Path(__file__).resolve().parents[2] / "tools" / "m4_gt_policy.json").exists()
 
 
-def test_b3_electrically_equivalent_passive_pins_map_by_physical_position():
+def test_b3_electrically_equivalent_passive_pins_remain_source_identity_unknown():
     sc = ambiguous_r()
     g = _gt(sc)
-    assert g["gt_pins_not_exported_UNKNOWN"] == len(g["unmatched_gt_pins"]) == 0
-    assert g["mapping_coverage"] == 1.0 and g["pairs"]["FP"] == 0
+    assert g["gt_pins_not_exported_UNKNOWN"] == len(g["unmatched_gt_pins"]) == 2
+    assert g["mapping_coverage"] == 0.5 and g["pairs"]["FP"] == 0
+    assert len(g["pin_identity_unverified_synthetic_canonical"]) == 2
+    assert kr.ground_truth_gate(g, sc.gt_policy())["state"] == kr.GT_INCONCLUSIVE
     moved = [GtPin(x.ref, x.number, x.x + 50, x.y + 50, x.net, False, x.lib_id) for x in crossing().gt_pins()]
     g2 = _gt(crossing(), moved)
     assert g2["exported_pins_unmatched"] == len(g2["unmatched_exported_pins"]) > 0
@@ -558,8 +574,8 @@ def test_b3_unique_geometric_match_without_a_kicad_net_stays_unknown():
     assert g["gt_pins_claimed_not_scored_UNKNOWN"] == 1
     (u,) = g["unmatched_gt_pins"]
     assert p["object"] in u["reason"] and "not on exactly one KiCad net" in u["reason"]
-    assert {"object": p["object"], "state": "UNKNOWN", "reason": "pin not on exactly one KiCad net"} \
-        in g["unmatched_exported_pins"]
+    assert any(x["object"] == p["object"] and x["state"] == "UNKNOWN"
+               and "not on exactly one KiCad net" in x["reason"] for x in g["unmatched_exported_pins"])
 
 
 def test_b3_two_exported_pins_claiming_one_gt_pin():

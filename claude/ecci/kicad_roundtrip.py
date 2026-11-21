@@ -147,6 +147,7 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
     # exactly one KiCad net, i.e. that enter the pair scoring. Every scoreable GT pin not in `scored` is UNKNOWN.
     mapped, unmatched, claimed, scored, dup = [], [], {}, set(), 0
     identity_mismatches, identity_unverified = [], []
+    unscored_reasons = {}
     for d in manifest["symbols"]:
         if d["decision"] != "PLACED":
             continue
@@ -165,19 +166,26 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
             gt_pin = scoreable[cand[0]]
             assignment = p.get("number_assignment", "CONFIRMED")
             if assignment == "EQUIVALENT_CANONICAL":
+                reason = f"matched by {p['object']}; synthetic canonical numbering means source pin identity is not proven and is excluded from GT PASS"
                 identity_unverified.append({"object": p["object"], "gt_ref": gt_pin.ref,
                                             "gt_number": gt_pin.number,
-                                            "export_numbers": list(p["numbers"]),
-                                            "reason": "synthetic canonical numbering; source pin identity is not proven"})
+                                            "export_numbers": list(p["numbers"]), "reason": reason})
+                unmatched.append((p["object"], reason))
+                unscored_reasons[cand[0]] = reason
+                continue
             elif list(map(str, p["numbers"])) != [str(gt_pin.number)]:
                 identity_mismatches.append({"object": p["object"], "gt_ref": gt_pin.ref,
                                             "gt_number": str(gt_pin.number),
                                             "export_numbers": list(map(str, p["numbers"]))})
-                unmatched.append((p["object"], "pin identity mismatch against GT number"))
+                reason = "pin identity mismatch against GT number"
+                unmatched.append((p["object"], reason))
+                unscored_reasons[cand[0]] = reason
                 continue
             ours = {net_of.get((ref, n)) for n in p["numbers"]}
             if len(ours) != 1 or None in ours:
-                unmatched.append((p["object"], "pin not on exactly one KiCad net"))
+                reason = f"matched by {p['object']} but that pin is not on exactly one KiCad net"
+                unmatched.append((p["object"], reason))
+                unscored_reasons[cand[0]] = reason
                 continue
             scored.add(cand[0])                  # only now: the GT pin is electrically scored
             mapped.append((p["object"], next(iter(ours)), gt_pin.net))
@@ -213,7 +221,7 @@ def compare_ground_truth(manifest: dict, netlist: dict, gt_pins: list, tol_pt: f
             "unmatched_exported_pins": [{"object": o, "state": "UNKNOWN", "reason": r} for o, r in sorted(unmatched)],
             "unmatched_gt_pins": sorted([{"ref": g.ref, "number": g.number, "state": "UNKNOWN",
                                           "reason": "no exported pin matched" if i not in claimed else
-                                          f"matched by {claimed[i]} but that pin is not on exactly one KiCad net"}
+                                          unscored_reasons.get(i, f"matched by {claimed[i]} but that pin is not on exactly one KiCad net")}
                                          for i, g in enumerate(scoreable) if i not in scored],
                                         key=lambda d: (str(d["ref"]), str(d["number"]))),
             "pairs": dict(TP=c["TP"], FP=c["FP"], FN=c["FN"], TN=c["TN"]),
@@ -263,6 +271,7 @@ def ground_truth_gate(g: dict, policy) -> dict:
            "exported_pins_unmatched": g["exported_pins_unmatched"], "mapping_coverage": g["mapping_coverage"],
            "TP": pairs["TP"], "FP": pairs["FP"], "FN": pairs["FN"], "TN": pairs["TN"],
            "precision": g["precision"], "recall": g["recall_over_mapped_pairs"],
+           "pin_identity_unverified_synthetic_canonical": g.get("pin_identity_unverified_synthetic_canonical", []),
            "min_mapping_coverage": policy.get("min_mapping_coverage") if isinstance(policy, dict) else None}
     if pairs["FP"] > 0 or pairs["FN"] > 0:
         failures = []
@@ -283,6 +292,9 @@ def ground_truth_gate(g: dict, policy) -> dict:
     if g["mapping_coverage"] < policy["min_mapping_coverage"]:
         return {**rep, "state": GT_FAIL, "reason": f"mapping coverage {g['mapping_coverage']} below the policy "
                                                    f"minimum {policy['min_mapping_coverage']}"}
+    if g.get("pin_identity_unverified_synthetic_canonical"):
+        return {**rep, "state": GT_INCONCLUSIVE,
+                "reason": f"{len(g['pin_identity_unverified_synthetic_canonical'])} synthetic-canonical pin(s) have no source pin identity; excluded from GT PASS"}
     if g["precision"] is None and pairs["TP"] == 0:
         return {**rep, "state": GT_PASS, "reason": "FP = 0, FN = 0, coverage met; no exported connection among mapped pins"}
     return {**rep, "state": GT_PASS, "reason": "FP = 0, FN = 0 and coverage met"}

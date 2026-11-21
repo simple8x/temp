@@ -28,12 +28,17 @@ def test_scene_round_trips_through_kicad_cli(scene, tmp_path):
     expected = {s: "PASS" for s in rec["stages"]}
     if scene.name == "t_nodot":
         # The T-end touches a wire in KiCad semantics, but without a junction dot ECCI
-        # keeps that edge INFERRED and does not export it. The stricter FN gate MUST fail;
-        # treating this known unresolved connection as PASS would defeat F3.
+        # keeps that edge INFERRED and does not export it. The stricter FN gate MUST fail.
         expected["ground_truth"] = "FAIL"
         assert rec["ground_truth"]["pairs"]["FP"] == 0
         assert rec["ground_truth"]["pairs"]["FN"] > 0
         assert "false-negative" in rec["ground_truth"]["gate"]["reason"]
+    if scene.name == "ambiguous_r":
+        # Synthetic canonical resistor numbering may be exported, but source pin identity
+        # remains UNKNOWN and is excluded from GT coverage/PASS.
+        expected["ground_truth"] = "INCONCLUSIVE"
+        assert rec["ground_truth"]["pin_identity_unverified_synthetic_canonical"]
+        assert rec["ground_truth"]["exported_pins_mapped"] < rec["ground_truth"]["gt_scoreable_pins"]
     assert rec["stages"] == expected, rec
     assert (tmp_path / "netlist.xml").exists() and (tmp_path / "roundtrip.json").exists()
 

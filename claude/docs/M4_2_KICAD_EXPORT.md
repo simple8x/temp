@@ -121,11 +121,12 @@ so the mutation job installs KiCad and sets `ECCI_KICAD_TESTS=1`).
   `GATE_MIN_PIN_RECALL` in `gt_gate.txt` is a different quantity), so **none is shipped**: `tools/m4_gt.py` reads
   `$M4_GT_POLICY` or `tools/m4_gt_policy.json`; absent → every page's `ground_truth` is BLOCKED and the
   `m4-kicad-export` job does not pass until the owner sets the threshold. The generated self-test scenes carry a
-  test-only policy (`Scene.gt_min_coverage`: 1.0; `ambiguous_r` now reaches 1.0 because its resistor pins are
-  electrically equivalent and are mapped by physical position, not source pin-number identity).
+  test-only policy (`Scene.gt_min_coverage`: 1.0 for positive scenes; `ambiguous_r` uses 0.5 but remains
+  `INCONCLUSIVE` because its synthetic canonical resistor pin identities are not source-confirmed).
 - Pin identity: for `number_assignment=CONFIRMED`, the exported pin number must equal the GT pin number at the
-  matched physical position; a mismatch fails the gate. `EQUIVALENT_CANONICAL` pins are reported separately as
-  source identity unverified and are not misrepresented as CONFIRMED.
+  matched physical position; a mismatch fails the gate. `EQUIVALENT_CANONICAL` pins are reported separately,
+  claimed geometrically but NOT scored, excluded from mapping coverage and GT PASS; if any remain, the gate is
+  `INCONCLUSIVE` even when the remaining mapped subset has zero FP/FN.
 - UNKNOWN accounting: a GT pin is *claimed* when exactly one exported pin matches it geometrically (first claim
   wins; a second exported pin on the same GT pin is unmatched, "GT pin already matched") and *scored* only once
   its pin identity is compatible and the exported pin is on exactly one KiCad net. `gt_pins_scored` = scored = `exported_pins_mapped`;
@@ -145,4 +146,4 @@ policy file / unmatched UNKNOWN / gate table / run_page wiring (kicad-cli SIMULA
 `tests/kicad`). Mutations M165–M187; M88 and M161 re-targeted to the refactored code (same bug class).
 
 ### F3 consequence in generated T-junction self-test
-The generated `t_nodot` scene deliberately has a wire endpoint touching another wire without a junction dot. KiCad's ground-truth netlist treats that endpoint as connected, while ECCI keeps the unsupported edge `INFERRED` and does not export it. The stricter FN gate therefore reports `ground_truth=FAIL` for this scene. This is an intentional fail-closed result, not a green self-test: `tests/kicad/test_kicad_cli.py` asserts the expected FN failure explicitly, while `tools/m4_selftest.py` remains non-zero until this connectivity gap is resolved from sufficient source evidence.
+The generated `t_nodot` scene deliberately has a wire endpoint touching another wire without a junction dot. KiCad's ground-truth netlist treats that endpoint as connected, while ECCI keeps the unsupported edge `INFERRED` and does not export it. The stricter FN gate therefore reports `ground_truth=FAIL` for this scene. This is an intentional fail-closed result, not a green self-test: `tests/kicad/test_kicad_cli.py` asserts the expected FN failure explicitly, and `tools/m4_selftest.py` records it as an expected non-PASS control. The `ambiguous_r` control likewise remains INCONCLUSIVE because its synthetic canonical source pin identity is not GT-confirmed; the self-test summary labels its aggregate result `PASS_WITH_EXPECTED_NONPASS_CONTROLS`, never electrical PASS.
