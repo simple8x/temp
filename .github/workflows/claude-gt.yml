@@ -113,6 +113,8 @@ jobs:
             gt_styles.log
 
   m4-kicad-export:
+    # The export job must populate the branch-scoped cache before this restore-only consumer starts.
+    needs: export
     # M4.2 on the ground-truth corpus: every page gt_eval plans -> .kicad_sch -> FRESH kicad-cli netlist ->
     # V-W round trip -> V-G partition vs KiCad's netlist of the source design. Runs beside `export` on the SAME
     # cached GT (restore only; a cache miss fails here = BLOCKED, it never falls back to anything).
