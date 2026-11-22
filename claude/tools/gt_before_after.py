@@ -14,6 +14,37 @@ import sys
 
 PRED_KEYS_GT = ("detected_pins", "prims", "clusters", "wire_objects")          # prediction-side fields of a gt_eval page record
 PRED_KEYS_M4 = ("symbols", "nets_exported", "roundtrip")
+PAGE_KEY_GT = ("project", "sheet", "instance")
+GT_TOTAL_FIELDS = ("detected", "detected_local", "coverage", "inventory_consistent", "recovery")
+GT_DETECTED_FIELDS = ("pos", "neg", "FP_V", "FP_I")
+GT_LOCAL_FIELDS = ("pins", "pin_recall")
+
+
+def _index_pages(records: list[dict], key_fields: tuple[str, ...], required_fields: tuple[str, ...], label: str) -> tuple[dict, list[str]]:
+    """Index page records without silently overwriting duplicates or treating missing as explicit null."""
+    pages: dict = {}
+    errors: list[str] = []
+    if not isinstance(records, list):
+        return pages, [f"{label} page records are not a list"]
+    for i, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"{label} page record {i} is not an object")
+            continue
+        missing = [k for k in (*key_fields, *required_fields) if k not in record]
+        if missing:
+            errors.append(f"{label} page record {i} missing fields: {','.join(missing)}")
+            continue
+        key = tuple(record[k] for k in key_fields)
+        try:
+            hash(key)
+        except TypeError:
+            errors.append(f"{label} page record {i} has an unhashable identity")
+            continue
+        if key in pages:
+            errors.append(f"{label} duplicate page identity: {key}")
+            continue
+        pages[key] = record
+    return pages, errors
 
 
 def _lines(path: str, tag: str) -> list[dict]:
@@ -25,10 +56,7 @@ def _lines(path: str, tag: str) -> list[dict]:
 
 
 def _pages(path: str) -> dict:
-    pages = {}
-    for r in _lines(path, "GT_EVAL"):
-        pages[(r.get("project"), r.get("sheet"), r.get("instance"))] = r
-    return pages
+    return _index_pages(_lines(path, "GT_EVAL"), PAGE_KEY_GT, (*PRED_KEYS_GT, "recovery"), "GT_EVAL")
 
 
 def gt_mode(a: str, b: str, out: pathlib.Path) -> int:
@@ -37,8 +65,26 @@ def gt_mode(a: str, b: str, out: pathlib.Path) -> int:
         print("GT_BEFORE_AFTER_FAIL missing GT_TOTAL")
         return 1
     ta, tb = ta[0], tb[0]
-    pa, pb = _pages(a), _pages(b)
-    fails, budget_pages = [], []
+    pa, ea = _pages(a)
+    pb, eb = _pages(b)
+    fails, budget_pages = [*ea, *eb], []
+    if not isinstance(ta, dict) or not isinstance(tb, dict):
+        print("GT_BEFORE_AFTER_FAIL GT_TOTAL is not an object")
+        return 1
+    for label, total in (("baseline", ta), ("repaired", tb)):
+        missing = [k for k in GT_TOTAL_FIELDS if k not in total]
+        if missing:
+            fails.append(f"{label} GT_TOTAL missing fields: {','.join(missing)}")
+            continue
+        for parent, fields in (("detected", GT_DETECTED_FIELDS), ("detected_local", GT_LOCAL_FIELDS),
+                               ("coverage", ("page_coverage",))):
+            obj = total[parent]
+            if not isinstance(obj, dict):
+                fails.append(f"{label} GT_TOTAL.{parent} is not an object")
+            else:
+                absent = [k for k in fields if k not in obj]
+                if absent:
+                    fails.append(f"{label} GT_TOTAL.{parent} missing fields: {','.join(absent)}")
     if set(pa) != set(pb):
         fails.append(f"page sets differ: {len(set(pa) ^ set(pb))} pages")
     for k in sorted(set(pa) & set(pb), key=str):
@@ -77,8 +123,39 @@ def gt_mode(a: str, b: str, out: pathlib.Path) -> int:
 def m4_mode(a: str, b: str, out: pathlib.Path) -> int:
     sa, sb = json.loads(pathlib.Path(a).read_text()), json.loads(pathlib.Path(b).read_text())
     fails = []
-    pa = {r["page"]: r for r in sa.get("pages", [])}
-    pb = {r["page"]: r for r in sb.get("pages", [])}
+    if not isinstance(sa, dict) or not isinstance(sb, dict):
+        print("M4_BEFORE_AFTER_FAIL summary is not an object")
+        return 1
+    for label, summary in (("baseline", sa), ("repaired", sb)):
+        required = ("pages", "pairs", "aggregate", "pages_planned", "pages_skipped_by_plan",
+                    "pages_with_error", "partial_selection")
+        missing = [k for k in required if k not in summary]
+        if missing:
+            fails.append(f"{label} M4 summary missing fields: {','.join(missing)}")
+            continue
+        if type(summary["pages_planned"]) is not int or summary["pages_planned"] < 0:
+            fails.append(f"{label} M4 pages_planned is not a non-negative integer")
+        if type(summary["pages_skipped_by_plan"]) is not int or summary["pages_skipped_by_plan"] != 0:
+            fails.append(f"{label} M4 has skipped pages or invalid pages_skipped_by_plan")
+        if not isinstance(summary["pages_with_error"], list) or summary["pages_with_error"]:
+            fails.append(f"{label} M4 has page errors or invalid pages_with_error")
+        if summary["partial_selection"] not in ("", None):
+            fails.append(f"{label} M4 is a partial corpus selection")
+        if not isinstance(summary["pages"], list) or summary["pages_planned"] != len(summary["pages"]):
+            fails.append(f"{label} M4 planned page count does not match evaluated page records")
+        for parent, fields in (("pairs", ("TP", "FP", "FN", "TN")),
+                               ("aggregate", ("gt_scoreable_pins", "exported_pins_mapped", "mapping_coverage",
+                                               "gt_pins_not_exported_UNKNOWN"))):
+            obj = summary[parent]
+            if not isinstance(obj, dict):
+                fails.append(f"{label} M4 summary.{parent} is not an object")
+            else:
+                absent = [k for k in fields if k not in obj]
+                if absent:
+                    fails.append(f"{label} M4 summary.{parent} missing fields: {','.join(absent)}")
+    pa, ea = _index_pages(sa.get("pages", []), ("page",), PRED_KEYS_M4, "baseline M4")
+    pb, eb = _index_pages(sb.get("pages", []), ("page",), PRED_KEYS_M4, "repaired M4")
+    fails.extend(ea + eb)
     if set(pa) != set(pb):
         fails.append("page sets differ")
     for k in sorted(set(pa) & set(pb)):

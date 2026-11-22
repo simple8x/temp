@@ -14,8 +14,9 @@ Properties (each has tests):
 Phases:
   1  VERIFIED edges only. Nets with a violation are QUARANTINED whole (nobody chooses an edge to drop).
   2  Add INFERRED edges and committed site links; reject the WHOLE witness set of every violation.
-  3  Resolve ambiguity sites per interaction cluster by exhaustive enumeration against the
-     constraints; a unique consistent option is committed as INFERRED, never VERIFIED. After each
+  3  Do not resolve FOURWAY or MULTI sites by constraint enumeration: their option domains are
+     not proven exhaustive. Both remain UNKNOWN unless a caller supplies an explicit fixed
+     assumption; that assumption can only produce INFERRED, never VERIFIED. After each
      commit round Phase 2 runs again on the augmented edge set; a commit that creates a violation
      is rolled back (site -> CONFLICT), and the loop repeats until nothing changes.
 """
@@ -56,8 +57,8 @@ class Site:
     id: str
     kind: str                         # "FOURWAY" | "MULTI"
     arms: tuple                       # ((label, obj id), ...)
-    options: tuple                    # (Option, ...)  the finite domain (ASSUMPTION: exhaustive)
-    fixed: str | None = None          # option name fixed as an assumption (INFERRED)
+    options: tuple                    # candidate options; completeness must be established before solver enumeration
+    fixed: str | None = None          # caller-supplied explicit assumption (INFERRED, never VERIFIED)
 
 
 @dataclass
@@ -336,7 +337,15 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
             site_res[sid] = SiteResult(UNKNOWN, None, "TOUCHES_CONFLICT_COMPONENT")
             failed.add(sid)
         elif s.fixed is not None:
+            # An explicit caller-supplied choice is an assumption, not a solver inference.
             committed[sid] = s.fixed
+        elif s.kind in ("FOURWAY", "MULTI"):
+            # Neither site domain is proven exhaustive. A unique survivor after constraint
+            # filtering is not proof that omitted topologies are impossible.
+            reason = ("NON_EXHAUSTIVE_FOURWAY_DOMAIN" if s.kind == "FOURWAY"
+                      else "NON_EXHAUSTIVE_MULTI_ARM_DOMAIN")
+            site_res[sid] = SiteResult(UNKNOWN, None, reason)
+            failed.add(sid)
 
     def links_of(cm: dict[str, str]) -> tuple[dict, dict]:
         out, owner = {}, {}

@@ -258,7 +258,12 @@ def test_repaired_equals_baseline_when_no_documented_rule_applies(tmp_path_facto
     old, oi = BASE.gt_pins(s, x)
     new, ni = G.gt_pins(s, x)
     t = gt_audit.audit_task(BASE, s, x, None, "h")
-    assert gt_audit.check([t]) == []
+    if "ambiguous_record_identity" in t["problems"]:
+        # Randomly generated duplicate ref/pin/position records cannot be assigned to UUIDs by order.
+        # A fail-closed audit block is acceptable; a guessed ledger or a silent pass is not.
+        assert "record_set_differs" not in t["problems"] and t["ledger"] == []
+    else:
+        assert gt_audit.check([t]) == []
     tup = lambda ps: [(p.ref, p.number, p.x, p.y, p.net, p.hidden, p.lib_id) for p in ps]  # noqa: E731
     if not t["ledger"]:
         assert tup(old) == tup(new)
@@ -286,3 +291,98 @@ def test_before_after_requires_identical_prediction(tmp_path):
     d = _log(tmp_path / "d.log", 3, 3, "SKIPPED_BUDGET")
     assert ba.gt_mode(a, d, tmp_path / "o3") == 0
     assert json.loads((tmp_path / "o3" / "recovery_comparison.json").read_text())["recovery_budget_dependent_pages"]
+
+
+def test_before_after_rejects_missing_prediction_field_and_duplicate_page(tmp_path):
+    import gt_before_after as ba
+    a = tmp_path / "a.log"
+    b = tmp_path / "b.log"
+    _log(a, 3, 3)
+    _log(b, 3, 3)
+    lines = b.read_text().splitlines()
+    page = json.loads(lines[0][len("GT_EVAL "):])
+    page.pop("clusters")
+    b.write_text("GT_EVAL " + json.dumps(page) + "\n" + "\n".join(lines[1:]) + "\n")
+    assert ba.gt_mode(str(a), str(b), tmp_path / "missing") == 1
+
+    _log(b, 3, 3)
+    lines = b.read_text().splitlines()
+    b.write_text("\n".join([lines[0], lines[0], *lines[1:]]) + "\n")
+    assert ba.gt_mode(str(a), str(b), tmp_path / "duplicate") == 1
+
+
+def test_before_after_rejects_missing_total_metric_schema(tmp_path):
+    import gt_before_after as ba
+    a = tmp_path / "a.log"
+    b = tmp_path / "b.log"
+    _log(a, 3, 3)
+    _log(b, 3, 3)
+    lines = b.read_text().splitlines()
+    total = json.loads(lines[1][len("GT_TOTAL "):])
+    total["detected"].pop("FP_V")
+    b.write_text(lines[0] + "\nGT_TOTAL " + json.dumps(total) + "\n")
+    assert ba.gt_mode(str(a), str(b), tmp_path / "bad-total") == 1
+
+
+def test_gt_audit_fails_closed_on_duplicate_record_identity(tmp_path):
+    # Two same-ref symbols at the same origin create repeated ref/pin/position keys. The old reader
+    # has no symbol UUID, so pairing records by list order would fabricate provenance.
+    s, x = write(tmp_path, [sym("R1", 50, 50), sym("R1", 50, 50)],
+                 {"/A": [("R1", "1")], "/B": [("R1", "2")]})
+    task = gt_audit.audit_task(BASE, s, x, None, "dup")
+    assert "ambiguous_record_identity" in task["problems"]
+    assert gt_audit.check([task]) and task["ledger"] == []
+
+
+def _m4_summary(pages=None, **overrides):
+    summary = {
+        "pages": pages if pages is not None else [{"page": "p1", "symbols": {}, "nets_exported": 0, "roundtrip": {}}],
+        "pages_planned": 1, "pages_skipped_by_plan": 0, "pages_with_error": [], "partial_selection": "",
+        "pairs": {"TP": 0, "FP": 0, "FN": 0, "TN": 0},
+        "aggregate": {"gt_scoreable_pins": 0, "exported_pins_mapped": 0, "mapping_coverage": None,
+                      "gt_pins_not_exported_UNKNOWN": 0},
+    }
+    summary.update(overrides)
+    return summary
+
+
+def test_m4_before_after_rejects_incomplete_or_partial_corpus(tmp_path):
+    import gt_before_after as ba
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    valid = _m4_summary()
+    a.write_text(json.dumps(valid))
+    b.write_text(json.dumps(valid))
+    assert ba.m4_mode(str(a), str(b), tmp_path / "valid") == 0
+
+    for name, change in (
+        ("skipped", {"pages_skipped_by_plan": 1}),
+        ("error", {"pages_with_error": ["p1"]}),
+        ("partial", {"partial_selection": "p1"}),
+        ("count", {"pages_planned": 2}),
+    ):
+        bad = dict(valid)
+        bad.update(change)
+        b.write_text(json.dumps(bad))
+        assert ba.m4_mode(str(a), str(b), tmp_path / name) == 1
+
+
+def test_m4_before_after_rejects_non_list_pages_without_crashing(tmp_path):
+    import gt_before_after as ba
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    valid = _m4_summary()
+    a.write_text(json.dumps(valid))
+    bad = dict(valid, pages=None)
+    b.write_text(json.dumps(bad))
+    assert ba.m4_mode(str(a), str(b), tmp_path / "bad-pages") == 1
+
+
+def test_before_after_rejects_unhashable_page_identity(tmp_path):
+    import gt_before_after as ba
+    a, b = tmp_path / "a.log", tmp_path / "b.log"
+    _log(a, 3, 3)
+    _log(b, 3, 3)
+    lines = b.read_text().splitlines()
+    page = json.loads(lines[0][len("GT_EVAL "):])
+    page["instance"] = ["not", "a", "stable", "identity"]
+    b.write_text("GT_EVAL " + json.dumps(page) + "\n" + "\n".join(lines[1:]) + "\n")
+    assert ba.gt_mode(str(a), str(b), tmp_path / "unhashable") == 1

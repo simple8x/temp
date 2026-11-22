@@ -400,6 +400,17 @@ def wire_component_index(sch_path: str):
                 if j != i and on(end, *segs[j]) and find(i) != find(j):
                     parent[find(i)] = find(j)
 
+    # KiCad's explicit junction is positive connectivity evidence even when it lies
+    # strictly inside one or more wire segments. A geometric crossing without a junction
+    # remains separate (the endpoint pass above deliberately does not join it).
+    for jx, jy in sch.get("junctions", []):
+        hits = [i for i, (a, b) in enumerate(segs) if on((jx, jy), a, b, tol=0.02)]
+        if len(hits) > 1:
+            first = hits[0]
+            for other in hits[1:]:
+                if find(first) != find(other):
+                    parent[find(first)] = find(other)
+
     def comp_of(x_pt: float, y_pt: float, tol_pt: float = 0.6):
         x, y = x_pt / MM_TO_PT, y_pt / MM_TO_PT
         for j in cell.get((int(x // 5), int(y // 5)), []):

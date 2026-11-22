@@ -103,13 +103,20 @@ def audit_task(base, sch: str, xml: str, instance: str | None, page: str) -> dic
     problems = []
     if sorted((k, len(v)) for k, v in old_by.items()) != sorted((k, len(v)) for k, v in new_by.items()):
         problems.append("record_set_differs")
+    # A positional zip is not a stable identity rule: duplicate (ref, pin, position) records can
+    # be reordered by either reader. The frozen reader has no symbol UUID, so do not guess a pairing.
+    ambiguous_old = [k for k, v in old_by.items() if len(v) != 1]
+    ambiguous_new = [k for k, v in new_by.items() if len(v) != 1]
+    if ambiguous_old or ambiguous_new:
+        problems.append("ambiguous_record_identity")
     src = {"sch": sch, "sch_sha256": sha(sch), "netlist": xml, "netlist_sha256": sha(xml), "instance_path": instance}
     ledger = []
     old_bad = baseline_cell_bad_refs(new)
     for k, rs in new_by.items():
+        if len(rs) != 1 or len(old_by.get(k, [])) != 1:
+            continue
         for i, r in enumerate(rs):
-            ops = old_by.get(k, [])
-            o = ops[i] if i < len(ops) else None
+            o = old_by[k][0]
             before = (o.net if o is not None and not o.hidden else None)
             after = r["net"] if not r["hidden"] else None
             r["id"] = f"{page}|{r['ref']}|{r['number']}|{r['symbol_uuid']}|{i}"

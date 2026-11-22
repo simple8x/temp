@@ -111,12 +111,44 @@ def test_degenerate_segments_are_counted_and_skipped():
     assert g.stats["degenerate_segments"] == 1 and len(g.edges) == 1
 
 
-def test_chaining_of_endpoints_is_transitive_and_visible_in_stats():
-    # three endpoints each 0.9*eps apart in a row: A~B, B~C but A!~C -> one node by chaining
+def test_proximity_chaining_is_quarantined_not_merged():
+    # A~B and B~C, but diameter(A,B,C) > eps. Do not manufacture one node by transitivity.
     eps = 1e-3
     prims = [mk(0, [(0, 0), (0, 5)]), mk(1, [(0.9 * eps, 0), (1, 1)]), mk(2, [(1.8 * eps, 0), (2, 2)])]
     g = build_arrangement(prims, eps=eps)
-    assert len([n for n in g.nodes if abs(n.xy[1]) < 1e-9]) == 1
+    near = [n for n in g.nodes if abs(n.xy[1]) < 1e-9 and n.xy[0] < 0.01]
+    assert len(near) == 3
+    assert g.stats["ambiguous_chain_components"] == 1
+    assert g.stats["ambiguous_chain_records"] == 3
+
+
+def test_bounding_box_corner_distance_does_not_reject_small_diameter_cluster():
+    # Four points on a diamond: actual diameter == eps, while the empty bbox diagonal > eps.
+    eps = 1.0
+    prims = [mk(i, [p, (p[0], p[1] + 10)]) for i, p in enumerate(
+        [(0, 0.5), (0.5, 0), (1, 0.5), (0.5, 1)])]
+    g = build_arrangement(prims, eps=eps)
+    n = next(n for n in g.nodes if len(n.vertices) == 4)
+    assert len(n.vertices) == 4
+    assert g.stats["ambiguous_chain_components"] == 0
+
+
+def test_rotated_proper_crossing_is_split_into_four_arms():
+    g = build_arrangement([mk(0, [(0, 0), (10, 10)]), mk(1, [(0, 10), (10, 0)])], eps=1e-7)
+    n = node_at(g, (5, 5))
+    assert len(n.edges) == 4
+    assert set(n.through) == {(0, 0), (1, 0)}
+
+
+def test_three_line_multi_arm_crossing_preserves_all_six_arms():
+    g = build_arrangement([
+        mk(0, [(-10, 0), (10, 0)]),
+        mk(1, [(-10, -10), (10, 10)]),
+        mk(2, [(-10, 10), (10, -10)]),
+    ], eps=1e-7)
+    n = node_at(g, (0, 0))
+    assert len(n.edges) == 6
+    assert set(n.through) == {(0, 0), (1, 0), (2, 0)}
 
 
 def test_empty_input_and_bad_eps():
