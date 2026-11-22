@@ -83,6 +83,14 @@ def four_ends():
     return line(100, 100, 140, 100) + line(100, 100, 60, 100) + line(100, 100, 100, 140) + line(100, 100, 100, 60)
 
 
+def test_rotated_crossing_is_not_silently_classified_as_wire():
+    # The current wire classifier is explicitly Manhattan-only. Diagonal primitives stay
+    # outside the electrical graph; they must not become accidental wire connectivity.
+    pi, cls, cl, built, res = run(line(100, 100, 160, 160) + line(100, 160, 160, 100))
+    assert built.graph.sites == []
+    assert len([o for o in built.graph.objects if o.kind == "WIRE"]) == 3  # BASE only
+
+
 def test_i7_four_arms_without_dot_never_verified():
     pi, cls, cl, built, res = run(four_ends())
     assert len(built.graph.sites) == 1 and len(built.graph.sites[0].options) == 5

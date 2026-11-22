@@ -211,10 +211,18 @@ def test_two_wire_crossing_keeps_both_arms_per_wire_with_distinct_geometry():
     recs = built.site_arms[site.id]
     assert [r.obj for r in recs].count(a) == 2 and [r.obj for r in recs].count(b) == 2
     assert len({r.graph_edge for r in recs}) == 4 and [r.label for r in recs] == [r.direction for r in recs]
+    # At a crossing, each wire is THROUGH the node; there is no PDF polyline vertex there.
+    assert all(not r.node_vertices and r.node_through for r in recs)
     assert audit_site_arms(built.graph, built.site_arms, built.obj_prims) == []
     d = loads(dumps(built.graph, res, built=built, page=pi, clusters=cl, registry=cls.registry))
     s = d["sites"][0]
     assert s["result"]["status"] == "UNKNOWN" and all(arm["geometry"]["prov"] for arm in s["arms"])
+    assert all(not arm["geometry"]["node_vertices"] and arm["geometry"]["node_through"]
+               for arm in s["arms"])
+    def erase_topology_fact(d):
+        d["sites"][0]["arms"][0]["geometry"]["node_through"] = []
+    with pytest.raises(DocumentError, match="topology facts"):
+        loads(tamper(d, erase_topology_fact))
     assert d["site_links"] == [] and pair_status(d, a, b) == UNKNOWN
     assert {tuple(map(tuple, o["links"])) for o in s["options"]} == {(), ((min(a, b), max(a, b)),)}
     def swap(d):                                     # contradictory direction for one arm
@@ -365,3 +373,17 @@ def test_end_to_end_pipeline_to_document_and_back(scene):
         assert n_ver > 0
     if scene == "t_junction":
         assert n_ver == 0 and {e["status"] for e in d["edges"]} == {"INFERRED"}
+
+
+def test_t_junction_serializes_endpoint_and_through_as_distinct_facts():
+    pi, cls, cl, built, res = run(line(100, 100, 160, 100) + line(130, 70, 130, 130)
+                                  + line(130, 100, 130, 150))
+    (site,) = built.graph.sites
+    recs = built.site_arms[site.id]
+    # The horizontal wire passes through the node; the branch terminates at a polyline vertex.
+    assert any(r.node_through and not r.node_vertices for r in recs)
+    assert any(r.node_vertices and r.node_through for r in recs)
+    doc = loads(dumps(built.graph, res, built=built, page=pi, clusters=cl, registry=cls.registry))
+    geometries = [a["geometry"] for a in doc["sites"][0]["arms"]]
+    assert any(g["node_through"] and not g["node_vertices"] for g in geometries)
+    assert any(g["node_vertices"] and g["node_through"] for g in geometries)

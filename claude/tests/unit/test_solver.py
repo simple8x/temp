@@ -38,6 +38,20 @@ def test_candidate_role_caps_at_inferred():
     assert classify_edge(edge("e", "a", "b", conf=False))[0] == INFERRED
 
 
+def test_non_exhaustive_multi_arm_domain_is_never_resolved_by_constraints():
+    # The current ALL/NONE pair is only a placeholder, not a proven exhaustive topology domain.
+    site = Site("multi", "MULTI", (("a0", "a"), ("a1", "b"), ("a2", "c")),
+                (Option("ALL", frozenset({("a", "b"), ("a", "c"), ("b", "c")})),
+                 Option("NONE", frozenset())))
+    graph = ConnGraph(wires("a", "b", "c"), [], [site],
+                      Constraints(cannot_link=(("a", "b", "known separation"),)))
+    result = solve(graph)
+    assert result.sites["multi"].status == UNKNOWN
+    assert result.sites["multi"].option is None
+    assert result.sites["multi"].reason == "NON_EXHAUSTIVE_MULTI_ARM_DOMAIN"
+    assert not result.final_edges
+
+
 def test_confirmed_with_single_evidence_is_not_trusted():
     r = RoleRef("a", "WIRE", "CONFIRMED", ("only-one",))
     e = Edge("e", "a", "b", "TR1", (r, role("b")), "node:1@1.000,2.000", 2, (), ("page:0/op:1",))
@@ -313,15 +327,16 @@ def test_tc_c5_site_one_consistent_option_is_inferred_not_verified():
     s = fourway_site("X", four_arms())
     cons = Constraints(names=names(n="VCC", e="GND"))
     r = solve(ConnGraph(wires("n", "e", "s", "w"), [], [s], cons))
-    # options joining n with e (ALL4, CORNER_NE_SW) are inconsistent; THRU_NS_EW, CORNER_NW_SE, NONE remain
-    assert r.sites["X"].status == UNKNOWN and "3_CONSISTENT" in r.sites["X"].reason
-    # restrict domain so only one option survives
+    # Constraints must not enumerate an unproven FOURWAY domain.
+    assert r.sites["X"].status == UNKNOWN
+    assert r.sites["X"].reason == "NON_EXHAUSTIVE_FOURWAY_DOMAIN"
+    # Even a unique survivor in a caller-narrowed, unproven domain is not entailed.
     opts = tuple(o for o in s.options if o.name in ("ALL4", "THRU_NS_EW"))
     s2 = Site("X", "FOURWAY", s.arms, opts)
     r2 = solve(ConnGraph(wires("n", "e", "s", "w"), [], [s2], cons))
-    assert r2.sites["X"].status == INFERRED and r2.sites["X"].option == "THRU_NS_EW"
-    assert r2.pair_status("n", "s") == INFERRED and r2.pair_status("n", "e") == UNKNOWN
-    assert all(v[0] != VERIFIED for v in r2.edge_status.values())
+    assert r2.sites["X"].status == UNKNOWN
+    assert r2.sites["X"].reason == "NON_EXHAUSTIVE_FOURWAY_DOMAIN"
+    assert r2.pair_status("n", "s") == UNKNOWN and r2.pair_status("n", "e") == UNKNOWN
 
 
 def test_tc_c5_zero_consistent_options_is_conflict():
@@ -330,7 +345,8 @@ def test_tc_c5_zero_consistent_options_is_conflict():
     s2 = Site("X", "FOURWAY", s.arms, opts)
     cons = Constraints(names=names(n="VCC", e="GND"))
     r = solve(ConnGraph(wires("n", "e", "s", "w"), [], [s2], cons))
-    assert r.sites["X"].status == CONFLICT and r.sites["X"].reason == "NO_CONSISTENT_OPTION"
+    assert r.sites["X"].status == UNKNOWN
+    assert r.sites["X"].reason == "NON_EXHAUSTIVE_FOURWAY_DOMAIN"
 
 
 def test_tc_c6_ocr_names_warn_but_do_not_conflict_or_link():
@@ -402,32 +418,34 @@ def test_rollback_does_not_reject_unrelated_inferred_edges():
     assert r.edge_status["i"][0] == INFERRED
 
 
-def test_tc_c10_idempotence_resolved_site_equals_fixed_from_scratch():
+def test_tc_c10_explicit_fixed_site_is_an_assumption_not_solver_inference():
     s = fourway_site("X", four_arms())
     opts = tuple(o for o in s.options if o.name in ("ALL4", "THRU_NS_EW"))
     s_free = Site("X", "FOURWAY", s.arms, opts)
     cons = Constraints(names=names(n="VCC", e="GND"))
     G = ConnGraph(wires("n", "e", "s", "w"), [edge("v", "n", "s")], [s_free], cons)
     r1 = solve(G)
-    chosen = r1.sites["X"].option
-    assert chosen == "THRU_NS_EW"
+    assert r1.sites["X"].status == UNKNOWN
+    chosen = "THRU_NS_EW"
     s_fix = Site("X", "FOURWAY", s.arms, opts, fixed=chosen)
     r2 = solve(ConnGraph(wires("n", "e", "s", "w"), [edge("v", "n", "s")], [s_fix], cons))
-    assert r1.edge_status == r2.edge_status
-    assert [(n.objects, n.status, n.closure) for n in r1.nets] == [(n.objects, n.status, n.closure) for n in r2.nets]
-    for a, b in itertools.combinations("news", 2):
-        assert r1.pair_status(a, b) == r2.pair_status(a, b)
+    assert r1.sites["X"].reason == "NON_EXHAUSTIVE_FOURWAY_DOMAIN"
+    assert r2.sites["X"].status == INFERRED
+    assert r2.sites["X"].reason == "FIXED_ASSUMPTION"
+    assert r1.pair_status("e", "w") == UNKNOWN
+    assert r2.pair_status("e", "w") == INFERRED
 
 
-def test_interacting_sites_share_a_cluster_and_too_large_cluster_is_unknown():
+def test_many_interacting_non_exhaustive_sites_all_remain_unknown():
     objs, sites, prev = [], [], None
     for i in range(7):
         ids = [f"{i}n", f"{i}e", f"{i}s", f"{i}w"]
         objs += wires(*ids)
         sites.append(fourway_site(f"S{i}", dict(zip("NESW", ids))))
     edges = [edge(f"v{i}", f"{i}e", f"{i+1}w") for i in range(6)]      # chain => one interaction cluster
-    r = solve(ConnGraph(objs, edges, sites), k_max=5)
-    assert all(v.status == UNKNOWN and v.reason == "CLUSTER_TOO_LARGE" for v in r.sites.values())
+    r = solve(ConnGraph(objs, edges, sites))
+    assert len(r.sites) == len(sites)
+    assert all(v.status == UNKNOWN and v.reason == "NON_EXHAUSTIVE_FOURWAY_DOMAIN" for v in r.sites.values())
 
 
 def test_site_touching_quarantined_net_is_unknown():

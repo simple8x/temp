@@ -28,7 +28,7 @@ os.environ.setdefault("GT_ONLY", os.environ.get("M4_ONLY", ""))
 
 import gt_eval  # noqa: E402
 from ecci import kicad_roundtrip as kr  # noqa: E402
-from ecci.gt_kicad import gt_pins
+from gt_audit import select_gt_pins  # noqa: E402
 from ecci.kicad_export import raw_library_from_schematic  # noqa: E402
 from ecci.ingest_vector import ingest_pdf  # noqa: E402
 from ecci.kicad_lib import load_library  # noqa: E402
@@ -37,7 +37,8 @@ from ecci.rules import analyze_page  # noqa: E402
 
 PAGE_SECONDS = int(os.environ.get("M4_PAGE_SECONDS", "600"))
 POLICY_PATH = os.environ.get("M4_GT_POLICY") or str(ROOT / "tools" / "m4_gt_policy.json")
-OUT = ROOT / "out" / "m4" / "gt"
+OUT = pathlib.Path(os.environ["M4_GT_OUT"]) if os.environ.get("M4_GT_OUT") else ROOT / "out" / "m4" / "gt"
+gt_pins = select_gt_pins()
 
 
 def _alarm(signum, frame):
@@ -98,6 +99,13 @@ def main(root: str) -> int:
                                                                      "nets_exported", "roundtrip", "ground_truth",
                                                                      "error", "kicad_error")}), flush=True)
     records.sort(key=lambda r: r["page"])
+    # The planned M4 set is the same pinned inventory as GT: evaluated tasks plus explicit,
+    # reason-coded skips. A skip is not an evaluated page, but it is accounted for and must
+    # match gt_pages.txt / gt_source.txt exactly.
+    inventory_records = [{"project": t["name"]} for t in tasks] + skipped
+    inventory = gt_eval.coverage([inventory_records], dirs)
+    skip_records = sorted((dict(x) for x in skipped if "skipped" in x), key=lambda x: x.get("project", ""))
+    planning_errors = [x.get("project", "") for x in skipped if "error" in x]
     tot = {"TP": 0, "FP": 0, "FN": 0, "TN": 0}
     agg = {"placed": 0, "clusters": 0, "nets": 0, "gt_scoreable_pins": 0, "exported_pins_mapped": 0,
            "gt_pins_not_exported_UNKNOWN": 0}
@@ -120,9 +128,12 @@ def main(root: str) -> int:
         gt_reasons[key] = gt_reasons.get(key, 0) + 1
     agg["mapping_coverage"] = round(agg["exported_pins_mapped"] / agg["gt_scoreable_pins"], 4) \
         if agg["gt_scoreable_pins"] else None
-    summary = gate_table(records, cli, {"all_planned_pages_evaluated": PASS if records and not errors else FAIL})
+    summary = gate_table(records, cli, {"all_planned_pages_evaluated": PASS if records and not errors else FAIL,
+                                        "pinned_inventory": PASS if not inventory["problems"] else FAIL})
     summary.update({"kicad_version": version, "pages_planned": len(tasks), "pages_skipped_by_plan": len(skipped),
-                    "pages_with_error": errors, "pairs": tot, "aggregate": agg,
+                    "skip_records": skip_records, "inventory": inventory,
+                    "inventory_consistent": not inventory["problems"],
+                    "pages_with_error": sorted(errors + planning_errors), "pairs": tot, "aggregate": agg,
                     "precision": round(tot["TP"] / (tot["TP"] + tot["FP"]), 4) if tot["TP"] + tot["FP"] else None,
                     "recall_over_mapped_pairs": round(tot["TP"] / (tot["TP"] + tot["FN"]), 4) if tot["TP"] + tot["FN"] else None,
                     "gt_policy": policy, "gt_gate_states": dict(sorted(gt_states.items())),
@@ -133,7 +144,8 @@ def main(root: str) -> int:
         summary["overall"] = "PARTIAL"
     (OUT / "summary.json").write_text(json.dumps(summary, indent=1, sort_keys=True))
     print("M4_GT_SUMMARY " + json.dumps({k: summary[k] for k in ("kicad_version", "gates", "overall", "pages_planned",
-                                                                 "pages_skipped_by_plan", "pages_with_error", "pairs",
+                                                                 "pages_skipped_by_plan", "skip_records", "inventory_consistent",
+                                                                 "pages_with_error", "pairs",
                                                                  "aggregate", "precision", "recall_over_mapped_pairs",
                                                                  "gt_policy", "gt_gate_states", "gt_gate_reasons",
                                                                  "seconds", "partial_selection")}))

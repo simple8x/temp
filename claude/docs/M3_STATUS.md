@@ -38,17 +38,18 @@ on ellipses) -> test that neutralises the roundness gate added, then KILLED. M48
    loop converges after one round; the loop is kept as a guard. This also makes the result monotone.
 4. **Phase-3 guard.** A consistency-checked option can never create a violation on the normal path; the
    rollback is therefore tested white-box with a `fixed` (injected) option (TC-C9), not through a free choice.
-5. **Domain exhaustiveness (ASSUMPTION).** A site resolves to INFERRED when exactly one of the 5 options
-   (ALL4, 2 straight pairs, 2 corner pairs, NONE; 2 options when two straight wires cross) is consistent. This
-   is relative to that domain.
+5. **Domain exhaustiveness (BLOCKED).** The earlier five-option FOURWAY enumeration was not proven exhaustive.
+   That solver path has been retired; FOURWAY and MULTI remain UNKNOWN unless explicitly fixed as an INFERRED
+   assumption.
 6. **C4 only against template-resolved pins.** A first version also linked unresolved terminals and produced
    ~80k cannot-links and 78 false quarantines on a real page (a wire cannot-linked to its own terminal).
    Fixed and covered by test (M58).
 
 ## Real PDF (observation only, NO ground truth): `[QI9-2604-A01] Module IO.pdf`, empty symbol library
 - Page 4: 18 wires, 4 unresolved terminals, no edges.
-- Page 10 (11 s): 974 wire objects, 889 unresolved terminals; edges TR1 393 (VERIFIED), TR4 177 + TR5 39
-  (INFERRED); 56 sites, all UNKNOWN (50 of them CLUSTER_TOO_LARGE, k_max=5); 377 nets, 344 OPEN; no quarantine.
+- Historical pre-hardening run on page 10 (11 s): 974 wire objects, 889 unresolved terminals; edges TR1 393
+  (VERIFIED), TR4 177 + TR5 39 (INFERRED); 56 sites UNKNOWN (the old k_max cluster reason is superseded);
+  377 nets, 344 OPEN; no quarantine. These are not current post-change measurements.
 - 0 junction dots found. 62 small filled discs exist, but each is paired with a same-size outline circle
   (terminal markers), so they touch another BODY primitive and are correctly NOT taken as dots.
 
@@ -56,7 +57,7 @@ on ellipses) -> test that neutralises the roundness gate added, then KILLED. M48
 - Net names, labels, power symbols, NC markers are not extracted from PDFs: TR6, C1, C2, C5 are only exercised
   on abstract graphs. HumanReview path (I1) is not implemented.
 - Crossings without a dot make every involved net OPEN (spec TR7). On a dense page almost all nets are OPEN.
-- Site interaction clusters above k_max=5 stay UNKNOWN (conservative, loses recall).
+- FOURWAY and MULTI sites remain UNKNOWN unless explicitly fixed as an INFERRED assumption; the prior option-enumeration / k_max cluster path is retired because its domains were not proven exhaustive.
 - Thresholds (dot size/roundness, g_max=3.0, tip tolerance) are ASSUMPTIONS, not calibrated.
 - Clusters of BODY primitives on dense pages merge heavily (13 clusters on page 10); pin detection and C4 on
   such pages are not trustworthy yet.

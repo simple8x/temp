@@ -85,6 +85,18 @@ jobs:
         run: |
           set -o pipefail
           python claude/tools/recovery_compare.py gt_eval.log gt_eval_off.log 2>&1 | tee recovery_compare.log | grep -vE '^RECOVERY_PAGE' | cut -c1-600
+      - name: GT forensic audit (baseline 873bfbb reader vs repaired reader; ledger, unresolved, denominators)
+        if: always()
+        run: |
+          set -o pipefail
+          python claude/tools/gt_audit.py gt_out claude/out/gt_audit 2>&1 | tee gt_audit.log | cut -c1-600
+      - name: Same prediction scored with the 873bfbb GT reader (before/after on one corpus)
+        if: always()
+        run: |
+          set -o pipefail
+          only="$(cat claude/tools/gt_only.txt 2>/dev/null | tr -d ' \n')"
+          GT_PINS_IMPL=873bfbb GT_ONLY="$only" python claude/tools/gt_eval.py gt_out > gt_eval_gt873.log 2>&1 || echo "873bfbb-GT run exit $?"
+          python claude/tools/gt_before_after.py gt gt_eval_gt873.log gt_eval.log claude/out/gt_audit 2>&1 | tee gt_before_after.log | cut -c1-600
       - name: Misses by library symbol
         if: ${{ contains(github.event.head_commit.message, '[diag]') }}
         run: python claude/tools/gt_misses.py gt_out 40 2>&1 | tee gt_misses.log
@@ -123,6 +135,10 @@ jobs:
             gt_eval.log
             gt_eval_off.log
             recovery_compare.log
+            gt_audit.log
+            gt_eval_gt873.log
+            gt_before_after.log
+            claude/out/gt_audit/
             gt_probe.log
             gt_styles.log
 
@@ -161,6 +177,12 @@ jobs:
         run: |
           set -o pipefail
           M4_WORKERS=4 python claude/tools/m4_gt.py gt_out 2>&1 | tee claude/out/m4/m4_gt.log
+      - name: M4 export on the GT corpus, 873bfbb GT reader (before/after, same prediction)
+        if: always()
+        run: |
+          set -o pipefail
+          GT_PINS_IMPL=873bfbb M4_GT_OUT=claude/out/m4/gt_873bfbb M4_WORKERS=4 python claude/tools/m4_gt.py gt_out > claude/out/m4/m4_gt_873bfbb.log 2>&1 || echo "873bfbb-GT M4 exit $?"
+          python claude/tools/gt_before_after.py m4 claude/out/m4/gt_873bfbb/summary.json claude/out/m4/gt/summary.json claude/out/m4 2>&1 | tee claude/out/m4/m4_before_after.log | cut -c1-600
       - name: M4 GT gate summary (coverage, gate states and reasons)
         if: always()
         run: |

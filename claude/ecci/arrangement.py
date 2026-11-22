@@ -8,8 +8,10 @@ merged into nodes. The result records GEOMETRIC FACTS about each node:
 Nothing here states that anything is electrically connected. A crossing, a T-touch and a
 polyline vertex are all just nodes; telling them apart is what `arm_relations` is for.
 
-Tolerance semantics (FACT): `eps` is a *touch tolerance*, not a metric. Two points closer
-than eps are merged; clusters are transitive (chaining), which is reported in `stats`.
+Tolerance semantics: `eps` is a *touch tolerance*, not a metric. A proximity component is
+merged only when its actual diameter is <= eps. Components whose transitive proximity chain
+exceeds eps are quarantined into exact-coordinate groups and reported in `stats`; very large
+components use a conservative bounding-box upper bound to avoid quadratic diameter checks.
 Complexity: uniform-grid broad phase, expected O(n + k) for n segments and k intersections
 with bounded local density; worst case O(n^2) (guarded by `max_pairs`).
 """
@@ -242,7 +244,8 @@ def build_arrangement(prims: list[Prim], eps: float = EPS_DEFAULT, *,
     stats["events"] = n_events
     stats["cell_size"] = cell
 
-    # ---- cluster records into nodes (transitive within eps)
+    # ---- find proximity components. Pairwise proximity is only a candidate relation:
+    # transitive chaining must not silently turn a long chain into one node.
     gx: dict[tuple[int, int], list[int]] = defaultdict(list)
     for r in range(len(rx)):
         gx[(math.floor(rx[r] / eps), math.floor(ry[r] / eps))].append(r)
@@ -254,9 +257,48 @@ def build_arrangement(prims: list[Prim], eps: float = EPS_DEFAULT, *,
                     if r2 > r and math.hypot(rx[r] - rx[r2], ry[r] - ry[r2]) <= eps:
                         uf.union(r, r2)
 
-    members: dict[int, list[int]] = defaultdict(list)
+    raw_members: dict[int, list[int]] = defaultdict(list)
     for r in range(len(rx)):
-        members[uf.find(r)].append(r)
+        raw_members[uf.find(r)].append(r)
+
+    # The bounding-box diagonal is a cheap upper bound. For ordinary components, compute
+    # the actual diameter so harmless L-shaped point sets are not rejected merely because
+    # their empty bounding-box corners are far apart. Very large components fall back to
+    # the upper bound; that can create a false negative, never a false merge.
+    members: dict[int, list[int]] = {}
+    ambiguous_chain_components = 0
+    ambiguous_chain_records = 0
+    synthetic_root = len(rx)
+    eps2 = eps * eps
+    for root, ms in sorted(raw_members.items()):
+        x0, x1 = min(rx[r] for r in ms), max(rx[r] for r in ms)
+        y0, y1 = min(ry[r] for r in ms), max(ry[r] for r in ms)
+        split = math.hypot(x1 - x0, y1 - y0) > eps
+        if split and len(ms) <= 256:
+            split = False
+            for i, r in enumerate(ms):
+                for r2 in ms[i + 1:]:
+                    dx, dy = rx[r] - rx[r2], ry[r] - ry[r2]
+                    if dx * dx + dy * dy > eps2:
+                        split = True
+                        break
+                if split:
+                    break
+        if not split:
+            members[root] = ms
+            continue
+        ambiguous_chain_components += 1
+        ambiguous_chain_records += len(ms)
+        exact: dict[tuple[float, float], list[int]] = defaultdict(list)
+        for r in ms:
+            exact[(rx[r], ry[r])].append(r)
+        for _, same_xy in sorted(exact.items()):
+            members[synthetic_root] = same_xy
+            synthetic_root += 1
+
+    stats["ambiguous_chain_components"] = ambiguous_chain_components
+    stats["ambiguous_chain_records"] = ambiguous_chain_records
+    record_root = {r: root for root, ms in members.items() for r in ms}
 
     def representative(ms: list[int]) -> tuple[float, float]:
         verts = [r for r in ms if rvert[r] is not None]
@@ -269,7 +311,7 @@ def build_arrangement(prims: list[Prim], eps: float = EPS_DEFAULT, *,
     node_of_root = {root: i for i, root in enumerate(order)}
 
     def node_of(r: int) -> int:
-        return node_of_root[uf.find(r)]
+        return node_of_root[record_root[r]]
 
     # ---- per-segment node sequences -> edges and facts
     edge_refs: dict[tuple[int, int], list[SegRef]] = defaultdict(list)

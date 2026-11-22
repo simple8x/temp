@@ -1,7 +1,8 @@
 """Pin hypotheses from independent sources (M2).
 
 S1  template: body cluster x library => predicted pin tips (lineage: lib token + body prims).
-S2  measured stub: a WIRE-class segment spanning predicted base->tip (lineage: that prim only).
+S2  measured pin line/stub: a distinct vector segment spanning predicted base->tip (lineage: that prim only).
+    This includes body-colour pin strokes when they are separate PDF primitives from the matched body.
 S3  terminal contact: WIRE-class segment ends touching a body outline that no pin explains.
 S4  text: NOT implemented in M2 (it may only ever add pin-number metadata, never positions).
 
@@ -287,6 +288,26 @@ def detect_pins(pi: PageIngest, cls: PageClassification, symbols, params: PinPar
                             break
                     else:
                         stub = None
+                    # KiCad often draws symbol pin strokes in the body colour. Those strokes
+                    # are deliberately not LC_WIRE, but a distinct vector primitive that
+                    # independently spans the library-predicted base->tip is still S2.
+                    # Reuse the same strict endpoint/axis/length test; never count a primitive
+                    # already consumed by the matched body template as independent evidence.
+                    if stub is None and not stub_selected:
+                        if lines is None:
+                            lines = _line_index(pi, cls)
+                        support = pin_line_support(res.hits[0], lines, params)[k]
+                        line = support["line"]
+                        if line is not None:
+                            pid, end, far = line
+                            a, b = tuple(far), tuple(end)
+                            orient = stub_orientation(a, b, rp.base, rp.tip, t2) if pid not in body_ids else None
+                            if orient is not None:
+                                s2 = EvidenceItem(f"S2:{cl.id}:{k}", "MEASURED_STUB", SRC_VECTOR,
+                                                  frozenset({f"geom:{pid}"}))
+                                _add(reg, s2)
+                                items.append(s2.id)
+                                stub = (pid, 0, a, b, orient, t2)
                 else:
                     stub = None
                 dec = decide_role(items, reg)

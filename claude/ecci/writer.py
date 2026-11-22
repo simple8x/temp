@@ -67,7 +67,8 @@ KEYS = {
     "attachment": {"id", "object", "attach", "electrical", "origin"},
     "site": {"id", "kind", "arms", "options", "fixed", "result"},
     "arm": {"label", "obj", "geometry"},
-    "arm_geometry": {"node", "graph_edge", "other_node", "prim_ids", "chosen_prim", "direction", "vector", "prov"},
+    "arm_geometry": {"node", "graph_edge", "other_node", "prim_ids", "chosen_prim", "direction", "vector", "prov",
+                     "node_vertices", "node_through"},
     "net": {"id", "objects", "status", "closure", "open_reasons", "warnings"},
     "conn": {"object", "net", "electrical_group", "verified_group"},
 }
@@ -369,7 +370,9 @@ def build_document(graph: ConnGraph, res: SolveResult, *, built=None, page=None,
             arms.append({"label": label, "obj": obj, "geometry": None if r is None else {
                 "node": r.node, "graph_edge": r.graph_edge, "other_node": r.other_node,
                 "prim_ids": list(r.prim_ids), "chosen_prim": r.chosen_prim, "direction": r.direction,
-                "vector": [float(v) for v in r.vector], "prov": list(r.prov)}})
+                "vector": [float(v) for v in r.vector], "prov": list(r.prov),
+                "node_vertices": [list(v) for v in r.node_vertices],
+                "node_through": [list(v) for v in r.node_through]}})
         sr = res.sites.get(s.id)
         if sr is None:
             raise WriterError(f"site {s.id} has no result")
@@ -723,6 +726,18 @@ def _validate(doc) -> list[str]:
                 P.append(f"site {sid}/{a['label']}: FOURWAY label is not the arm direction")
             if len(g["prov"]) != len(g["prim_ids"]):
                 P.append(f"site {sid}/{a['label']}: arm provenance incomplete")
+            for field in ("node_vertices", "node_through"):
+                facts = g[field]
+                if type(facts) is not list or any(type(v) is not list or len(v) != 2
+                                                   or type(v[0]) is not int or type(v[1]) is not int
+                                                   or v[0] not in g["prim_ids"] or v[1] < 0 for v in facts):
+                    P.append(f"site {sid}/{a['label']}: malformed {field} topology facts")
+                elif facts != [list(v) for v in sorted({tuple(v) for v in facts})]:
+                    P.append(f"site {sid}/{a['label']}: {field} must be sorted and unique")
+            fact_prims = {v[0] for field in ("node_vertices", "node_through")
+                          for v in g[field] if type(v) is list and len(v) == 2 and type(v[0]) is int}
+            if not set(g["prim_ids"]).issubset(fact_prims):
+                P.append(f"site {sid}/{a['label']}: endpoint/through topology facts do not cover every arm primitive")
             for x in g["prov"]:
                 if x not in prim_refs and x not in unres["provenance"]:
                     P.append(f"site {sid}/{a['label']}: dangling provenance {x!r}")

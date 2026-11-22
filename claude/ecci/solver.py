@@ -14,8 +14,9 @@ Properties (each has tests):
 Phases:
   1  VERIFIED edges only. Nets with a violation are QUARANTINED whole (nobody chooses an edge to drop).
   2  Add INFERRED edges and committed site links; reject the WHOLE witness set of every violation.
-  3  Resolve ambiguity sites per interaction cluster by exhaustive enumeration against the
-     constraints; a unique consistent option is committed as INFERRED, never VERIFIED. After each
+  3  Do not resolve FOURWAY or MULTI sites by constraint enumeration: their option domains are
+     not proven exhaustive. Both remain UNKNOWN unless a caller supplies an explicit fixed
+     assumption; that assumption can only produce INFERRED, never VERIFIED. After each
      commit round Phase 2 runs again on the augmented edge set; a commit that creates a violation
      is rolled back (site -> CONFLICT), and the loop repeats until nothing changes.
 """
@@ -30,8 +31,6 @@ from dataclasses import dataclass, field
 
 from .constraints import Constraints, check_constraints, warnings_for, witnesses
 from .status import CONFLICT, INFERRED, UNKNOWN, VERIFIED, Edge, RoleRef, classify_edge
-
-K_MAX_DEFAULT = 5
 
 
 class GraphError(ValueError):
@@ -56,8 +55,8 @@ class Site:
     id: str
     kind: str                         # "FOURWAY" | "MULTI"
     arms: tuple                       # ((label, obj id), ...)
-    options: tuple                    # (Option, ...)  the finite domain (ASSUMPTION: exhaustive)
-    fixed: str | None = None          # option name fixed as an assumption (INFERRED)
+    options: tuple                    # candidate options; completeness must be established before solver enumeration
+    fixed: str | None = None          # caller-supplied explicit assumption (INFERRED, never VERIFIED)
 
 
 @dataclass
@@ -293,7 +292,7 @@ def _phase2(objs, V, S, links, cons):
     raise AssertionError("phase 2 did not converge")
 
 
-def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
+def solve(G: ConnGraph) -> SolveResult:
     _validate(G)
     cons = G.constraints
     objs = sorted(o.id for o in G.objects)
@@ -336,7 +335,15 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
             site_res[sid] = SiteResult(UNKNOWN, None, "TOUCHES_CONFLICT_COMPONENT")
             failed.add(sid)
         elif s.fixed is not None:
+            # An explicit caller-supplied choice is an assumption, not a solver inference.
             committed[sid] = s.fixed
+        elif s.kind in ("FOURWAY", "MULTI"):
+            # Neither site domain is proven exhaustive. A unique survivor after constraint
+            # filtering is not proof that omitted topologies are impossible.
+            reason = ("NON_EXHAUSTIVE_FOURWAY_DOMAIN" if s.kind == "FOURWAY"
+                      else "NON_EXHAUSTIVE_MULTI_ARM_DOMAIN")
+            site_res[sid] = SiteResult(UNKNOWN, None, reason)
+            failed.add(sid)
 
     def links_of(cm: dict[str, str]) -> tuple[dict, dict]:
         out, owner = {}, {}
@@ -350,90 +357,21 @@ def solve(G: ConnGraph, k_max: int = K_MAX_DEFAULT) -> SolveResult:
 
     active_S: set = set()
     active_L: set = set()
-    for _ in range(len(sites) + 3):
+    # Only caller-fixed assumptions can reach `committed`; all other FOURWAY/MULTI sites
+    # were marked UNKNOWN above. Run phase 2 and roll back any fixed assumption that
+    # conflicts with constraints. There is deliberately no option-domain enumeration here.
+    for _ in range(len(sites) + 1):
         links, owner = links_of(committed)
         active_S, active_L, rolled = _phase2(objs, V_ok, S, links, cons)
-        if rolled:
-            for lid in rolled:
-                sid = owner[lid]
-                committed.pop(sid, None)
-                failed.add(sid)
-                site_res[sid] = SiteResult(CONFLICT, None, "ROLLED_BACK_BY_RESOLVE")
-            continue
-        edges_now = list(V) + A + [(i, S[i][0], S[i][1]) for i in sorted(active_S)] \
-            + [(i, links[i][0], links[i][1]) for i in sorted(active_L)]
-        rep = _components(objs, edges_now)
-        groups = _groups(rep)
-        todo = [sid for sid in sorted(sites) if sid not in committed and sid not in failed]
-        cl_parent = {sid: sid for sid in todo}
-
-        def cfind(x):
-            while cl_parent[x] != x:
-                cl_parent[x] = cl_parent[cl_parent[x]]
-                x = cl_parent[x]
-            return x
-
-        first_site_at: dict[str, str] = {}
-        for sid in todo:
-            for _, o in sites[sid].arms:
-                r = rep[o]
-                if r in first_site_at:
-                    ra, rb = cfind(first_site_at[r]), cfind(sid)
-                    if ra != rb:
-                        cl_parent[max(ra, rb)] = min(ra, rb)
-                else:
-                    first_site_at[r] = sid
-        clusters: dict[str, list] = defaultdict(list)
-        for sid in todo:
-            clusters[cfind(sid)].append(sid)
-        new: dict[str, str] = {}
-        for key in sorted(clusters):
-            cl = sorted(clusters[key])
-            if len(cl) > k_max:
-                for sid in cl:
-                    site_res[sid] = SiteResult(UNKNOWN, None, "CLUSTER_TOO_LARGE")
-                continue
-            doms = [sorted(sites[sid].options, key=lambda o: o.name) for sid in cl]
-            consistent = []
-            for combo in itertools.product(*doms):
-                lk = sorted({l for o in combo for l in o.links})
-                par = {r: r for r in groups}
-
-                def f(x, par=par):
-                    while par[x] != x:
-                        par[x] = par[par[x]]
-                        x = par[x]
-                    return x
-
-                for a, b in lk:
-                    ra, rb = f(rep[a]), f(rep[b])
-                    if ra != rb:
-                        par[max(ra, rb)] = min(ra, rb)
-                mroots: dict[str, set] = defaultdict(set)
-                for r in groups:
-                    mroots[f(r)].add(r)
-                ok = True
-                for rs in mroots.values():
-                    if len(rs) > 1 and check_constraints(frozenset().union(*(groups[r] for r in rs)), cons):
-                        ok = False
-                        break
-                if ok:
-                    consistent.append(combo)
-            if not consistent:
-                for sid in cl:
-                    site_res[sid] = SiteResult(CONFLICT, None, "NO_CONSISTENT_OPTION")
-                    failed.add(sid)
-            elif len(consistent) == 1:
-                for sid, opt in zip(cl, consistent[0]):
-                    new[sid] = opt.name
-            else:
-                for sid in cl:
-                    site_res[sid] = SiteResult(UNKNOWN, None, f"AMBIGUOUS_{len(consistent)}_CONSISTENT_ASSIGNMENTS")
-        if not new:
+        if not rolled:
             break
-        committed.update(new)
+        for lid in rolled:
+            sid = owner[lid]
+            committed.pop(sid, None)
+            failed.add(sid)
+            site_res[sid] = SiteResult(CONFLICT, None, "ROLLED_BACK_BY_RESOLVE")
     else:
-        raise AssertionError("solver did not reach a fixpoint")
+        raise AssertionError("solver rollback did not reach a fixpoint")
 
     for sid, name in committed.items():
         site_res[sid] = SiteResult(INFERRED, name, "FIXED_ASSUMPTION" if sites[sid].fixed == name

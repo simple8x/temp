@@ -114,6 +114,17 @@ def test_coincident_pins_on_different_nets_drop_the_symbols_from_scoring(tmp_pat
     assert all(p.net is None for p in pins)
 
 
+def test_wire_components_join_at_explicit_junction_on_segment_interior(tmp_path):
+    from ecci.gt_kicad import MM_TO_PT, wire_component_index
+    sch = tmp_path / "junction.kicad_sch"
+    sch.write_text("(kicad_sch (wire (pts (xy 0 0) (xy 10 0)))"
+                   " (wire (pts (xy 5 -5) (xy 5 5)))"
+                   " (junction (at 5 0) (diameter 0) (color 0 0 0 0)))")
+    comp = wire_component_index(str(sch))
+    at = lambda x, y: comp(x * MM_TO_PT, y * MM_TO_PT)  # noqa: E731
+    assert at(0, 0) == at(5, -5) == at(10, 0) is not None
+
+
 def test_wire_components_join_end_to_end_and_t_touches_but_not_crossings(tmp_path):
     from ecci.gt_kicad import MM_TO_PT, wire_component_index
     sch = tmp_path / "w.kicad_sch"

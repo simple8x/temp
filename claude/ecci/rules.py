@@ -71,6 +71,8 @@ class ArmRecord:
     direction: str | None           # _dir_label of the arm vector, None if not axis-aligned
     vector: tuple                   # (dx, dy) node -> other node, normalized page space (y down)
     prov: tuple                     # content_ref of every primitive in prim_ids
+    node_vertices: tuple = ()       # (prim_id, vertex_idx) endpoint/polyline-vertex facts at this node
+    node_through: tuple = ()        # (prim_id, seg_idx) interior-through facts at this node
 
 
 def audit_site_arms(graph: ConnGraph, site_arms: dict, obj_prims: dict | None = None) -> list[str]:
@@ -215,6 +217,10 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
         obj_prims[f"w:{i}"] = (i,)
     wprims = [by_id[i] for i in wire_ids]
     g = build_arrangement(wprims, prm.eps) if wprims else None
+    if g is not None and g.stats.get("ambiguous_chain_components", 0):
+        notes.append("ARRANGEMENT_AMBIGUOUS_PROXIMITY_CHAIN: "
+                     f"{int(g.stats['ambiguous_chain_components'])} component(s), "
+                     f"{int(g.stats['ambiguous_chain_records'])} record(s) kept separate")
 
     # ---- junction dots (found by find_dots: filled discs touching no other BODY primitive)
     if dots is None:
@@ -312,7 +318,11 @@ def build_conn_graph(pi: PageIngest, cls: PageClassification, clusters: list[Clu
                 sid = f"site:{n.id}"
 
                 def arm_rec(label, r):
-                    return ArmRecord(label, f"w:{r[3]}", n.id, r[0], r[1], r[2], r[3], r[4], r[5], prov_of(r[2]))
+                    pset = set(r[2])
+                    node_vertices = tuple(sorted(v for v in n.vertices if v[0] in pset))
+                    node_through = tuple(sorted(v for v in n.through if v[0] in pset))
+                    return ArmRecord(label, f"w:{r[3]}", n.id, r[0], r[1], r[2], r[3], r[4], r[5],
+                                     prov_of(r[2]), node_vertices, node_through)
                 if ok and set(lab) == {"N", "E", "S", "W"}:
                     sites.append(fourway_site(sid, lab))
                     by_l = {r[4]: r for r in raw}

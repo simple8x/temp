@@ -1,8 +1,8 @@
-"""F1: the BASELINE pipeline output is unchanged versus the parent commit 873bfbb on the same fixtures.
+"""F1: baseline outputs match parent 873bfbb except one explicitly approved safety-only solver reason change.
 
-The golden file was produced by tools/baseline_compat.py run against a worktree of 873bfbb (normalized JSON of
-classification, ClusterResults incl. Resolution, conn graph and solve result; interpreter- and hash-seed-
-independent). Any difference fails: a deliberate baseline change needs a new, explained and approved golden."""
+The golden is parent 873bfbb's normalized pipeline output, with the m4_crossing fingerprint updated for the
+intentional FOURWAY-domain fail-closed reason change. Its verdict remains UNKNOWN and affected nets remain OPEN;
+no connectivity is promoted. Every other fixture remains byte-for-byte fingerprint compatible."""
 from __future__ import annotations
 
 import dataclasses
@@ -24,6 +24,23 @@ def test_baseline_outputs_identical_to_parent_873bfbb():
         assert got[name]["resolutions"] == g["resolutions"], name
         assert got[name]["resolution_fields"] == g["resolution_fields"], name
         assert got[name]["norm_sha256"] == g["norm_sha256"], name
+
+
+def test_m4_crossing_fourway_remains_unknown_with_explicit_non_exhaustive_reason():
+    from ecci.ingest_vector import ingest_pdf
+    from ecci.rules import analyze_page
+    from pdfgen import one_page
+    from test_rules import H, W
+
+    content, syms = baseline_compat.scenes()["m4_crossing"]
+    wires = b"0.45 w 10 190 m 80 190 l S 10 185 m 10 150 l S 90 185 m 90 150 l S\n"
+    _cls, _clusters, _built, solved = analyze_page(
+        ingest_pdf(one_page(wires + content, size=(W, H))).pages[0], syms)
+    assert len(solved.sites) == 1
+    site = next(iter(solved.sites.values()))
+    assert (site.status, site.option, site.reason) == ("UNKNOWN", None, "NON_EXHAUSTIVE_FOURWAY_DOMAIN")
+    assert all("OPEN_SITE" in reason for net in solved.nets for reason in net.open_reasons
+               if net.closure == "OPEN")
 
 
 def test_legacy_resolution_contract_unchanged():
