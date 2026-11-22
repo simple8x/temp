@@ -55,8 +55,31 @@ def _lines(path: str, tag: str) -> list[dict]:
     return out
 
 
-def _pages(path: str) -> dict:
-    return _index_pages(_lines(path, "GT_EVAL"), PAGE_KEY_GT, (*PRED_KEYS_GT, "recovery"), "GT_EVAL")
+def _pages(path: str) -> tuple[dict, list[str], dict]:
+    """Index evaluated sheet records and separately retain explicitly skipped inventory rows.
+
+    GT_EVAL is a mixed stream: evaluated sheet records have prediction fields, while planned
+    projects/pages that cannot be evaluated are emitted as {project, skipped}. Treating those
+    intentional skip records as malformed page results made a complete run fail its comparator.
+    Skips remain part of the comparison and must match exactly between readers.
+    """
+    evaluated, skipped, errors = [], [], []
+    for i, record in enumerate(_lines(path, "GT_EVAL")):
+        if not isinstance(record, dict):
+            errors.append(f"GT_EVAL record {i} is not an object")
+            continue
+        if "skipped" in record:
+            if not isinstance(record.get("project"), str) or not record["project"] or not isinstance(record["skipped"], str):
+                errors.append(f"GT_EVAL skipped record {i} has invalid project/reason")
+            else:
+                skipped.append(record)
+        else:
+            evaluated.append(record)
+    pages, page_errors = _index_pages(evaluated, PAGE_KEY_GT, (*PRED_KEYS_GT, "recovery"), "GT_EVAL")
+    errors.extend(page_errors)
+    skip_map, skip_errors = _index_pages(skipped, ("project",), ("skipped",), "GT_EVAL skipped")
+    errors.extend(skip_errors)
+    return pages, errors, skip_map
 
 
 def gt_mode(a: str, b: str, out: pathlib.Path) -> int:
@@ -65,9 +88,14 @@ def gt_mode(a: str, b: str, out: pathlib.Path) -> int:
         print("GT_BEFORE_AFTER_FAIL missing GT_TOTAL")
         return 1
     ta, tb = ta[0], tb[0]
-    pa, ea = _pages(a)
-    pb, eb = _pages(b)
+    pa, ea, sa = _pages(a)
+    pb, eb, sb = _pages(b)
     fails, budget_pages = [*ea, *eb], []
+    if set(sa) != set(sb):
+        fails.append(f"skipped project sets differ: {len(set(sa) ^ set(sb))}")
+    for project in sorted(set(sa) & set(sb)):
+        if sa[project].get("skipped") != sb[project].get("skipped"):
+            fails.append(f"skip disposition differs for project {project}")
     if not isinstance(ta, dict) or not isinstance(tb, dict):
         print("GT_BEFORE_AFTER_FAIL GT_TOTAL is not an object")
         return 1

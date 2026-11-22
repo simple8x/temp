@@ -436,14 +436,15 @@ def test_tc_c10_explicit_fixed_site_is_an_assumption_not_solver_inference():
     assert r2.pair_status("e", "w") == INFERRED
 
 
-def test_interacting_sites_share_a_cluster_and_too_large_cluster_is_unknown():
+def test_many_interacting_non_exhaustive_sites_all_remain_unknown():
     objs, sites, prev = [], [], None
     for i in range(7):
         ids = [f"{i}n", f"{i}e", f"{i}s", f"{i}w"]
         objs += wires(*ids)
         sites.append(fourway_site(f"S{i}", dict(zip("NESW", ids))))
     edges = [edge(f"v{i}", f"{i}e", f"{i+1}w") for i in range(6)]      # chain => one interaction cluster
-    r = solve(ConnGraph(objs, edges, sites), k_max=5)
+    r = solve(ConnGraph(objs, edges, sites))
+    assert len(r.sites) == len(sites)
     assert all(v.status == UNKNOWN and v.reason == "NON_EXHAUSTIVE_FOURWAY_DOMAIN" for v in r.sites.values())
 
 

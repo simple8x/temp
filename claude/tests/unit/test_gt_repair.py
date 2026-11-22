@@ -311,6 +311,31 @@ def test_before_after_rejects_missing_prediction_field_and_duplicate_page(tmp_pa
     assert ba.gt_mode(str(a), str(b), tmp_path / "duplicate") == 1
 
 
+def test_before_after_accepts_matching_pinned_skip_records_and_rejects_drift(tmp_path):
+    import gt_before_after as ba
+    a, b = tmp_path / "a.log", tmp_path / "b.log"
+    _log(a, 3, 3)
+    _log(b, 3, 3)
+    skip = {"project": "project-without-export", "skipped": "no pdf/netlist"}
+    for path in (a, b):
+        path.write_text(path.read_text() + "GT_EVAL " + json.dumps(skip) + "\n")
+    assert ba.gt_mode(str(a), str(b), tmp_path / "matching-skips") == 0
+
+    changed = dict(skip, skipped="page not mapped to one sheet")
+    b.write_text(b.read_text().replace(json.dumps(skip), json.dumps(changed)))
+    assert ba.gt_mode(str(a), str(b), tmp_path / "skip-drift") == 1
+
+
+def test_before_after_rejects_duplicate_skipped_project_record(tmp_path):
+    import gt_before_after as ba
+    a, b = tmp_path / "a.log", tmp_path / "b.log"
+    _log(a, 3, 3)
+    _log(b, 3, 3)
+    skip = {"project": "project-without-export", "skipped": "no pdf/netlist"}
+    b.write_text(b.read_text() + "GT_EVAL " + json.dumps(skip) + "\nGT_EVAL " + json.dumps(skip) + "\n")
+    assert ba.gt_mode(str(a), str(b), tmp_path / "duplicate-skip") == 1
+
+
 def test_before_after_rejects_missing_total_metric_schema(tmp_path):
     import gt_before_after as ba
     a = tmp_path / "a.log"

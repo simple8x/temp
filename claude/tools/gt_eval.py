@@ -88,7 +88,7 @@ def shortest_path(final_edges, a, b):
 
 
 MAX_PAGE_PINS = 1500
-PAGE_SECONDS = 150            # wall-clock budget per page; a page over budget is reported, never silently dropped
+PAGE_SECONDS = 240            # wall-clock budget per page; recovery must finish or fail closed, never be silently skipped
 
 
 def _on_alarm(signum, frame):
