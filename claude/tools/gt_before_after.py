@@ -156,15 +156,26 @@ def m4_mode(a: str, b: str, out: pathlib.Path) -> int:
         return 1
     for label, summary in (("baseline", sa), ("repaired", sb)):
         required = ("pages", "pairs", "aggregate", "pages_planned", "pages_skipped_by_plan",
-                    "pages_with_error", "partial_selection")
+                    "skip_records", "inventory", "inventory_consistent", "pages_with_error", "partial_selection")
         missing = [k for k in required if k not in summary]
         if missing:
             fails.append(f"{label} M4 summary missing fields: {','.join(missing)}")
             continue
         if type(summary["pages_planned"]) is not int or summary["pages_planned"] < 0:
             fails.append(f"{label} M4 pages_planned is not a non-negative integer")
-        if type(summary["pages_skipped_by_plan"]) is not int or summary["pages_skipped_by_plan"] != 0:
-            fails.append(f"{label} M4 has skipped pages or invalid pages_skipped_by_plan")
+        if type(summary["pages_skipped_by_plan"]) is not int or summary["pages_skipped_by_plan"] < 0:
+            fails.append(f"{label} M4 pages_skipped_by_plan is not a non-negative integer")
+        skips = summary["skip_records"]
+        if not isinstance(skips, list) or len(skips) != summary["pages_skipped_by_plan"]:
+            fails.append(f"{label} M4 skip record count does not match pages_skipped_by_plan")
+        else:
+            skip_map, skip_errors = _index_pages(skips, ("project",), ("skipped",), f"{label} M4 skips")
+            fails.extend(skip_errors)
+        inventory = summary["inventory"]
+        if (summary["inventory_consistent"] is not True or not isinstance(inventory, dict)
+                or inventory.get("full_run") is not True or inventory.get("problems") != []
+                or inventory.get("errors") != []):
+            fails.append(f"{label} M4 pinned inventory is not complete/consistent")
         if not isinstance(summary["pages_with_error"], list) or summary["pages_with_error"]:
             fails.append(f"{label} M4 has page errors or invalid pages_with_error")
         if summary["partial_selection"] not in ("", None):
@@ -184,6 +195,11 @@ def m4_mode(a: str, b: str, out: pathlib.Path) -> int:
     pa, ea = _index_pages(sa.get("pages", []), ("page",), PRED_KEYS_M4, "baseline M4")
     pb, eb = _index_pages(sb.get("pages", []), ("page",), PRED_KEYS_M4, "repaired M4")
     fails.extend(ea + eb)
+    skips_a, skip_errors_a = _index_pages(sa.get("skip_records", []), ("project",), ("skipped",), "baseline M4 skips")
+    skips_b, skip_errors_b = _index_pages(sb.get("skip_records", []), ("project",), ("skipped",), "repaired M4 skips")
+    fails.extend(skip_errors_a + skip_errors_b)
+    if skips_a != skips_b:
+        fails.append("pinned skip records differ between baseline and repaired M4")
     if set(pa) != set(pb):
         fails.append("page sets differ")
     for k in sorted(set(pa) & set(pb)):

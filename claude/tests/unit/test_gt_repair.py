@@ -362,7 +362,8 @@ def test_gt_audit_fails_closed_on_duplicate_record_identity(tmp_path):
 def _m4_summary(pages=None, **overrides):
     summary = {
         "pages": pages if pages is not None else [{"page": "p1", "symbols": {}, "nets_exported": 0, "roundtrip": {}}],
-        "pages_planned": 1, "pages_skipped_by_plan": 0, "pages_with_error": [], "partial_selection": "",
+        "pages_planned": 1, "pages_skipped_by_plan": 0, "skip_records": [], "pages_with_error": [], "partial_selection": "",
+        "inventory": {"full_run": True, "problems": [], "errors": []}, "inventory_consistent": True,
         "pairs": {"TP": 0, "FP": 0, "FN": 0, "TN": 0},
         "aggregate": {"gt_scoreable_pins": 0, "exported_pins_mapped": 0, "mapping_coverage": None,
                       "gt_pins_not_exported_UNKNOWN": 0},
@@ -380,7 +381,8 @@ def test_m4_before_after_rejects_incomplete_or_partial_corpus(tmp_path):
     assert ba.m4_mode(str(a), str(b), tmp_path / "valid") == 0
 
     for name, change in (
-        ("skipped", {"pages_skipped_by_plan": 1}),
+        ("skip-count", {"pages_skipped_by_plan": 1}),
+        ("skip-inventory", {"inventory": {"full_run": True, "problems": ["unaccounted"], "errors": []}}),
         ("error", {"pages_with_error": ["p1"]}),
         ("partial", {"partial_selection": "p1"}),
         ("count", {"pages_planned": 2}),
@@ -389,6 +391,25 @@ def test_m4_before_after_rejects_incomplete_or_partial_corpus(tmp_path):
         bad.update(change)
         b.write_text(json.dumps(bad))
         assert ba.m4_mode(str(a), str(b), tmp_path / name) == 1
+
+
+def test_m4_before_after_accepts_pinned_skips_but_requires_exact_same_skip_inventory(tmp_path):
+    import gt_before_after as ba
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    valid = _m4_summary()
+    skip = {"project": "vme-wren#p15", "skipped": "page not mapped to one sheet (pinned repeated sheet)"}
+    for summary in (valid,):
+        summary["pages_skipped_by_plan"] = 1
+        summary["skip_records"] = [skip]
+        summary["inventory"] = {"full_run": True, "problems": [], "errors": []}
+    a.write_text(json.dumps(valid))
+    b.write_text(json.dumps(valid))
+    assert ba.m4_mode(str(a), str(b), tmp_path / "pinned-skip") == 0
+
+    changed = dict(valid)
+    changed["skip_records"] = [dict(skip, skipped="different reason")]
+    b.write_text(json.dumps(changed))
+    assert ba.m4_mode(str(a), str(b), tmp_path / "skip-drift") == 1
 
 
 def test_m4_before_after_rejects_non_list_pages_without_crashing(tmp_path):
