@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from ecci.classify import classify_page
+from ecci.classify import LC_OTHER, classify_page
 from ecci.evidence import independent
 from ecci.ingest_vector import ingest_pdf
 from ecci.kicad_lib import Library, load_library
@@ -111,6 +111,41 @@ def test_stacked_duplicate_pin_number_is_not_misreported_as_confirmed():
     _, _, (cr,) = run(sym("R"), symbols={"R_STACKED": stacked})
     assert cr.resolution.id_state == "AMBIGUOUS"
     assert all(p.id_state == "AMBIGUOUS" for p in cr.pins)
+
+
+def test_p1b_body_colour_pin_strokes_are_independent_measured_s2():
+    # KiCad commonly draws symbol pin strokes in the body colour. Force the separate
+    # measured strokes to OTHER (not WIRE) to exercise the body-colour S2 path directly.
+    from render_kicad import place
+    content = b"1 0 0 RG\n" + sym("R")
+    pi = ingest_pdf(one_page(WIRES + content, size=(W, H))).pages[0]
+    cls = classify_page(pi)
+    for lib_pin in LIB.symbols["R"].pins:
+        base_u = place(ORIENTS["r0"], 3.0, (150.0, 100.0), *lib_pin.base)
+        tip_u = place(ORIENTS["r0"], 3.0, (150.0, 100.0), *lib_pin.tip)
+        base, tip = (base_u[0], H - base_u[1]), (tip_u[0], H - tip_u[1])
+        matches = []
+        for prim in pi.prims:
+            if prim.kind != "polyline" or prim.line_closed or len(prim.pts) != 2:
+                continue
+            a, b = prim.pts
+            if (near(a, base) and near(b, tip)) or (near(b, base) and near(a, tip)):
+                matches.append(prim.id)
+        assert len(matches) == 1
+        pid = matches[0]
+        cls.records[pid] = replace(cls.records[pid], cls=LC_OTHER)
+    (cr,) = detect_pins(pi, cls, list(LIB.symbols.values()))
+    assert cr.resolution.status == "UNIQUE" and len(cr.pins) == 2
+    for pin in cr.pins:
+        assert pin.pos_state == POS_CONFIRMED
+        assert len(pin.independent_items) == 2
+        s1, s2 = pin.independent_items
+        assert independent(s1, s2, cls.registry)
+        assert cls.registry.items[s2].kind == "MEASURED_STUB"
+        assert len(cls.registry.items[s2].lineage) == 1
+        assert not (cls.registry.items[s2].lineage & cls.registry.items[s1].lineage)
+        measured_prim = int(next(iter(cls.registry.items[s2].lineage)).split(":")[1])
+        assert measured_prim not in cr.cluster.prim_ids
 
 
 def test_p2_no_stub_drawn_gives_candidate_only():

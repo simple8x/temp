@@ -368,6 +368,8 @@ MUTATIONS = [
      '    if g.get("pin_identity_unverified_synthetic_canonical"):', "    if False:"),
     ("M191-missing-pin-identity-defaults-confirmed", "ecci/kicad_roundtrip.py",
      '            assignment = p.get("number_assignment")', '            assignment = p.get("number_assignment", "CONFIRMED")'),
+    ("M192-body-colour-pin-line-s2-disabled", "ecci/pins.py",
+     "if stub is None and not stub_selected:", "if False:"),
     ("M157-wrong-mirror-order", "ecci/kicad_export.py",
      'MIRROR_ORDER: str | None = "RM"', 'MIRROR_ORDER: str | None = "MR"'),
     ("M158-evidence-audit-skips-s1-lineage", "ecci/symrec.py",
